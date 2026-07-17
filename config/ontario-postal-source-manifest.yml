@@ -1,32 +1,138 @@
+manifest_version: 2
+last_reviewed: 2026-07-16
+
+status_fields:
+  licence_status: [verified, unverified, restricted]
+  schema_status: [verified, unverified]
+  profile_status: [complete, pending]
+  decision:
+    - accept-primary
+    - accept-supplementary
+    - conditional-accept
+    - defer-validation
+    - defer-verification
+    - defer-separate-layer
+    - quarantine
+
 sources:
   - id: statcan_nar
     name: National Address Register
     publisher: Statistics Canada
-    role: primary
-    type: national_aggregation
+    role: primary_observed_postal_associations
+    type: national_address_register
+    catalogue_number: "46-26-0002"
+    catalogue_url: https://www150.statcan.gc.ca/n1/en/catalogue/46260002
+    release_date: 2026-06-26
+    expected_update_frequency: semi-annual
     licence: Open Government Licence - Canada
-    endpoint: https://www.statcan.gc.ca/en/lode/databases/nar
+    licence_url: https://open.canada.ca/en/open-government-licence-canada
+    licence_status: verified
+    schema_status: partially_verified
+    profile_status: pending
+    decision: accept-primary
+    ingestion_endpoint: null
+    notes: >-
+      Current primary candidate. Record the versioned download endpoint, checksum,
+      exact mailing postal-code field, Ontario row counts, completeness and lineage
+      during the profiling proof of concept.
+
+  - id: statcan_oda
+    name: Open Database of Addresses
+    publisher: Statistics Canada
+    role: historical_validation_and_lineage
+    type: harmonized_open_address_database
+    catalogue_number: "46-26-0001"
+    catalogue_url: https://www.statcan.gc.ca/en/lode/databases/oda
+    licence: Open Government Licence - Canada
+    licence_url: https://open.canada.ca/en/open-government-licence-canada
+    licence_status: verified
+    schema_status: verified_from_documentation
+    profile_status: pending
+    decision: defer-validation
+    ingestion_endpoint: null
+    notes: >-
+      Ontario zipped CSV remains available. Use for lineage analysis, regression
+      tests and historical comparison, not as the current primary source.
 
   - id: geonames_ca
     name: GeoNames Canadian Postal Codes
     publisher: GeoNames
-    role: supplementary
-    type: point_reference
+    role: supplementary_point_reference
+    type: postal_code_point_reference
+    catalogue_url: https://download.geonames.org/export/zip/
+    ingestion_endpoint: https://download.geonames.org/export/zip/CA_full.csv.zip
     licence: Creative Commons Attribution 4.0
-    endpoint: https://download.geonames.org/export/zip/CA_full.csv.zip
+    licence_url: https://creativecommons.org/licenses/by/4.0/
+    licence_status: verified
+    schema_status: unverified
+    profile_status: pending
+    decision: accept-supplementary
+    notes: >-
+      Full Canadian postal codes are provided. Previous Ontario counts are
+      withdrawn until reproduced by a committed profiling script with checksum,
+      province filter, row counts and unique-code counts.
 
   - id: toronto_addresses
-    name: Toronto Address Points
+    name: Address Points (Municipal) - Toronto One Address Repository
     publisher: City of Toronto
-    role: authoritative_local
-    type: municipal
+    role: authoritative_local_address_geometry
+    type: municipal_address_points
+    catalogue_url: https://open.toronto.ca/dataset/address-points-municipal-toronto-one-address-repository/
+    ingestion_endpoint: null
     licence: Open Government Licence - Toronto
-    endpoint: https://ckan0.cf.opendata.inter.prod-toronto.ca/dataset/address-points-municipal-toronto/download
+    licence_url: https://open.toronto.ca/open-data-licence/
+    licence_status: verified
+    schema_status: unverified
+    profile_status: pending
+    decision: conditional-accept
+    notes: >-
+      Official catalogue describes more than 500,000 address points and multiple
+      spatial formats. Resolve and test a stable resource endpoint and verify
+      postal-code fields before ingestion.
 
   - id: ottawa_addresses
-    name: Ottawa Municipal Addresses
+    name: Ottawa municipal address source
     publisher: City of Ottawa
-    role: authoritative_local
-    type: municipal
+    role: candidate_authoritative_local
+    type: municipal_address_points
+    catalogue_url: null
+    ingestion_endpoint: null
     licence: Open Government Licence - Ottawa
-    endpoint: https://opendata.arcgis.com/api/v3/datasets/municipal-addresses/downloads/data?format=csv
+    licence_url: null
+    licence_status: unverified
+    schema_status: unverified
+    profile_status: pending
+    decision: defer-verification
+    notes: >-
+      Initial survey did not preserve enough evidence to identify and reproduce
+      the source. Re-discover from the official catalogue before use.
+
+  - id: ontario_pcd
+    name: Canada Postal Code Data
+    publisher: Government of Ontario
+    role: prohibited_pending_clearance
+    type: restricted_postal_dataset
+    catalogue_url: https://data.ontario.ca/
+    ingestion_endpoint: null
+    licence: Restricted
+    licence_url: null
+    licence_status: restricted
+    schema_status: unverified
+    profile_status: pending
+    decision: quarantine
+    notes: Do not ingest or redistribute.
+
+  - id: osm_ontario
+    name: OpenStreetMap Ontario
+    publisher: OpenStreetMap contributors
+    role: optional_separate_layer
+    type: crowdsourced_geospatial_database
+    catalogue_url: https://download.geofabrik.de/north-america/canada/ontario.html
+    ingestion_endpoint: https://download.geofabrik.de/north-america/canada/ontario-latest.osm.pbf
+    licence: Open Data Commons Open Database License
+    licence_url: https://opendatacommons.org/licenses/odbl/
+    licence_status: verified
+    schema_status: unverified
+    profile_status: pending
+    decision: defer-separate-layer
+    notes: Keep outside the default combined product until distribution obligations are designed.
