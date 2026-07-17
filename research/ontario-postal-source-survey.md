@@ -1,44 +1,107 @@
 # Ontario Postal-Code Source Survey
 
+## Status
+
+This document is a verified correction of the initial survey committed in `a393382`. The first pass established a useful structure, but several source claims were stronger than the evidence supported. This revision separates confirmed facts from work that still requires reproducible profiling.
+
 ## Executive Summary
-This survey identified and evaluated public datasets containing postal-code evidence for Ontario. We prioritized sources based on open licensing, authoritative provenance, and direct location evidence (coordinates + address + postal code). The primary finding is that the Statistics Canada National Address Register (NAR) should serve as the primary source, replacing the deprecated Open Database of Addresses (ODA). GeoNames provides a strong supplementary dataset, while the Ontario Data Catalogue's "Canada Postal Code Data" is restricted and must be quarantined.
 
-## Strongest Usable Sources
-1. **Statistics Canada National Address Register (NAR)**: The most comprehensive and authoritative source of validated civic addresses in Canada.
-2. **GeoNames Canadian Postal Codes**: Contains 298,607 valid Ontario records with point coordinates. Lacks civic addresses but provides excellent baseline coverage.
-3. **Municipal Open Data Portals**: Toronto and Ottawa offer highly accurate, locally authoritative address points with open licenses.
+The strongest open starting point is Statistics Canada's National Address Register (NAR). The current release is dated June 26, 2026, the product is semi-annual, and it contains valid georeferenced civic addresses with corresponding mailing-address fields. NAR should be treated as the primary source of observed address-to-postal-code associations, not as a public clone of PCCF.
 
-## Measured or Estimated Ontario Coverage
-- **GeoNames**: 298,607 valid Ontario postal code point locations.
-- **NAR/Municipal**: Provides millions of address points, though exact postal-code completeness varies by municipality.
+The Open Database of Addresses (ODA) should not be discarded. It is older and superseded operationally by NAR, but remains useful for lineage analysis, schema prototyping, regression tests, and comparison with the contributing municipal datasets.
 
-## Major Geographic Gaps
-Rural and unorganized territories in Northern Ontario have weaker civic addressing, relying more heavily on PO Boxes and general delivery, which do not link well to specific building coordinates.
+GeoNames is openly licensed and useful as a supplementary postal-code point reference. The previous Ontario record counts have not been reproduced in this repository and must not be treated as verified until a profiling script records the download date, checksum, row counts, unique postal codes, province filter, and validation rules.
 
-## Licensing Risks
-- **OpenStreetMap (OSM)**: Uses the ODbL license, which has a share-alike clause. Any dataset merging OSM data with other data risks triggering share-alike obligations for the entire combined dataset. OSM data must be maintained as a separate, distinct layer.
-- **PCCF/Canada Post Contamination**: Several provincial and federal datasets may have derived their postal code assignments from Canada Post's proprietary PCCF. We must ensure selected data comes from independent municipal assignment or open crowdsourcing.
+Toronto has an authoritative open address-point dataset with more than 500,000 address points and multiple downloadable spatial formats. Its postal-code field and completeness still require direct schema profiling. Ottawa and all other municipalities remain discovery candidates rather than ingestion-ready sources until their exact catalogue records, endpoints, licences, schemas, and row-level postal evidence are verified.
 
-## Stale, Retired or Inaccessible Sources
-- **Statistics Canada Open Database of Addresses (ODA)**: Succeeded by the NAR.
-- **Ontario Data Catalogue "Canada Postal Code Data"**: Restricted access.
+## Verified Findings
 
-## Duplicated Source Lineages
-The ODA was largely an aggregation of municipal open data. Using both the ODA/NAR and the direct municipal datasets (e.g., from Toronto or Ottawa) constitutes duplicated source lineages rather than independent corroboration.
+### Statistics Canada National Address Register
 
-## Recommended First Ingestion Set
-1. Statistics Canada National Address Register (NAR)
-2. Toronto Address Points (Municipal)
-3. Ottawa Municipal Addresses (Municipal)
-4. GeoNames (Supplementary layer)
+- Catalogue number: `46-26-0002`.
+- Current release: June 26, 2026.
+- Frequency: semi-annual.
+- Scope: valid georeferenced civic addresses and corresponding mailing-address information.
+- Provenance: addresses are extracted from Statistics Canada's Building Register and validated using at least two independent sources.
+- Recommended role: primary observed address and postal-association source.
+- Important limitation: the mailing address follows Canada Post addressing guidelines, but the project must preserve source lineage and must not describe the field as an independently reconstructed Canada Post assignment.
 
-## Sources Requiring Human or Legal Review
-- **Ontario Data Catalogue "Canada Postal Code Data"**: Need to confirm why it is restricted and if an open version with clear provenance exists.
+### Statistics Canada Open Database of Addresses
 
-## Rejected Sources and Reasons
-- **Statistics Canada Open Database of Addresses (ODA)**: Rejected because it is superseded by the NAR.
+- Open Government Licence - Canada.
+- Ontario remains available as a downloadable provincial zipped CSV.
+- Includes postal code, provider, CSD identifiers, latitude, and longitude.
+- Aggregates many local-government open datasets.
+- Recommended role: validation-only, lineage analysis, historical comparison, and test fixture development.
 
-## Update-Check Mechanism for Each Selected Source
-- **NAR**: Check Statistics Canada catalogue page for new release vintages (annual).
-- **GeoNames**: HTTP headers (`Last-Modified`, `ETag`) on the `CA_full.csv.zip` URL.
-- **Municipal**: ArcGIS Hub API metadata (`updatedAt`) or CKAN datastore API metadata.
+### GeoNames Canadian Postal Codes
+
+- `CA_full.csv.zip` contains full Canadian postal codes.
+- Licence: Creative Commons Attribution 4.0.
+- Recommended role: supplementary centroid or reference layer only.
+- Current repository status: licence and file existence verified; Ontario counts and quality metrics unverified.
+
+### Toronto One Address Repository
+
+- Official City of Toronto open-data catalogue entry exists.
+- Licence: Open Government Licence - Toronto.
+- Described as containing more than 500,000 address points.
+- Available in CSV, GeoJSON, GeoPackage, and shapefile forms, including EPSG:4326 resources.
+- Recommended role: authoritative local address geometry after schema profiling.
+- Current repository status: catalogue and licence verified; postal-code field, missingness, duplicates, and stable resource URL not yet verified.
+
+## Findings Not Yet Verified
+
+The initial survey marked Ottawa and fourteen additional municipalities as having address sources, but did not record enough evidence to support that status. Each municipality must have all of the following before being promoted to ingestion-ready:
+
+1. official catalogue URL;
+2. stable download or API endpoint;
+3. explicit licence URL;
+4. sampled field names;
+5. confirmation of full six-character postal codes;
+6. geometry type and coordinate reference system;
+7. release or update date;
+8. row count and postal-code completeness;
+9. provenance and known upstream lineage.
+
+Until then, their status is `discovered_unverified`, not `accepted`.
+
+## Licensing and Lineage Rules
+
+- Never ingest restricted Ontario postal-code data or licensed PCCF/Canada Post products.
+- Treat NAR, ODA, and municipal sources as potentially overlapping lineages.
+- Agreement between overlapping lineage sources is not independent corroboration.
+- Keep OpenStreetMap-derived products separate because ODbL database obligations require a deliberate distribution design.
+- Preserve source-level observations rather than collapsing immediately to one postal-code point.
+- Use the phrase `observed postal association` unless the source explicitly establishes assignment authority.
+
+## Revised Source Decisions
+
+| Source | Decision | Intended use |
+|---|---|---|
+| Statistics Canada NAR | accept-primary | Primary address and observed postal associations |
+| Statistics Canada ODA | defer-validation | Historical comparison, lineage, tests |
+| GeoNames CA full | accept-supplementary | Reference points and gap diagnostics after profiling |
+| Toronto One Address Repository | conditional-accept | Local authoritative geometry after schema profiling |
+| Ottawa municipal addresses | defer-verification | Do not ingest until exact source and schema are confirmed |
+| Other Ontario municipal sources | discovery-required | Complete source-by-source verification |
+| Ontario restricted postal data | quarantine | No ingestion or redistribution |
+| OpenStreetMap Ontario | defer-separate-layer | Optional independent ODbL product only |
+
+## Recommended First Technical Milestone
+
+Build a reproducible profiling pipeline before building the full linkage product. It should:
+
+1. download the current NAR release and Ontario subset;
+2. record URL, release date, checksum, file size, and schema;
+3. profile mailing postal-code completeness and validity;
+4. spatially assign observations to current Dissemination Blocks;
+5. use the Geographic Attribute File to derive higher geographies;
+6. profile ODA Ontario as a historical comparison;
+7. profile GeoNames separately without mixing it into the primary observation table;
+8. profile Toronto as the first municipal source;
+9. output source-level quality and lineage reports.
+
+## Implementation Gate
+
+The project is ready for a narrow NAR profiling proof of concept. It is not yet ready for a province-wide multi-source production build. The next gate is passed only when the NAR download, Ontario extraction, schema, postal-code metrics, DB assignment, and provenance output are reproducible from code.
