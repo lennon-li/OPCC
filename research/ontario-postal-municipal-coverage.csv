@@ -1,17 +1,17 @@
 municipality_or_region,population_priority,address_source_found,postal_code_present,coordinates_present,latest_release,licence_verified,source_id,coverage_status,notes
-Toronto,1,true,true,true,2024,true,toronto_addresses,direct_postal_evidence,Open Data Toronto
-Ottawa,2,true,true,true,2024,true,ottawa_addresses,direct_postal_evidence,Open Ottawa ArcGIS Hub
-Peel,3,true,unknown,true,2024,false,peel_addresses,unverified,Requires further schema inspection
-York,4,true,unknown,true,2024,false,york_addresses,unverified,Requires further schema inspection
-Durham,5,true,unknown,true,2024,false,durham_addresses,unverified,Requires further schema inspection
-Halton,6,true,unknown,true,2024,false,halton_addresses,unverified,Requires further schema inspection
-Hamilton,7,true,unknown,true,2024,false,hamilton_addresses,unverified,Requires further schema inspection
-Waterloo,8,true,unknown,true,2024,false,waterloo_addresses,unverified,Requires further schema inspection
-Niagara,9,true,unknown,true,2024,false,niagara_addresses,unverified,Requires further schema inspection
-London and Middlesex,10,true,unknown,true,2024,false,london_addresses,unverified,Requires further schema inspection
-Windsor and Essex,11,true,unknown,true,2024,false,windsor_addresses,unverified,Requires further schema inspection
-Kingston,12,true,unknown,true,2024,false,kingston_addresses,unverified,Requires further schema inspection
-Simcoe,13,true,unknown,true,2024,false,simcoe_addresses,unverified,Requires further schema inspection
-Greater Sudbury,14,true,unknown,true,2024,false,sudbury_addresses,unverified,Requires further schema inspection
-Thunder Bay,15,true,unknown,true,2024,false,thunderbay_addresses,unverified,Requires further schema inspection
-Peterborough,16,true,unknown,true,2024,false,peterborough_addresses,unverified,Requires further schema inspection
+Toronto,1,true,unknown,true,unknown,true,toronto_addresses,conditional_accept,"Official catalogue and licence verified; dataset describes 500000+ address points, but postal field, stable resource endpoint, completeness, duplicates and release metadata require profiling"
+Ottawa,2,unknown,unknown,unknown,unknown,false,ottawa_addresses,defer_verification,"Initial survey did not preserve a verified catalogue record, dataset identifier, schema sample or reproducible endpoint"
+Peel,3,unknown,unknown,unknown,unknown,false,peel_addresses,discovery_required,"No supporting catalogue URL, endpoint, schema or licence evidence recorded"
+York,4,unknown,unknown,unknown,unknown,false,york_addresses,discovery_required,"No supporting catalogue URL, endpoint, schema or licence evidence recorded"
+Durham,5,unknown,unknown,unknown,unknown,false,durham_addresses,discovery_required,"No supporting catalogue URL, endpoint, schema or licence evidence recorded"
+Halton,6,unknown,unknown,unknown,unknown,false,halton_addresses,discovery_required,"No supporting catalogue URL, endpoint, schema or licence evidence recorded"
+Hamilton,7,unknown,unknown,unknown,unknown,false,hamilton_addresses,discovery_required,"No supporting catalogue URL, endpoint, schema or licence evidence recorded"
+Waterloo,8,unknown,unknown,unknown,unknown,false,waterloo_addresses,discovery_required,"No supporting catalogue URL, endpoint, schema or licence evidence recorded"
+Niagara,9,unknown,unknown,unknown,unknown,false,niagara_addresses,discovery_required,"No supporting catalogue URL, endpoint, schema or licence evidence recorded"
+London and Middlesex,10,unknown,unknown,unknown,unknown,false,london_addresses,discovery_required,"No supporting catalogue URL, endpoint, schema or licence evidence recorded"
+Windsor and Essex,11,unknown,unknown,unknown,unknown,false,windsor_addresses,discovery_required,"No supporting catalogue URL, endpoint, schema or licence evidence recorded"
+Kingston,12,unknown,unknown,unknown,unknown,false,kingston_addresses,discovery_required,"No supporting catalogue URL, endpoint, schema or licence evidence recorded"
+Simcoe,13,unknown,unknown,unknown,unknown,false,simcoe_addresses,discovery_required,"No supporting catalogue URL, endpoint, schema or licence evidence recorded"
+Greater Sudbury,14,unknown,unknown,unknown,unknown,false,sudbury_addresses,discovery_required,"No supporting catalogue URL, endpoint, schema or licence evidence recorded"
+Thunder Bay,15,unknown,unknown,unknown,unknown,false,thunderbay_addresses,discovery_required,"No supporting catalogue URL, endpoint, schema or licence evidence recorded"
+Peterborough,16,unknown,unknown,unknown,unknown,false,peterborough_addresses,discovery_required,"No supporting catalogue URL, endpoint, schema or licence evidence recorded"
