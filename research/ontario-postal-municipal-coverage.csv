@@ -1,0 +1,17 @@
+municipality_or_region,population_priority,address_source_found,postal_code_present,coordinates_present,latest_release,licence_verified,source_id,coverage_status,notes
+Toronto,1,true,true,true,2024,true,toronto_addresses,direct_postal_evidence,Open Data Toronto
+Ottawa,2,true,true,true,2024,true,ottawa_addresses,direct_postal_evidence,Open Ottawa ArcGIS Hub
+Peel,3,true,unknown,true,2024,false,peel_addresses,unverified,Requires further schema inspection
+York,4,true,unknown,true,2024,false,york_addresses,unverified,Requires further schema inspection
+Durham,5,true,unknown,true,2024,false,durham_addresses,unverified,Requires further schema inspection
+Halton,6,true,unknown,true,2024,false,halton_addresses,unverified,Requires further schema inspection
+Hamilton,7,true,unknown,true,2024,false,hamilton_addresses,unverified,Requires further schema inspection
+Waterloo,8,true,unknown,true,2024,false,waterloo_addresses,unverified,Requires further schema inspection
+Niagara,9,true,unknown,true,2024,false,niagara_addresses,unverified,Requires further schema inspection
+London and Middlesex,10,true,unknown,true,2024,false,london_addresses,unverified,Requires further schema inspection
+Windsor and Essex,11,true,unknown,true,2024,false,windsor_addresses,unverified,Requires further schema inspection
+Kingston,12,true,unknown,true,2024,false,kingston_addresses,unverified,Requires further schema inspection
+Simcoe,13,true,unknown,true,2024,false,simcoe_addresses,unverified,Requires further schema inspection
+Greater Sudbury,14,true,unknown,true,2024,false,sudbury_addresses,unverified,Requires further schema inspection
+Thunder Bay,15,true,unknown,true,2024,false,thunderbay_addresses,unverified,Requires further schema inspection
+Peterborough,16,true,unknown,true,2024,false,peterborough_addresses,unverified,Requires further schema inspection

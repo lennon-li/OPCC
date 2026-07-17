@@ -1,0 +1,32 @@
+sources:
+  - id: statcan_nar
+    name: National Address Register
+    publisher: Statistics Canada
+    role: primary
+    type: national_aggregation
+    licence: Open Government Licence - Canada
+    endpoint: https://www.statcan.gc.ca/en/lode/databases/nar
+
+  - id: geonames_ca
+    name: GeoNames Canadian Postal Codes
+    publisher: GeoNames
+    role: supplementary
+    type: point_reference
+    licence: Creative Commons Attribution 4.0
+    endpoint: https://download.geonames.org/export/zip/CA_full.csv.zip
+
+  - id: toronto_addresses
+    name: Toronto Address Points
+    publisher: City of Toronto
+    role: authoritative_local
+    type: municipal
+    licence: Open Government Licence - Toronto
+    endpoint: https://ckan0.cf.opendata.inter.prod-toronto.ca/dataset/address-points-municipal-toronto/download
+
+  - id: ottawa_addresses
+    name: Ottawa Municipal Addresses
+    publisher: City of Ottawa
+    role: authoritative_local
+    type: municipal
+    licence: Open Government Licence - Ottawa
+    endpoint: https://opendata.arcgis.com/api/v3/datasets/municipal-addresses/downloads/data?format=csv
