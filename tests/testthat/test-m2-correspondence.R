@@ -1,4 +1,9 @@
-source("scripts/m2_build_correspondence.R")
+script_path <- if (file.exists("scripts/m2_build_correspondence.R")) {
+  "scripts/m2_build_correspondence.R"
+} else {
+  file.path("..", "..", "scripts", "m2_build_correspondence.R")
+}
+source(script_path)
 
 testthat::test_that("normalize_pc returns ANA NAN", {
   testthat::expect_equal(normalize_pc(c("k1a 0a6", "K1A0A7")), c("K1A 0A6", "K1A 0A7"))
@@ -18,7 +23,7 @@ testthat::test_that("M2 evidence weights and winner are deterministic", {
   testthat::expect_equal(sum(result$best_link), 1)
   testthat::expect_equal(result$DBUID[result$best_link], "DB1")
   testthat::expect_equal(result$confidence, result$address_weight)
-  testthat::expect_false(anyDuplicated(result[c("postal_code", "DBUID")]))
+  testthat::expect_identical(anyDuplicated(result[c("postal_code", "DBUID")]), 0L)
 })
 
 testthat::test_that("M2 rejects missing and invalid observations", {
