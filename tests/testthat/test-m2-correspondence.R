@@ -1,0 +1,49 @@
+source("scripts/m2_build_correspondence.R")
+
+testthat::test_that("normalize_pc returns ANA NAN", {
+  testthat::expect_equal(normalize_pc(c("k1a 0a6", "K1A0A7")), c("K1A 0A6", "K1A 0A7"))
+  testthat::expect_true(is.na(normalize_pc("not-a-postal-code")))
+})
+
+testthat::test_that("M2 evidence weights and winner are deterministic", {
+  data <- data.frame(
+    postal_code = c("K1A 0A6", "K1A 0A6", "K1A 0A6", "K1A 0A6"),
+    LOC_GUID = c("A1", "A2", "B1", "B2"),
+    DBUID = c("DB2", "DB2", "DB1", "DB1"),
+    DAUID = c("DA2", "DA2", "DA1", "DA1"),
+    stringsAsFactors = FALSE
+  )
+  result <- aggregate_m2_evidence(data, "DAUID")
+  testthat::expect_equal(sum(result$address_weight), 1)
+  testthat::expect_equal(sum(result$best_link), 1)
+  testthat::expect_equal(result$DBUID[result$best_link], "DB1")
+  testthat::expect_equal(result$confidence, result$address_weight)
+  testthat::expect_false(anyDuplicated(result[c("postal_code", "DBUID")]))
+})
+
+testthat::test_that("M2 rejects missing and invalid observations", {
+  testthat::expect_error(
+    aggregate_m2_evidence(data.frame(postal_code = "K1A 0A6")),
+    "Missing required aggregation columns"
+  )
+  invalid <- data.frame(
+    postal_code = NA_character_, LOC_GUID = "A1", DBUID = "DB1",
+    stringsAsFactors = FALSE
+  )
+  testthat::expect_error(aggregate_m2_evidence(invalid), "No valid NAR observations")
+})
+
+testthat::test_that("M2 output keeps the required contract", {
+  data <- data.frame(
+    postal_code = c("K1A 0A6", "K1A 0A6"),
+    LOC_GUID = c("A1", "A2"),
+    DBUID = c("DB1", "DB2"),
+    DAUID = c("DA1", "DA2"),
+    stringsAsFactors = FALSE
+  )
+  result <- aggregate_m2_evidence(data, "DAUID")
+  required <- c("postal_code", "DBUID", "DAUID", "n_observations",
+                "n_unique_addresses", "n_sources", "address_weight",
+                "best_link", "confidence")
+  testthat::expect_true(all(required %in% names(result)))
+})
