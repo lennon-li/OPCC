@@ -12,20 +12,41 @@ does not claim authoritative postal assignments.
 
 ## Current status
 
-M1 is complete. The verified NAR 2026-06-26 M2 baseline contains 414,207
-postal-code/DBUID rows covering 282,409 postal codes under
-`releases/m2/2026-06-26/`. M2 is being amended to include 17,334
-GeoNames-sourced point-to-DB/DA assignments as a separate supplementary
-evidence class. The remaining 39 of the 17,373 GeoNames points do not
-intersect a 2021 Ontario DB/DA and remain visible in M1 rather than receiving
-a fabricated link. The independently rebuilt amendment contains 431,541 rows
-covering 299,743 postal codes; the immutable baseline will not be overwritten.
+| Milestone | Status | Current deliverable |
+| --- | --- | --- |
+| M1 | Complete | NAR-derived centroids and 17,373 source-labeled GeoNames fallback points |
+| M2 baseline | Published | 414,207 NAR postal-code/DBUID rows covering 282,409 postal codes |
+| M2 amendment | Review candidate | 431,541 rows / 299,743 postal codes: NAR plus 17,334 GeoNames point-in-polygon links |
+| M3 | Review candidate | Installable R package, tests, vignette, release index, and validator |
+
+The M2 GeoNames amendment and M3 package are committed in the review branch
+`agent/m2-m3-community-package` and await review/merge. The immutable NAR
+baseline remains under `releases/m2/2026-06-26/`; it is never overwritten.
 
 The M1 reference layer retains all 17,373 GeoNames-sourced fallback points.
-The 17,334 that intersect a DB/DA are M2 supplementary evidence; the other 39
-remain explicitly unmatched. These records are not silently treated as NAR
-address evidence, and their GeoNames accuracy category remains source metadata
-rather than a probability or confidence score.
+Of these, 17,334 intersect a 2021 Ontario DB/DA and are separately labeled M2
+supplementary evidence. The other 39 remain explicitly unmatched rather than
+receiving a fabricated link. GeoNames accuracy is source metadata, not a
+probability or confidence score, and GeoNames points are never silently treated
+as NAR address evidence.
+
+## Verify a release
+
+From a source checkout, verify the versioned M2 baseline and its release index:
+
+```r
+Rscript scripts/m3_validate_release.R
+```
+
+The M3 package passes `R CMD check`, including its test suite and rendered
+vignette. It exposes `normalize_postal_code()`, `pc_to_geo()`,
+`get_correspondence()`, `list_vintages()`, `release_manifest()`,
+`validate_release()`, and `pc_to_point()`.
+
+The GitHub repository is currently private to unauthenticated clients. As a
+result, checksum-verified remote artifact downloads are an external-publication
+gate rather than a currently usable public service. Once an intentional public
+release endpoint exists, run the validator with `--remote` to test it.
 
 ## Product direction
 

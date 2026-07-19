@@ -68,11 +68,11 @@ metadata.
 
 ### M2 - Source-qualified correspondence table
 
-Status: **VERIFIED RELEASE CANDIDATE** (2026-07-19; scope corrected
+Status: **VERIFIED REVIEW CANDIDATE** (2026-07-19; scope corrected
 2026-07-18). The immutable NAR 2026-06-26 baseline and portable build manifest
-remain tracked under `releases/m2/2026-06-26/`. The amended candidate is staged
-separately and is not published until its implementation is committed and
-reviewed.
+remain tracked under `releases/m2/2026-06-26/`. The amended candidate is
+committed on `agent/m2-m3-community-package` and is not published until review
+and merge.
 
 The first artifact that is actually OPCC: `postal_code x DBUID` with DAUID
 and higher identifiers, `n_observations`, `n_unique_addresses`,
@@ -100,10 +100,10 @@ rebuilt and verified before publication.
 
 ### M3 - Usable R package foundation
 
-**Status (2026-07-19): VERIFIED CANDIDATE.** The package, source-qualified
+**Status (2026-07-19): VERIFIED REVIEW CANDIDATE.** The package, source-qualified
 point artifact, fixtures, rendered vignette, and standalone release validator
 are complete and pass `R CMD check`; publication remains gated on review and
-commit of the currently uncommitted M2/M3 candidate set.
+merge of `agent/m2-m3-community-package`.
 
 Build an installable `OPCC` package around the published releases. The first
 public contract includes:
