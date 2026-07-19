@@ -1,0 +1,20 @@
+{
+  "source_vintage": "2026-07-19",
+  "census_vintage": "2021",
+  "source_paths": [
+    ".scratch/postal_centroids/ontario_postal_gaf_rollup.csv"
+  ],
+  "source_licence": "GeoNames CC BY 4.0; see row-level attribution fields",
+  "method": "M1 source-qualified GeoNames centroids spatially joined to 2021 Ontario dissemination blocks",
+  "row_counts": {
+    "geonames_points": 17373,
+    "with_db_and_da": 17334,
+    "without_2021_ontario_db": 39
+  },
+  "release_artifact": {
+    "path": "opcc_m1_geonames_points.csv.gz",
+    "compression": "gzip",
+    "sha256": "b3edbab3aee3c4fbcac004d978fa2635e83cdad0abada1f4e44f02e7cc36cbfa"
+  },
+  "candidate_status": "independently generated from the local M1 rollup; uncommitted and unpublished"
+}

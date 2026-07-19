@@ -1,0 +1,7 @@
+^\.scratch$
+^\.claude$
+^handoff$
+^docs$
+^releases$
+^README\.md$
+^\.gitignore$

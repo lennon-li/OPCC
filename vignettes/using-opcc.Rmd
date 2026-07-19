@@ -1,0 +1,38 @@
+---
+title: "Using OPCC reproducibly"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Using OPCC reproducibly}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
+
+OPCC keeps the release vintage and evidence source visible. Normalize input
+first; the default geography lookup returns every allocation link.
+
+```{r, eval = FALSE}
+library(OPCC)
+pc_to_geo("K1A0A6")
+pc_to_geo("K1A0A6", all_links = FALSE)
+```
+
+Use `offline = TRUE` in reproducible or air-gapped environments after caching a
+verified release. `validate_release()` checks the cached artifact's checksum,
+postal-code/DB uniqueness, allocation-weight sums, and best-link invariant.
+
+```{r, eval = FALSE}
+validate_release(offline = TRUE)
+release_manifest(offline = TRUE)
+```
+
+`pc_to_point()` provides GeoNames-derived supplementary point records. These
+are explicitly source-labeled and must not be interpreted as NAR address
+evidence.
+
+```{r, eval = FALSE}
+pc_to_point("K0A0A1")
+```
