@@ -43,6 +43,9 @@ by committed scripts.
 
 ### M2 - First correspondence table
 
+Status: **COMPLETE** (2026-07-18). The NAR 2026-06-26 correspondence and
+portable build manifest are tracked under `releases/m2/2026-06-26/`.
+
 The first artifact that is actually OPCC: `postal_code x DBUID` (rolled up
 to DAUID and higher) with n_observations, n_unique_addresses, n_sources,
 address_weight, best_link, confidence, source_vintage, census_vintage.

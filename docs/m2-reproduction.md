@@ -51,6 +51,21 @@ the GAF, including `DAUID`, are carried into the output.
 The JSON manifest records source URLs and paths, SHA-256 values, code version,
 UTC build time, row counts, and validation results.
 
+## Published artifact
+
+The verified 2026-06-26 source-vintage artifact is tracked under
+`releases/m2/2026-06-26/`:
+
+- `opcc_m2_correspondence.csv.gz`: 414,207 postal-code/DBUID rows for 282,409
+  postal codes.
+- `m2_manifest.json`: portable provenance, checksums, code version, build
+  timestamp, row counts, and validation results.
+
+The compressed artifact SHA-256 is
+`184b7a107049b145c98a3ab37e0fb789c492272aa26e5ab6a41bb5d400bc63e7`.
+Its uncompressed CSV SHA-256 is
+`7874b82ff9f8144c2844dd75a4f611401430a4416542d2c7a00f2e50376d412d`.
+
 ## Tests
 
 The synthetic tests do not require NAR, shapefile, or GAF downloads:
