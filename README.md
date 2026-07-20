@@ -19,6 +19,7 @@ does not claim authoritative postal assignments.
 | M2 amendment | Review candidate | 431,541 rows / 299,743 postal codes: NAR plus 17,334 GeoNames point-in-polygon links |
 | M3 | Review candidate | Installable R package, tests, vignette, release index, and validator |
 | M4 | Complete | Source-separated GeoNames coverage enrichment, local source layers, contribution bundles, and source/correction issue templates |
+| M5 | Complete | Direct weighted postal-code-to-DA artifact with DB-level lineage |
 
 The M2 GeoNames amendment and M3 package are committed in the review branch
 `agent/m2-m3-community-package` and await review/merge. The immutable NAR
@@ -56,6 +57,21 @@ Rscript scripts/m3_validate_release.R --remote
 The remote command verifies the downloaded manifest and compressed CSV against
 their SHA-256 values, then checks unique postal-code/DBUID keys, allocation
 weights, and one `best_link` per postal code.
+
+## Direct DA lookup
+
+M5 rolls the versioned DB correspondence to Dissemination Areas through its
+tracked 2021 GAF DB-to-DA attributes. It aggregates DB allocation weights by
+DA, retains every contributing DB ID and source vintage, and recomputes one
+deterministic best DA per postal code. It does not create a new point or postal
+polygon assignment.
+
+```r
+pc_to_geo("K1A 0A6", level = "DA")
+```
+
+Use `get_da_correspondence()` for the full verified M5 artifact and
+`validate_release(level = "DA")` to verify it from the release index.
 
 ## Rebuild the current candidate
 

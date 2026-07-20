@@ -3,6 +3,8 @@
 \alias{normalize_postal_code}
 \alias{list_vintages}
 \alias{get_correspondence}
+\alias{get_da_correspondence}
+\alias{aggregate_da_correspondence}
 \alias{geonames_supplementary_adapter}
 \alias{new_source_adapter}
 \alias{pc_to_geo}
@@ -17,8 +19,10 @@
 \description{Checksum-verified, source-qualified correspondence releases and postal-code lookup helpers.}
 \usage{
 normalize_postal_code(x, strict = FALSE)
-list_vintages()
+list_vintages(level = c("DB", "DA"))
 get_correspondence(vintage = "2026-06-26", cache_dir = tools::R_user_dir("OPCC", "cache"), offline = FALSE)
+get_da_correspondence(vintage = "2026-06-26", cache_dir = tools::R_user_dir("OPCC", "cache"), offline = FALSE)
+aggregate_da_correspondence(correspondence)
 geonames_supplementary_adapter()
 new_source_adapter(source_id, licence, lineage, retrieval_date = Sys.Date(), schema_map = list(postal_code = "postal_code"), endpoint = NULL, checksum = NULL)
 pc_to_geo(postal_code, level = c("DB", "DA"), all_links = TRUE, correspondence = NULL, ...)
@@ -27,13 +31,14 @@ validate_source_data(data, adapter)
 build_source_layer(data, adapter)
 profile_source_layer(layer)
 contribution_bundle(layer, output_dir = getwd(), fixture_rows = 100L)
-release_manifest(vintage = "2026-06-26", cache_dir = tools::R_user_dir("OPCC", "cache"), offline = FALSE)
-validate_release(vintage = "2026-06-26", cache_dir = tools::R_user_dir("OPCC", "cache"), offline = FALSE)
+release_manifest(vintage = "2026-06-26", cache_dir = tools::R_user_dir("OPCC", "cache"), offline = FALSE, level = c("DB", "DA"))
+validate_release(vintage = "2026-06-26", cache_dir = tools::R_user_dir("OPCC", "cache"), offline = FALSE, level = c("DB", "DA"))
 }
 \arguments{
   \item{x}{A vector of postal codes.}
   \item{strict}{Whether invalid postal codes are errors.}
   \item{vintage}{A supported release vintage.}
+  \item{level}{The requested census geography level, either \code{"DB"} or \code{"DA"}.}
   \item{cache_dir}{Directory used for verified cached artifacts.}
   \item{offline}{Whether downloading is prohibited.}
   \item{source_id}{A stable lower-case source identifier.}
@@ -44,16 +49,15 @@ validate_release(vintage = "2026-06-26", cache_dir = tools::R_user_dir("OPCC", "
   \item{endpoint}{An optional source retrieval endpoint.}
   \item{checksum}{An optional SHA-256 checksum of the source artifact.}
   \item{postal_code}{A character vector of Canadian postal codes.}
-  \item{level}{Requested census geography level.}
-  \item{all_links}{Whether to retain every DB allocation link.}
-  \item{correspondence}{Optional already-loaded correspondence data.}
+  \item{all_links}{Whether to retain every allocated geography link.}
+  \item{correspondence}{Optional already-loaded postal-code-to-DB correspondence data.}
   \item{point_file}{Optional local verified GeoNames point artifact.}
   \item{data}{A user-supplied postal-code evidence data frame.}
   \item{adapter}{Source metadata created by \code{new_source_adapter}.}
   \item{layer}{A local source layer created by \code{build_source_layer}.}
   \item{output_dir}{Directory where a new contribution bundle is created.}
   \item{fixture_rows}{Maximum normalized sample rows in the bundle.}
-  \item{...}{Arguments passed to \code{get_correspondence}.}
+  \item{...}{Arguments passed to the selected correspondence getter.}
 }
 \value{Data frames or release metadata, depending on the function.}
 \details{OPCC does not substitute GeoNames point evidence for NAR address evidence.

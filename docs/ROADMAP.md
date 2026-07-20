@@ -211,11 +211,14 @@ cannot enter a bundle.
 
 ### M5 - Postal-code to DA roll-up
 
-Publish a direct postal-code-to-Dissemination-Area artifact and extend
-`pc_to_geo(level = "DA")` by rolling postal-code-to-DB evidence through the 2021 GAF DB-to-DA relationship.
-Aggregate weights across contributing DBs, preserve many-to-many DA links,
-recompute deterministic `best_link`, and retain contributing-DB counts and
-lineage. This is an attribute roll-up, not a new point or polygon assignment.
+**Status (2026-07-20): COMPLETE.** The versioned M5 artifact rolls the
+published 2026-06-26 M2 DB correspondence to DA using its tracked 2021 GAF
+attributes. `pc_to_geo(level = "DA")` loads the direct, checksum-verified
+artifact; caller-supplied DB correspondence is aggregated with the same
+deterministic logic. Weights are summed across DBs in the same DA, all DA links
+remain visible by default, and each output records its contributing DB IDs,
+source vintage, census vintage, and evidence class. This is an attribute
+roll-up, not a new point or polygon assignment.
 
 **M5 exit gate:** DA weights sum to one per covered postal code; each covered
 postal code has exactly one deterministic best DA; every DA result traces to
