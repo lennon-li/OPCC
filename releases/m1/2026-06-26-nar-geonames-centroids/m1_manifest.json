@@ -1,0 +1,96 @@
+{
+  "manifest_version": 2,
+  "release_type": "m1_centroids",
+  "release_date": "2026-06-26",
+  "generator": {
+    "script": "scripts/m1_build_centroids.R",
+    "release_script": "scripts/m1_release.R",
+    "repo_sha": "707bd743c8f0805010bee5cd60c5055a3081c206"
+  },
+  "artifact": {
+    "file": "opcc_m1_centroids.csv.gz",
+    "format": "gzip-compressed CSV",
+    "schema": {
+      "columns": ["postal_code", "latitude", "longitude", "point_source", "point_method"],
+      "point_source_values": ["nar_centroid", "geonames", "none"]
+    },
+    "total_rows": 299796,
+    "csv_sha256": "a94a541925ae3db59929e88de5eeafecc3eda57d39a7db02baa661a6911d5098",
+    "csv_size_bytes": 94866935,
+    "gz_sha256": "79b6eaf29480a5f151c307a5a103174c072f99701c3247661f001d9ffd338b62",
+    "gz_size_bytes": 6542037,
+    "serialization": {
+      "quote": true,
+      "na": "",
+      "row.names": false,
+      "compression": 9,
+      "encoding": "UTF-8"
+    }
+  },
+  "sources": {
+    "nar": {
+      "catalogue": "46-26-0002",
+      "name": "National Address Register",
+      "publisher": "Statistics Canada",
+      "release_date": "2026-06-26",
+      "licence": "Open Government Licence - Canada",
+      "licence_url": "https://open.canada.ca/en/open-government-licence-canada",
+      "download_url": "https://www150.statcan.gc.ca/n1/pub/46-26-0002/2022001/202606.zip",
+      "zip_sha256": "c87df8d39537b75146ab4b38b9b1ca1f820d72e0f74ee2b3722059851a564364",
+      "address_files": [
+        "Addresses/Address_35_part_1.csv",
+        "Addresses/Address_35_part_2.csv",
+        "Addresses/Address_35_part_3.csv",
+        "Addresses/Address_35_part_4.csv",
+        "Addresses/Address_35_part_5.csv",
+        "Addresses/Address_35_part_6.csv",
+        "Addresses/Address_35_part_7.csv"
+      ],
+      "location_files": [
+        "Locations/Location_35_part_1.csv",
+        "Locations/Location_35_part_2.csv",
+        "Locations/Location_35_part_3.csv",
+        "Locations/Location_35_part_4.csv",
+        "Locations/Location_35_part_5.csv"
+      ],
+      "coord_system": "WGS84 (EPSG:4326) via BF_REPPOINT_LATITUDE/LONGITUDE",
+      "coord_fallback": "BG_LATITUDE/BG_LONGITUDE (also WGS84, from Location files)",
+      "postal_note": "Postal codes described as observed postal associations only"
+    },
+    "geonames": {
+      "name": "GeoNames Canadian Postal Codes",
+      "publisher": "GeoNames (geonames.org)",
+      "licence": "Creative Commons Attribution 4.0",
+      "licence_url": "https://creativecommons.org/licenses/by/4.0/",
+      "attribution": "Data from GeoNames (geonames.org), CC BY 4.0",
+      "download_url": "https://download.geonames.org/export/zip/CA_full.csv.zip",
+      "zip_sha256": "773d5f3d5edf04a25d414c7b7f2ef4f11eee70bffa44f7ee288a5539e0e5b70c",
+      "retrieval_date": "2026-07-17",
+      "coord_system": "WGS84 (EPSG:4326), direct per-code centroid",
+      "ontario_filter": "admin_code1 == 'ON'"
+    }
+  },
+  "counts": {
+    "total_codes": 299796,
+    "in_nar": 282771,
+    "in_geonames": 298398,
+    "in_both": 281373,
+    "nar_only": 1398,
+    "geonames_only": 17025,
+    "point_nar_centroid": 282409,
+    "point_geonames": 17373,
+    "point_none": 14,
+    "codes_with_point": 299782
+  },
+  "point_selection_policy": {
+    "priority_1": "nar_centroid: code in NAR with >= 1 address having WGS84 coords",
+    "priority_2": "geonames: code absent from NAR, or NAR has no coord coverage",
+    "priority_3": "none: NAR-only code with zero coord coverage and not in GeoNames"
+  },
+  "redistribution": {
+    "assessment": "Permitted under NAR Open Government Licence - Canada and GeoNames CC BY 4.0, with attribution.",
+    "nar_attribution": "Statistics Canada, National Address Register (46-26-0002, 2026-06-26), Open Government Licence - Canada.",
+    "geonames_attribution": "Data from GeoNames (geonames.org), CC BY 4.0."
+  },
+  "notes": "This M1 release is the full NAR + GeoNames Ontario postal centroid table. It replaces the earlier GeoNames-only supplementary point artifact. Postal codes are described only as observed postal associations. This product contains no Canada Post licensed data."
+}

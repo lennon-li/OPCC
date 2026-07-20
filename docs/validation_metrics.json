@@ -1,0 +1,53 @@
+{
+  "mode": "synthetic",
+  "build_ref": "707bd743c8f0805010bee5cd60c5055a3081c206",
+  "overall": {
+    "n": 200,
+    "median_distance_km": 0.3088,
+    "mean_distance_km": 1.2867,
+    "p90_distance_km": 3.5397,
+    "p95_distance_km": 4.2402,
+    "p99_distance_km": 5.4938,
+    "max_distance_km": 7.1925
+  },
+  "by_source": [
+    {
+      "point_source": "geonames",
+      "n": 100,
+      "median_distance_km": 2.3355,
+      "mean_distance_km": 2.446,
+      "p90_distance_km": 4.2417,
+      "p95_distance_km": 4.8333,
+      "p99_distance_km": 6.818,
+      "max_distance_km": 7.1925
+    },
+    {
+      "point_source": "nar_centroid",
+      "n": 100,
+      "median_distance_km": 0.1196,
+      "mean_distance_km": 0.1274,
+      "p90_distance_km": 0.2263,
+      "p95_distance_km": 0.2512,
+      "p99_distance_km": 0.2768,
+      "max_distance_km": 0.336
+    }
+  ],
+  "coverage": {
+    "distinct_open_postal_codes": 299782,
+    "distinct_sli_postal_codes": 200,
+    "matched_postal_codes": 200,
+    "coverage_pct": 100
+  },
+  "inputs": {
+    "centroid_csv": "releases/m1/2026-06-26-nar-geonames-centroids/opcc_m1_centroids.csv.gz",
+    "centroid_manifest": "releases/m1/2026-06-26-nar-geonames-centroids/m1_manifest.json",
+    "parent_manifest_sha256": "f1e4dac4be5d2ca17c78c3dcd9f388f14e08a0231acb80aa467d592a56180825",
+    "centroid_csv_sha256": "a94a541925ae3db59929e88de5eeafecc3eda57d39a7db02baa661a6911d5098",
+    "centroid_gz_sha256": "79b6eaf29480a5f151c307a5a103174c072f99701c3247661f001d9ffd338b62",
+    "synthetic": true
+  },
+  "restricted_input": {
+    "recorded": false,
+    "reason": "synthetic benchmark"
+  }
+}

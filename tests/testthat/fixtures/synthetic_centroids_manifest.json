@@ -1,0 +1,18 @@
+{
+  "manifest_version": 2,
+  "release_type": "synthetic_fixture",
+  "release_date": "2026-07-20",
+  "artifact": {
+    "file": "synthetic_centroids.csv",
+    "total_rows": 7,
+    "csv_sha256": "deterministic-fixture-for-tests-only"
+  },
+  "sources": {
+    "nar": {
+      "licence": "Open Government Licence - Canada"
+    },
+    "geonames": {
+      "licence": "CC BY 4.0"
+    }
+  }
+}

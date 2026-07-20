@@ -5,7 +5,9 @@
 ^docs$
 ^releases$
 ^README\.md$
+^\.git$
 ^\.gitignore$
+^\.mailmap$
 ^_pkgdown\.yml$
 ^cran-comments\.md$
 ^NEWS\.md$
