@@ -5,7 +5,7 @@
   "generator": {
     "script": "scripts/m1_build_centroids.R",
     "release_script": "scripts/m1_release.R",
-    "repo_sha": "8b4494f"
+    "repo_sha": "707bd743c8f0805010bee5cd60c5055a3081c206"
   },
   "artifact": {
     "file": "opcc_m1_centroids.csv.gz",
