@@ -228,6 +228,11 @@ single-link, multi-link, supplementary-only, and unmatched postal codes.
 
 ### M6 - Reproducible and independently verifiable releases
 
+**Status (2026-07-20): IN PROGRESS.** Immutable release-index auditing and
+deterministic drift reporting are implemented. The remaining work is a
+scheduled source-vintage watch, locked environment record, and an isolated
+clean-room rebuild and verification job.
+
 Create the release system that keeps OPCC current without hand-built data. It
 includes a monthly NAR metadata check, rebuilds only for new source vintages,
 locked R dependencies, recorded build environment, deterministic artifacts,

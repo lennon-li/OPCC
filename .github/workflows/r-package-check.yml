@@ -18,5 +18,7 @@ jobs:
         run: Rscript scripts/m4_coverage_report.R
       - name: Verify versioned M5 DA release
         run: Rscript scripts/m5_validate_release.R
+      - name: Audit immutable release index
+        run: Rscript scripts/m6_release_controls.R
       - name: Check package
         run: Rscript -e 'rcmdcheck::rcmdcheck(args = "--no-manual", error_on = "warning")'
