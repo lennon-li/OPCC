@@ -128,7 +128,7 @@ test_that("producer revision validation works", {
   expect_error(
     sli_validate_producer_ref("0000000000000000000000000000000000000000",
                               c("scripts/sli_validate.R")),
-    "not found"
+    "does not contain script"
   )
 
   # Valid ref but missing script should fail
