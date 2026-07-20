@@ -1,9 +1,9 @@
 {
   "manifest_version": 1,
-  "run_timestamp": "2026-07-20T18:52:12Z",
+  "run_timestamp": "2026-07-20T19:09:20Z",
   "generator": {
     "script": "scripts/sli_validate.R",
-    "repo_sha": "382c2fbceefcdddea174e834f4f87ce1b7c284b4",
+    "repo_sha": "7d7c7ef242e1ff5b4e06bbefad5b0746ba1bdfb2",
     "r_version": "4.6.0"
   },
   "inputs": {
@@ -16,7 +16,7 @@
   "outputs": {
     "validation_report_md": {
       "path": "validation_report.md",
-      "sha256": "6d269c30cd046291d26f73ca37ffeaa79d0851e91e83659f06d9c27ec4513522"
+      "sha256": "19d56928528d93ef1efd21da10321b157257cc5de5f83384b967d16a2e05207e"
     },
     "validation_ecdf_png": {
       "path": "validation_ecdf.png",
