@@ -108,13 +108,20 @@ test_that("tampered M1 manifest fails verification", {
 })
 
 test_that("producer revision validation works", {
+  # Skip if helper function not available (e.g., on CI without git)
+  testthat::skip_if_not(exists("sli_validate_producer_ref"))
+  testthat::skip_on_cran()
+
   # Get current HEAD as a valid producer ref
-  head_sha <- system("git rev-parse HEAD", intern = TRUE)
+  head_sha <- tryCatch(
+    system("git rev-parse HEAD", intern = TRUE),
+    error = function(e) NULL
+  )
+  testthat::skip_if(is.null(head_sha) || !nzchar(head_sha))
 
   # Valid ref with existing scripts should succeed
-  expect_silent(
-    sli_validate_producer_ref(head_sha, c("scripts/sli_validate.R"))
-  )
+  result <- sli_validate_producer_ref(head_sha, c("scripts/sli_validate.R"))
+  expect_equal(result, head_sha)
 
   # Non-existent ref should fail
   expect_error(
