@@ -1,0 +1,19 @@
+{
+  "source_id": "geonames_ca",
+  "licence": "Creative Commons Attribution 4.0",
+  "lineage": "GeoNames Canadian Postal Codes; supplementary point reference, not address evidence",
+  "retrieval_date": "2026-07-19",
+  "endpoint": "https://download.geonames.org/export/zip/CA_full.csv.zip",
+  "artifact_sha256": "b3edbab3aee3c4fbcac004d978fa2635e83cdad0abada1f4e44f02e7cc36cbfa",
+  "schema_map": {
+    "postal_code": "postal_code",
+    "latitude": "latitude",
+    "longitude": "longitude",
+    "accuracy": "gn_accuracy"
+  },
+  "expected_profile": {
+    "rows": 17373,
+    "with_db_and_da": 17334,
+    "without_2021_ontario_db": 39
+  }
+}

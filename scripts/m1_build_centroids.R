@@ -110,10 +110,10 @@ cat("[pre] NAR ZIP:      ", NAR_ZIP, "\n")
 cat("[pre] GeoNames txt: ", GN_TXT, "\n")
 
 # ---------------------------------------------------------------------------
-# 2. Extract NAR Location files (Ontario, parts 1-5)
+# 2. Extract NAR Location and Address files (Ontario)
 # ---------------------------------------------------------------------------
 
-cat("\n[1] Extracting NAR Location files (Ontario)...\n")
+cat("\n[1] Extracting NAR Location and Address files (Ontario)...\n")
 
 loc_parts <- paste0("Locations/Location_35_part_", 1:5, ".csv")
 
@@ -127,6 +127,19 @@ for (lf in loc_parts) {
       dir.create(file.path(NAR_SCRATCH, "Locations"), recursive = TRUE)
     }
     unzip(NAR_ZIP, files = lf, exdir = NAR_SCRATCH)
+  }
+}
+
+addr_members <- paste0("Addresses/Address_35_part_", 1:7, ".csv")
+for (member in addr_members) {
+  dest <- file.path(NAR_SCRATCH, member)
+  if (file.exists(dest)) {
+    cat("    Cached:", basename(dest), "\n")
+  } else {
+    cat("    Extracting", basename(member), "...\n")
+    dir.create(file.path(NAR_SCRATCH, "Addresses"), recursive = TRUE,
+               showWarnings = FALSE)
+    unzip(NAR_ZIP, files = member, exdir = NAR_SCRATCH)
   }
 }
 
@@ -306,13 +319,14 @@ gn_on <- gn_raw %>%
   mutate(
     pc_norm = normalize_pc(postal_code),
     gn_lat  = suppressWarnings(as.numeric(latitude)),
-    gn_lon  = suppressWarnings(as.numeric(longitude))
+    gn_lon  = suppressWarnings(as.numeric(longitude)),
+    gn_accuracy = suppressWarnings(as.numeric(accuracy))
   ) %>%
   filter(grepl(PC_REGEX, pc_norm, perl = TRUE), !is.na(gn_lat)) %>%
   group_by(pc_norm) %>%
   slice(1) %>%           # GeoNames has one row per code; keep first if duplicated
   ungroup() %>%
-  select(pc_norm, gn_lat, gn_lon, gn_place_name = place_name)
+  select(pc_norm, gn_lat, gn_lon, gn_accuracy, gn_place_name = place_name)
 
 cat("    GeoNames Ontario codes:", format(nrow(gn_on), big.mark = ","), "\n")
 
@@ -381,6 +395,7 @@ combined <- all_codes %>%
     nar_postal_note,
     gn_lat,
     gn_lon,
+    gn_accuracy,
     gn_place_name,
     gn_retrieval_date,
     gn_licence,

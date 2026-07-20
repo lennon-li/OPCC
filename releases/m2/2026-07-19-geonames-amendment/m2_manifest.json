@@ -1,0 +1,68 @@
+{
+  "source_urls": {
+    "nar_catalogue": "https://www150.statcan.gc.ca/n1/en/catalogue/46260002",
+    "census_gaf": "https://www12.statcan.gc.ca/census-recensement/2021/geo/aip-pia/attribute-attribs/files-fichiers/2021_92-151_X.zip"
+  },
+  "source_paths": [
+    ".scratch/m1_nar/Addresses/Address_35_part_1.csv",
+    ".scratch/m1_nar/Addresses/Address_35_part_2.csv",
+    ".scratch/m1_nar/Addresses/Address_35_part_3.csv",
+    ".scratch/m1_nar/Addresses/Address_35_part_4.csv",
+    ".scratch/m1_nar/Addresses/Address_35_part_5.csv",
+    ".scratch/m1_nar/Addresses/Address_35_part_6.csv",
+    ".scratch/m1_nar/Addresses/Address_35_part_7.csv",
+    ".scratch/m1_nar/Locations/Location_35_part_1.csv",
+    ".scratch/m1_nar/Locations/Location_35_part_2.csv",
+    ".scratch/m1_nar/Locations/Location_35_part_3.csv",
+    ".scratch/m1_nar/Locations/Location_35_part_4.csv",
+    ".scratch/m1_nar/Locations/Location_35_part_5.csv",
+    ".scratch/shp/ldb_000b21a_e.shp",
+    ".scratch/gaf/2021_92-151_X.csv",
+    ".scratch/postal_centroids/ontario_postal_gaf_rollup.csv",
+    ".scratch/m2/m2_correspondence.csv"
+  ],
+  "sha256": {
+    ".scratch/m1_nar/Addresses/Address_35_part_1.csv": "a26d0daa792961e419adbf9477c6a89cb0a8b0a14b718e6f0e4590aa4e046a5d",
+    ".scratch/m1_nar/Addresses/Address_35_part_2.csv": "4709a2dfbb13be8b7f913646c75ff4ab45934a0a922780c38e72fa083da9f229",
+    ".scratch/m1_nar/Addresses/Address_35_part_3.csv": "a265ea10bcbe43975f3380c3e417e4899766f2fecb8605171cf6b7c03b9708b1",
+    ".scratch/m1_nar/Addresses/Address_35_part_4.csv": "f8bffc6215a5df3fbfa3d4fb2ffe97179f39cf8d31aae13f46ffc091b3903817",
+    ".scratch/m1_nar/Addresses/Address_35_part_5.csv": "bb724a9cdd33b18d2a66f5a84af672b71c253d5972f72a095b1331fafec6a4d4",
+    ".scratch/m1_nar/Addresses/Address_35_part_6.csv": "e14455d5e1c981351b07f48b06f9bbeb31c82e6cc36eaa06f7b41497fca6f807",
+    ".scratch/m1_nar/Addresses/Address_35_part_7.csv": "6a117d2860da3e2eb6b06d7c6946a5d4de529b26eef5e518ad7ab66f6910129f",
+    ".scratch/m1_nar/Locations/Location_35_part_1.csv": "b76ccfa6a91af55bffc91ae6a365fb63e2eed8b97b68e485debae2fd6b87cf06",
+    ".scratch/m1_nar/Locations/Location_35_part_2.csv": "a89fa9b34d91d851871e60a23e583a50e5017d3a0c924bacdf01a18462a4ece1",
+    ".scratch/m1_nar/Locations/Location_35_part_3.csv": "c651c526ced0a03d6080e826d6762144aaefe1af1749e93b168d42a085cdfaf5",
+    ".scratch/m1_nar/Locations/Location_35_part_4.csv": "57f0ff9401bad1d11916fd5015c224e4f95c2bf4673d139a2e4c3d9af7ddcbac",
+    ".scratch/m1_nar/Locations/Location_35_part_5.csv": "64f999d1c7ccd6ce38e874324ad039210cfe4bf8f66c0b33f564e1ad6a5ed4c7",
+    ".scratch/shp/ldb_000b21a_e.shp": "b6f9294237a300f6c9bfb7f9001039916150bfb0ec9b2980fb2caa043382756f",
+    ".scratch/gaf/2021_92-151_X.csv": "3c089d2a1832cbef498afde36af186236f8bd98e9839dd681995303f7ea7ba99",
+    ".scratch/postal_centroids/ontario_postal_gaf_rollup.csv": "714a750c9ce028cde17d3e45f8b5793b84c2762d71f58010d31d4843c5328b53",
+    ".scratch/m2/m2_correspondence.csv": "dec582ddffb9703ff9e86040ffaa865168040a3b2a33ac24185c55043043a603"
+  },
+  "source_vintage": {
+    "nar": "2026-06-26",
+    "geonames": "2026-07-17"
+  },
+  "census_vintage": "2021",
+  "code_version": "e68e9650b4eb7ee2c7e1326d25552d2b0cf3a0a6",
+  "build_timestamp_utc": "2026-07-19T20:57:38Z",
+  "row_counts": {
+    "correspondence_rows": 431541,
+    "input_observations": 6218990,
+    "geonames_supplementary_rows": 17334
+  },
+  "validation_results": {
+    "weights_sum_to_one": true,
+    "unique_best_link": true,
+    "unique_postal_dbuid": true,
+    "restricted_sources_used": false
+  },
+  "release_artifact": {
+    "path": "opcc_m2_correspondence.csv.gz",
+    "compression": "gzip",
+    "bytes": 4765684,
+    "sha256": "812c94cadded5d24de44ea163c4c6a630d8d991ae0c480e88f32738087e00e15",
+    "uncompressed_sha256": "dec582ddffb9703ff9e86040ffaa865168040a3b2a33ac24185c55043043a603"
+  },
+  "candidate_status": "independently rebuilt and verified; uncommitted and unpublished"
+}

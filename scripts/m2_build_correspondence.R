@@ -1,5 +1,7 @@
 # OPCC M2 correspondence build.
-# NAR-only observed postal associations joined to 2021 DBUID geography.
+# NAR observed postal associations plus source-labelled GeoNames point evidence
+# joined to 2021 DBUID geography.  GeoNames points without a DB/DA assignment
+# remain available to M1/M3 point consumers and are not fabricated as M2 links.
 
 normalize_pc <- function(x) {
   x <- toupper(trimws(as.character(x)))
@@ -86,6 +88,81 @@ sha256_file <- function(path) {
   digest::digest(path, algo = "sha256", file = TRUE)
 }
 
+append_geonames_supplementary <- function(nar_result, rollup_path, geography_columns) {
+  if (!file.exists(rollup_path)) {
+    stop("Missing M1 GAF rollup: ", rollup_path,
+         "\nRun scripts/m1_build_centroids.R and scripts/m1_gaf_rollup.R first.")
+  }
+  rollup <- readr::read_csv(rollup_path, col_types = readr::cols(.default = "c"),
+                            show_col_types = FALSE, name_repair = "minimal")
+  required <- c("postal_code", "point_source", "DBUID", "DAUID_ADIDU", "latitude",
+                "longitude", "gn_accuracy")
+  missing <- setdiff(required, names(rollup))
+  if (length(missing) > 0) {
+    stop("M1 rollup is missing required GeoNames fields: ", paste(missing, collapse = ", "),
+         "\nRegenerate M1 before building M2.")
+  }
+  geo <- rollup[
+    rollup$point_source == "geonames" &
+      !is.na(rollup$postal_code) & rollup$postal_code != "" &
+      !is.na(rollup$DBUID) & rollup$DBUID != "" &
+      !is.na(rollup$DAUID_ADIDU) & rollup$DAUID_ADIDU != "" &
+      !is.na(rollup$latitude) & !is.na(rollup$longitude) &
+      !is.na(rollup$gn_accuracy), , drop = FALSE
+  ]
+  geo <- geo[!(geo$postal_code %in% nar_result$postal_code), , drop = FALSE]
+  if (anyDuplicated(geo$postal_code)) stop("GeoNames supplementary evidence must be one point per postal code")
+
+  supplementary <- data.frame(
+    postal_code = as.character(geo$postal_code),
+    DBUID = as.character(geo$DBUID),
+    n_observations = 0L,
+    n_unique_addresses = 0L,
+    n_sources = 1L,
+    address_weight = NA_real_,
+    best_link = TRUE,
+    confidence = NA_real_,
+    source_vintage = "2026-07-17",
+    census_vintage = "2021",
+    evidence_class = "geonames_supplementary",
+    assignment_method = "geonames_point_in_polygon",
+    allocation_weight = 1,
+    gn_accuracy = suppressWarnings(as.numeric(geo$gn_accuracy)),
+    stringsAsFactors = FALSE
+  )
+  for (column in geography_columns) {
+    source_column <- if (column == "DAUID") "DAUID_ADIDU" else column
+    supplementary[[column]] <- if (source_column %in% names(geo)) as.character(geo[[source_column]]) else NA_character_
+  }
+  supplementary <- supplementary[, c("postal_code", "DBUID", geography_columns,
+                                     "n_observations", "n_unique_addresses", "n_sources",
+                                     "address_weight", "best_link", "confidence",
+                                     "source_vintage", "census_vintage", "evidence_class",
+                                     "assignment_method", "allocation_weight", "gn_accuracy"), drop = FALSE]
+
+  nar_result$evidence_class <- "nar_address"
+  nar_result$assignment_method <- "nar_address_point_in_polygon"
+  nar_result$allocation_weight <- nar_result$address_weight
+  nar_result$gn_accuracy <- NA_real_
+  combined <- rbind(nar_result[, names(supplementary), drop = FALSE], supplementary)
+  combined <- combined[order(combined$postal_code, -combined$best_link,
+                             -combined$allocation_weight, combined$DBUID), , drop = FALSE]
+  rownames(combined) <- NULL
+  combined
+}
+
+validate_m2_result <- function(result) {
+  if (anyDuplicated(result[c("postal_code", "DBUID")])) stop("M2 contains duplicate postal_code/DBUID keys")
+  weights <- tapply(result$allocation_weight, result$postal_code, sum)
+  if (any(!is.finite(result$allocation_weight) | result$allocation_weight < 0) ||
+      any(abs(weights - 1) > 1e-8)) stop("M2 allocation weights must be finite, non-negative, and sum to 1 per postal code")
+  best <- table(result$postal_code[result$best_link])
+  if (length(best) != length(unique(result$postal_code)) || any(best != 1L)) {
+    stop("M2 must have exactly one best link per postal code")
+  }
+  invisible(TRUE)
+}
+
 build_m2_correspondence <- function() {
   if (!requireNamespace("sf", quietly = TRUE) ||
       !requireNamespace("dplyr", quietly = TRUE) ||
@@ -99,6 +176,7 @@ build_m2_correspondence <- function() {
   nar_dir <- file.path(root, ".scratch", "m1_nar")
   db_path <- file.path(root, ".scratch", "shp", "ldb_000b21a_e.shp")
   gaf_path <- file.path(root, ".scratch", "gaf", "2021_92-151_X.csv")
+  rollup_path <- file.path(root, ".scratch", "postal_centroids", "ontario_postal_gaf_rollup.csv")
   out_dir <- file.path(root, ".scratch", "m2")
   if (!dir.exists(nar_dir)) stop("Missing NAR scratch directory: ", nar_dir)
   if (!file.exists(db_path)) stop("Missing DB shapefile: ", db_path)
@@ -206,6 +284,8 @@ build_m2_correspondence <- function() {
     "n_unique_addresses", "n_sources", "address_weight", "best_link",
     "confidence", "source_vintage", "census_vintage"
   ), drop = FALSE]
+  result <- append_geonames_supplementary(result, rollup_path, geography_columns)
+  validate_m2_result(result)
 
   dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
   csv_path <- file.path(out_dir, "m2_correspondence.csv")
@@ -215,16 +295,19 @@ build_m2_correspondence <- function() {
     system2("git", c("rev-parse", "HEAD"), stdout = TRUE, stderr = FALSE)[1],
     error = function(e) NA_character_
   )
-  source_files <- c(address_files, location_files, db_path, gaf_path, csv_path)
+  source_files <- c(address_files, location_files, db_path, gaf_path, rollup_path, csv_path)
+  source_paths <- sub(paste0("^", root, "/"), "", source_files)
+  source_sha256 <- setNames(lapply(source_files, sha256_file), source_paths)
   manifest <- list(
     source_urls = list(nar_catalogue = "https://www150.statcan.gc.ca/n1/en/catalogue/46260002",
                        census_gaf = "https://www12.statcan.gc.ca/census-recensement/2021/geo/aip-pia/attribute-attribs/files-fichiers/2021_92-151_X.zip"),
-    source_paths = source_files,
-    sha256 = setNames(lapply(source_files, sha256_file), source_files),
-    source_vintage = "2026-06-26", census_vintage = "2021",
+    source_paths = source_paths,
+    sha256 = source_sha256,
+    source_vintage = list(nar = "2026-06-26", geonames = "2026-07-17"), census_vintage = "2021",
     code_version = code_version,
     build_timestamp_utc = format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC"),
-    row_counts = list(correspondence_rows = nrow(result), input_observations = nrow(joined)),
+    row_counts = list(correspondence_rows = nrow(result), input_observations = nrow(joined),
+                      geonames_supplementary_rows = sum(result$evidence_class == "geonames_supplementary")),
     validation_results = list(weights_sum_to_one = TRUE, unique_best_link = TRUE,
                               unique_postal_dbuid = TRUE, restricted_sources_used = FALSE)
   )

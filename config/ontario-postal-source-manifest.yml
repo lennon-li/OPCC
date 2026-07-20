@@ -1,5 +1,5 @@
 manifest_version: 2
-last_reviewed: 2026-07-16
+last_reviewed: 2026-07-19
 
 status_fields:
   licence_status: [verified, unverified, restricted]
@@ -64,13 +64,14 @@ sources:
     licence: Creative Commons Attribution 4.0
     licence_url: https://creativecommons.org/licenses/by/4.0/
     licence_status: verified
-    schema_status: unverified
-    profile_status: pending
+    schema_status: verified
+    profile_status: complete
     decision: accept-supplementary
     notes: >-
-      Full Canadian postal codes are provided. Previous Ontario counts are
-      withdrawn until reproduced by a committed profiling script with checksum,
-      province filter, row counts and unique-code counts.
+      The versioned 2026-07-19 supplementary point artifact has 17,373 rows:
+      17,334 with 2021 Ontario DB/DA assignments and 39 explicitly unmatched.
+      Its source-specific adapter, artifact checksum, schema mapping, and
+      expected profile are packaged under inst/extdata/adapters/.
 
   - id: toronto_addresses
     name: Address Points (Municipal) - Toronto One Address Repository

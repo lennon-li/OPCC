@@ -3,9 +3,10 @@ library(dplyr)
 library(readr)
 
 cat("Starting M1 GAF Rollup...\n\n")
+root <- getwd()
 
 # 1. Load and filter the DB shapefile
-shp_path <- "/home/yeli/repos/pccf/.scratch/shp/ldb_000b21a_e.shp"
+shp_path <- file.path(root, ".scratch", "shp", "ldb_000b21a_e.shp")
 cat(sprintf("Loading DB shapefile from %s...\n", shp_path))
 db_sf <- st_read(shp_path, quiet = TRUE)
 
@@ -14,7 +15,7 @@ db_on <- db_sf %>% filter(PRUID == "35")
 cat(sprintf("Ontario DB count: %d\n\n", nrow(db_on)))
 
 # 2. Load postal centroids
-pc_path <- "/home/yeli/repos/pccf/.scratch/postal_centroids/ontario_postal_centroids.csv"
+pc_path <- file.path(root, ".scratch", "postal_centroids", "ontario_postal_centroids.csv")
 cat(sprintf("Loading Ontario postal centroids from %s...\n", pc_path))
 pc_df <- read_csv(pc_path, show_col_types = FALSE)
 
@@ -43,7 +44,7 @@ cat(sprintf("Spatial join complete. %d postal codes matched to a DB out of %d.\n
             sum(!is.na(pc_db_df$DBUID)), nrow(pc_db_df)))
 
 # 4. GAF Rollup
-gaf_path <- "/home/yeli/repos/pccf/.scratch/gaf/2021_92-151_X.csv"
+gaf_path <- file.path(root, ".scratch", "gaf", "2021_92-151_X.csv")
 cat(sprintf("Loading Geographic Attribute File (GAF) from %s...\n", gaf_path))
 # Use read_csv but ensure DBUID is read as character to match the shapefile
 gaf_df <- read_csv(gaf_path, col_types = cols(.default = "c"))
@@ -53,7 +54,7 @@ final_rollup <- pc_db_df %>%
   left_join(gaf_df, by = c("DBUID" = "DBUID_IDIDU"))
 
 # 5. Save output
-out_path <- "/home/yeli/repos/pccf/.scratch/postal_centroids/ontario_postal_gaf_rollup.csv"
+out_path <- file.path(root, ".scratch", "postal_centroids", "ontario_postal_gaf_rollup.csv")
 cat(sprintf("Saving final rolled-up dataset to %s...\n", out_path))
 write_csv(final_rollup, out_path)
 
