@@ -302,6 +302,7 @@ validate_release <- function(
   } else {
     get_da_correspondence(vintage, cache_dir, offline)
   }
+  manifest <- release_manifest(vintage, cache_dir, offline, level)
   required <- if (level == "DB") {
     c("postal_code", "DBUID", "DAUID", "best_link", "confidence")
   } else {
@@ -318,6 +319,10 @@ validate_release <- function(
     stop("Allocation weights do not sum to one", call. = FALSE)
   }
   if (any(best != 1L)) stop("Each postal code must have exactly one best link", call. = FALSE)
+  if (!identical(tolower(manifest$release_artifact$sha256),
+                 tolower(.release_spec(if (level == "DB") .index() else .da_index(), vintage)$sha256))) {
+    stop("Manifest/index disagreement", call. = FALSE)
+  }
   invisible(TRUE)
 }
 
