@@ -252,6 +252,13 @@ reproduced without maintainer-local files.
 
 ### M7 - Community-maintained public project
 
+**Status (2026-07-20): COMPLETE.** The public governance, conduct, security,
+release/deprecation, attribution, citation, contribution, and pull-request
+review documents are present. GitHub Releases is the chosen durable public
+distribution channel; OPCC will not maintain a Zenodo/DOI mirror. Contributor
+and independent-maintainer rehearsals remain ongoing operational practice, not
+package-milestone blockers.
+
 Publish the governance needed for OPCC to outlive its initial maintainers:
 `CONTRIBUTING.md`, code of conduct, source-proposal and data-correction issue
 templates, adapter scaffolding, reviewer checklist, maintainer roles, decision
@@ -279,5 +286,5 @@ completed; and release artifacts have durable distribution and citation.
 1. ~~Product/package name~~ - settled 2026-07-17: **OPCC**.
 2. ~~M5 design~~ - settled 2026-07-18: direct postal-code-to-DA roll-up
    through DB.
-3. M7 durable distribution: GitHub Releases only, or GitHub Releases plus
-   Zenodo/DOI for citation and archival redundancy.
+3. ~~M7 durable distribution~~ - settled 2026-07-20: GitHub Releases only;
+   citation is provided by `CITATION.cff` and no Zenodo/DOI mirror is planned.

@@ -20,6 +20,8 @@ does not claim authoritative postal assignments.
 | M3 | Review candidate | Installable R package, tests, vignette, release index, and validator |
 | M4 | Complete | Source-separated GeoNames coverage enrichment, local source layers, contribution bundles, and source/correction issue templates |
 | M5 | Complete | Direct weighted postal-code-to-DA artifact with DB-level lineage |
+| M6 | Complete | External Hermes release-assurance handoff with human publish gate |
+| M7 | In progress | Public governance, security, release, attribution, and citation policy |
 
 The M2 GeoNames amendment and M3 package are committed in the review branch
 `agent/m2-m3-community-package` and await review/merge. The immutable NAR
@@ -108,6 +110,17 @@ M3-M7 build the public package and its community infrastructure:
 Every published release must be useful without the bulk build inputs,
 rebuildable from public-source manifests and checksums, independently
 verifiable, and open to fixture-backed contributions.
+
+## Community and governance
+
+Contribute open, redistributable evidence through the
+[contribution guide](CONTRIBUTING.md). Review the [Code of Conduct](CODE_OF_CONDUCT.md),
+[governance](GOVERNANCE.md), [security policy](SECURITY.md),
+[release policy](docs/release-policy.md), and
+[maintainer guide](docs/maintainer-guide.md),
+[licence and attribution matrix](docs/license-attribution.md). Cite OPCC using
+[`CITATION.cff`](CITATION.cff). Immutable release artifacts are distributed
+through GitHub Releases; OPCC does not currently maintain a Zenodo/DOI mirror.
 
 ## Optional: use your own open data locally
 
