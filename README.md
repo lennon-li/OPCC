@@ -35,7 +35,7 @@ as NAR address evidence.
 
 From a source checkout, verify the versioned M2 baseline and its release index:
 
-```r
+```bash
 Rscript scripts/m3_validate_release.R
 ```
 
@@ -47,7 +47,36 @@ vignette. It exposes `normalize_postal_code()`, `pc_to_geo()`,
 The release index uses commit-pinned GitHub raw URLs so a published artifact
 cannot change when `main` advances. The repository must be public for those
 checksum-verified remote downloads to be available to unauthenticated clients.
-After publication, run the validator with `--remote` to test the endpoint.
+After publication, run the validator with `--remote` to test the endpoint:
+
+```bash
+Rscript scripts/m3_validate_release.R --remote
+```
+
+The remote command verifies the downloaded manifest and compressed CSV against
+their SHA-256 values, then checks unique postal-code/DBUID keys, allocation
+weights, and one `best_link` per postal code.
+
+## Rebuild the current candidate
+
+The frozen 2026-06-26 baseline is verified above. Rebuilding from the current
+public sources produces the newer NAR-plus-GeoNames candidate, not a
+byte-for-byte replacement for that baseline. The full workflow downloads large
+git-ignored inputs to `.scratch/`; never commit those inputs or overwrite a
+versioned release directory.
+
+```bash
+Rscript scripts/m1_nar_profile.R
+Rscript scripts/m4_geonames_profile.R
+Rscript scripts/m1_build_centroids.R
+Rscript scripts/m1_gaf_rollup.R
+Rscript scripts/m2_build_correspondence.R
+```
+
+Before the GAF rollup, place the public 2021 DB boundary shapefile and
+Geographic Attribute File at the paths documented in
+[`docs/m1-reproduction.md`](docs/m1-reproduction.md). The detailed, executable
+guide is [`docs/reproduce-m2-artifact.qmd`](docs/reproduce-m2-artifact.qmd).
 
 ## Product direction
 
@@ -64,22 +93,31 @@ Every published release must be useful without the bulk build inputs,
 rebuildable from public-source manifests and checksums, independently
 verifiable, and open to fixture-backed contributions.
 
+## Optional: use your own open data locally
+
 The M4 foundation lets users validate and use their own postal-code evidence as
 an explicitly local, source-labeled layer. Every local-data function states
 that the layer is separate and invites users with redistributable evidence to
 generate a contribution bundle and open an OPCC issue or pull request. Local
-data never silently merges into a canonical OPCC release.
+data never silently merges into a canonical OPCC release. Do not use Canada
+Post, PCCF, PCCF+, or other restricted data.
 
 ```r
+source("R/opcc.R")
+my_postal_data <- utils::read.csv("/path/to/open-data.csv", stringsAsFactors = FALSE)
+
+# The source postal column is named "postal" here. Coordinates, if present,
+# must be named latitude and longitude and use decimal degrees.
 adapter <- new_source_adapter(
   source_id = "municipal_registry",
   licence = "Open Government Licence",
   lineage = "municipal address registry",
-  schema_map = list(postal_code = "postal")
+  schema_map = list(postal_code = "postal"),
+  checksum = digest::digest("/path/to/open-data.csv", algo = "sha256", file = TRUE)
 )
 layer <- build_source_layer(my_postal_data, adapter)
 profile_source_layer(layer)
-contribution_bundle(layer)
+contribution_bundle(layer, output_dir = "local-contributions")
 ```
 
 `geonames_supplementary_adapter()` supplies the checked, versioned metadata for
@@ -98,6 +136,8 @@ rejected; only redistributable evidence can enter a contribution bundle.
 
 See `docs/ROADMAP.md` for milestone contracts and
 `docs/m2-reproduction.md` for the current release schema and verification
-details. See `docs/m4-contributing-source.md` for the local-layer and
+details. See `docs/reproduce-m2-artifact.qmd` for executable verification,
+rebuild, and optional local-data import instructions. See
+`docs/m4-contributing-source.md` for the local-layer and
 contribution workflow. See `docs/uncertainty-and-allocation-design.md` for the uncertainty
 model and reproducible build, calibration, validation, and release pipeline.
