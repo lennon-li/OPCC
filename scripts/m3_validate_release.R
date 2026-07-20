@@ -2,7 +2,7 @@
 
 # One-command verification for the versioned M2 baseline. Run from the project
 # root: Rscript scripts/m3_validate_release.R. With --remote, verify the
-# public release endpoint too (after the repository/release is public).
+# public commit-pinned endpoint too (after the repository is public).
 
 index_path <- file.path("inst", "extdata", "release-index.json")
 if (!file.exists(index_path)) stop("Run this command from the OPCC project root", call. = FALSE)
@@ -13,7 +13,6 @@ if (is.null(spec)) stop("Baseline 2026-06-26 is absent from the release index", 
 
 download_and_check <- function(url, expected, suffix) {
   path <- tempfile(fileext = suffix)
-  on.exit(unlink(path), add = TRUE)
   utils::download.file(url, path, mode = "wb", quiet = TRUE)
   actual <- digest::digest(path, algo = "sha256", file = TRUE)
   if (!identical(tolower(actual), tolower(expected))) {
@@ -37,6 +36,7 @@ if (!use_remote && dir.exists(local_dir)) {
 } else {
   manifest_path <- download_and_check(spec$manifest, spec$manifest_sha256, ".json")
   artifact_path <- download_and_check(spec$artifact, spec$sha256, ".csv.gz")
+  on.exit(unlink(c(manifest_path, artifact_path)), add = TRUE)
   source_label <- "remote release endpoint"
 }
 manifest <- jsonlite::read_json(manifest_path, simplifyVector = TRUE)
