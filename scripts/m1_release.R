@@ -3,10 +3,12 @@
 # Publish the M1 NAR + GeoNames centroid scratch output as a versioned,
 # redistributable release artifact with a manifest.
 #
-# The script takes no arguments by default; it reads the scratch manifest
-# produced by scripts/m1_build_centroids.R and writes:
-#   releases/m1/<vintage>/opcc_m1_centroids.csv.gz
-#   releases/m1/<vintage>/m1_manifest.json
+# USAGE:
+#   Rscript scripts/m1_release.R --producer-ref <full-commit-SHA>
+#
+# The --producer-ref argument is required. It records the commit that contains
+# the generator scripts, validates that the revision exists and contains every
+# named script, and writes that SHA into the manifest.
 #
 # Deterministic serialization is enforced: the exact uncompressed CSV bytes
 # that are placed in the gzip are captured, hashed, and verified after write.
@@ -23,11 +25,34 @@ helper_path <- file.path(repo_root, "tests", "testthat", "helper-sli-validation.
 if (file.exists(helper_path)) {
   source(helper_path)
 } else {
-  # Fall back to the verification logic defined below if the helper is moved.
   sli_verify_m1_artifact <- function(gz_path, manifest) {
     stop("sli_verify_m1_artifact not available")
   }
+  sli_validate_producer_ref <- function(producer_ref, scripts) {
+    stop("sli_validate_producer_ref not available")
+  }
 }
+
+parse_args <- function() {
+  args <- commandArgs(trailingOnly = TRUE)
+  out <- list(producer_ref = NULL)
+  i <- 1
+  while (i <= length(args)) {
+    a <- args[i]
+    if (a == "--producer-ref") {
+      out$producer_ref <- args[i + 1]
+      i <- i + 2
+    } else {
+      stop("Unknown argument: ", a)
+    }
+  }
+  if (is.null(out$producer_ref)) {
+    stop("--producer-ref is required.")
+  }
+  out
+}
+
+inputs <- parse_args()
 
 SCRATCH_DIR <- file.path(getwd(), ".scratch", "postal_centroids")
 SCRATCH_CSV <- file.path(SCRATCH_DIR, "ontario_postal_centroids.csv")
@@ -53,6 +78,13 @@ if (!dir.exists(RELEASE_DIR)) dir.create(RELEASE_DIR, recursive = TRUE)
 
 cat("=== m1_release.R ===\n")
 cat("Vintage:", vintage, "\n")
+cat("Producer ref:", inputs$producer_ref, "\n")
+
+sli_validate_producer_ref(
+  inputs$producer_ref,
+  c("scripts/m1_build_centroids.R", "scripts/m1_release.R")
+)
+cat("Producer revision validated.\n")
 
 combined <- readr::read_csv(SCRATCH_CSV, show_col_types = FALSE)
 cat("Rows read:", format(nrow(combined), big.mark = ","), "\n")
@@ -93,7 +125,7 @@ release_manifest <- list(
   generator = list(
     script = "scripts/m1_build_centroids.R",
     release_script = "scripts/m1_release.R",
-    repo_sha = system("git rev-parse HEAD", intern = TRUE)
+    repo_sha = inputs$producer_ref
   ),
   artifact = list(
     file = basename(RELEASE_CSV_GZ),

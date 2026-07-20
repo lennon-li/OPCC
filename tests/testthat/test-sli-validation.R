@@ -106,3 +106,26 @@ test_that("tampered M1 manifest fails verification", {
     "hash mismatch"
   )
 })
+
+test_that("producer revision validation works", {
+  # Get current HEAD as a valid producer ref
+  head_sha <- system("git rev-parse HEAD", intern = TRUE)
+
+  # Valid ref with existing scripts should succeed
+  expect_silent(
+    sli_validate_producer_ref(head_sha, c("scripts/sli_validate.R"))
+  )
+
+  # Non-existent ref should fail
+  expect_error(
+    sli_validate_producer_ref("0000000000000000000000000000000000000000",
+                              c("scripts/sli_validate.R")),
+    "not found"
+  )
+
+  # Valid ref but missing script should fail
+  expect_error(
+    sli_validate_producer_ref(head_sha, c("scripts/nonexistent.R")),
+    "does not contain script"
+  )
+})

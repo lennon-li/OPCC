@@ -14,13 +14,14 @@
 #   validation_manifest.json
 #
 # All committed outputs are deterministic: no wall-clock time is embedded.
-# Reproducibility is anchored to the generator commit, input manifest hashes,
+# Reproducibility is anchored to the producer revision, input manifest hashes,
 # and an explicit seed.
 #
 # USAGE:
 #   Rscript scripts/sli_validate.R \
 #     --centroid-csv releases/m1/2026-06-26-nar-geonames-centroids/opcc_m1_centroids.csv.gz \
 #     --centroid-manifest releases/m1/2026-06-26-nar-geonames-centroids/m1_manifest.json \
+#     --producer-ref <full-commit-SHA> \
 #     --sli-csv /restricted/local/sli_2017.csv \
 #     --sli-label "PCCF SLI 2017 QA" \
 #     --output-dir docs
@@ -28,6 +29,7 @@
 #   Rscript scripts/sli_validate.R \
 #     --centroid-csv releases/m1/2026-06-26-nar-geonames-centroids/opcc_m1_centroids.csv.gz \
 #     --centroid-manifest releases/m1/2026-06-26-nar-geonames-centroids/m1_manifest.json \
+#     --producer-ref <full-commit-SHA> \
 #     --synthetic \
 #     --output-dir docs
 #
@@ -169,6 +171,7 @@ parse_args <- function() {
   out <- list(
     centroid_csv      = NULL,
     centroid_manifest = NULL,
+    producer_ref      = NULL,
     sli_csv           = NULL,
     sli_label         = NULL,
     output_dir        = "docs",
@@ -180,6 +183,7 @@ parse_args <- function() {
     a <- args[i]
     if (a == "--centroid-csv") { out$centroid_csv <- args[i + 1]; i <- i + 2
     } else if (a == "--centroid-manifest") { out$centroid_manifest <- args[i + 1]; i <- i + 2
+    } else if (a == "--producer-ref") { out$producer_ref <- args[i + 1]; i <- i + 2
     } else if (a == "--sli-csv") { out$sli_csv <- args[i + 1]; i <- i + 2
     } else if (a == "--sli-label") { out$sli_label <- args[i + 1]; i <- i + 2
     } else if (a == "--output-dir") { out$output_dir <- args[i + 1]; i <- i + 2
@@ -189,6 +193,9 @@ parse_args <- function() {
   }
   if (is.null(out$centroid_csv) || is.null(out$centroid_manifest)) {
     stop("--centroid-csv and --centroid-manifest are required.")
+  }
+  if (is.null(out$producer_ref)) {
+    stop("--producer-ref is required.")
   }
   if (out$synthetic && !is.null(out$sli_csv)) {
     stop("--synthetic and --sli-csv are mutually exclusive.")
@@ -225,8 +232,9 @@ main <- function() {
   sli_verify_m1_artifact(inputs$centroid_csv, parent_manifest)
   cat("Parent M1 artifact verified against manifest.\n")
 
-  inputs$build_ref <- system("git rev-parse HEAD", intern = TRUE)
-  cat("Generator commit:", inputs$build_ref, "\n")
+  sli_validate_producer_ref(inputs$producer_ref, c("scripts/sli_validate.R"))
+  inputs$build_ref <- inputs$producer_ref
+  cat("Producer revision:", inputs$build_ref, "\n")
 
   set.seed(inputs$seed)
 

@@ -192,3 +192,35 @@ sli_verify_m1_artifact <- function(gz_path, manifest) {
 
   invisible(df)
 }
+
+# Validate that a producer revision exists and contains every named generator
+# script. Returns the full SHA invisibly.
+sli_validate_producer_ref <- function(producer_ref, scripts) {
+  if (is.null(producer_ref) || !nzchar(producer_ref)) {
+    stop("--producer-ref is required.")
+  }
+  res <- tryCatch(
+    suppressWarnings(
+      system2("git", c("cat-file", "-e", producer_ref),
+              stdout = TRUE, stderr = TRUE)
+    ),
+    error = function(e) e
+  )
+  if (inherits(res, "error") || !is.null(attr(res, "status"))) {
+    stop("Producer revision not found: ", producer_ref)
+  }
+  for (s in scripts) {
+    res2 <- tryCatch(
+      suppressWarnings(
+        system2("git", c("cat-file", "-e", paste0(producer_ref, ":", s)),
+                stdout = TRUE, stderr = TRUE)
+      ),
+      error = function(e) e
+    )
+    if (inherits(res2, "error") || !is.null(attr(res2, "status"))) {
+      stop("Producer revision ", producer_ref,
+           " does not contain script: ", s)
+    }
+  }
+  invisible(producer_ref)
+}
