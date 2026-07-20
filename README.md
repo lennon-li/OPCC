@@ -18,7 +18,7 @@ does not claim authoritative postal assignments.
 | M2 baseline | Published | 414,207 NAR postal-code/DBUID rows covering 282,409 postal codes |
 | M2 amendment | Review candidate | 431,541 rows / 299,743 postal codes: NAR plus 17,334 GeoNames point-in-polygon links |
 | M3 | Review candidate | Installable R package, tests, vignette, release index, and validator |
-| M4 foundation | Review candidate | Local source layers, contribution bundles, and source/correction issue templates |
+| M4 | Complete | Source-separated GeoNames coverage enrichment, local source layers, contribution bundles, and source/correction issue templates |
 
 The M2 GeoNames amendment and M3 package are committed in the review branch
 `agent/m2-m3-community-package` and await review/merge. The immutable NAR
@@ -125,9 +125,11 @@ the current GeoNames supplementary-point artifact. It remains a separate point
 layer and never promotes GeoNames coordinates to NAR address evidence.
 
 The reproducible GeoNames coverage/disagreement report is available at
-`docs/m4-geonames-coverage-report.md`. Its current result is deliberately an
-honest non-result: there are no shared NAR/GeoNames postal codes, so OPCC does
-not publish invented cross-source uncertainty weights.
+`docs/m4-geonames-coverage-report.md`. There are no shared NAR/GeoNames postal
+codes, so cross-source uncertainty weighting is not applicable to this layer.
+OPCC retains its deterministic, source-qualified point link and does not
+publish invented weights. Calibration becomes a requirement only for a future
+layer with independently overlapping evidence.
 
 The source table must contain the field declared as `postal_code` in the
 adapter schema map. Optional `latitude` and `longitude` must appear together

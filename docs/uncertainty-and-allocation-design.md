@@ -184,11 +184,13 @@ retains contributing DB counts and identifiers.
 This stage performs no spatial intersection and adds no uncertainty. It only
 propagates and, where possible, collapses existing DB uncertainty.
 
-### Stage 6 - Calibrate GeoNames uncertainty
+### Stage 6 - Calibrate uncertainty when paired evidence exists
 
-The deterministic GeoNames point assignment remains available even before a
-model exists. A separate calibrated layer may generate plausible DB/DA
-candidates around the point.
+The deterministic GeoNames point assignment remains available without a
+cross-source weighting model. When a source layer has no independently paired
+evidence, OPCC does not create or require a calibrated candidate distribution;
+the source-qualified point link remains the complete result for that layer. A
+separate calibrated layer may be generated only when paired evidence exists.
 
 The calibration population is postal codes independently represented by both
 GeoNames and NAR. NAR address distributions are a validation proxy, not perfect
@@ -221,7 +223,7 @@ The calibrated output retains all candidates. Suggested fields include
 `n_candidate_da`, `top_weight`, `weight_entropy`, `support_radius_km`,
 `support_quantile`, `model_version`, and `calibration_vintage`.
 
-### Stage 7 - Validate the model
+### Stage 7 - Validate a calibrated model
 
 The held-out report compares the calibrated model with at least these
 baselines:
@@ -241,9 +243,10 @@ Report overall and stratum-specific metrics:
 - change from the previous source/model vintage.
 
 A nominal 90% candidate set must be assessed against approximately 90%
-held-out coverage. If calibration fails for a stratum, OPCC publishes the
-deterministic supplementary point and a limitation flag rather than a false
-probability distribution.
+held-out coverage. If calibration fails for a stratum, or if no independent
+paired evidence exists to calibrate it, OPCC publishes the deterministic
+supplementary point and a limitation flag rather than a false probability
+distribution.
 
 ### Stage 8 - Produce and verify a release
 

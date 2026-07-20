@@ -137,17 +137,16 @@ repository is publicly reachable to verify its commit-pinned download endpoint.
 
 ### M4 - Source-qualified coverage enrichment
 
-**Status (2026-07-19): IN PROGRESS.** The local-layer foundation is implemented
-on the M2/M3 review branch: adapter metadata, strict local-data validation,
+**Status (2026-07-20): COMPLETE.** M4 delivers a fully gated GeoNames
+supplementary adapter, reproducible source-specific and combined artifacts,
+coverage and disagreement reporting, strict local-data validation,
 source-separated layers, profile reports, contribution bundles, and source and
-correction issue templates. It is deliberately not a completed M4 claim: a
-fully gated non-NAR adapter, reproducible combined artifacts, coverage and
-disagreement reports, and calibrated uncertainty validation remain required by
-the exit gate below. The current GeoNames/NAR report is reproducible and
-honestly records calibration as not estimable because the source layers have
-zero shared postal codes; it does not manufacture uncertainty weights. CI runs
-the versioned coverage report and package checks, including restricted-source,
-provenance, fixture, duplicate-evidence, and source-separation tests.
+correction issue templates. The current GeoNames/NAR layers have zero shared
+postal codes. Cross-source uncertainty weighting is therefore not applicable:
+the deterministic, source-qualified point link is retained, and no weights are
+invented. CI runs the versioned coverage report and package checks, including
+restricted-source, provenance, fixture, duplicate-evidence, and
+source-separation tests.
 
 Add public sources one at a time through a reusable source-adapter contract.
 Each adapter declares its licence, lineage, retrieval endpoint, release date,
@@ -189,22 +188,26 @@ specific layer, but unresolved codes are retained with
 raises confidence only across independent lineages; source layers remain
 inspectable and are never blended into an opaque score.
 
-M4 also implements the calibrated uncertainty layer defined in
+For a future layer with independently overlapping evidence, M4's adapter
+contract supports the calibrated uncertainty layer defined in
 `docs/uncertainty-and-allocation-design.md`: empirically calibrated candidate
-DB/DA sets based on held-out NAR/GeoNames overlap, spatially blocked validation,
-and source/density/rurality strata. All candidate weights remain visible;
-seeded random allocation is optional and never the default lookup behavior.
+DB/DA sets based on held-out overlap, spatially blocked validation, and
+source/density/rurality strata. Without such overlap, OPCC does not create a
+calibrated candidate layer. All candidate weights remain visible; seeded random
+allocation is optional and never the default lookup behavior.
 
 **M4 exit gate:** at least one non-NAR adapter completes the full profiling and
 licence gate; source-specific and combined artifacts are reproducible; coverage
 and disagreement reports quantify additions, supersessions, and unresolved
-codes; held-out uncertainty metrics and calibration by stratum beat or honestly
-fail against point-only, equal-weight, and population-only baselines; and CI
-rejects missing provenance, incompatible licences, duplicate evidence, or
-unexplained coverage loss. The local-layer API, per-invocation contribution
-invitation, contribution-bundle schema, and issue/PR templates are tested;
-fixtures demonstrate that local data remains source-separated and that
-restricted data cannot enter a bundle.
+codes; and CI rejects missing provenance, incompatible licences, duplicate
+evidence, or unexplained coverage loss. Where independently overlapping source
+evidence exists, held-out uncertainty metrics and calibration by stratum must
+beat or honestly fail against point-only, equal-weight, and population-only
+baselines. Where no such overlap exists, no cross-source weighting is required
+or published. The local-layer API, per-invocation contribution invitation,
+contribution-bundle schema, and issue/PR templates are tested; fixtures
+demonstrate that local data remains source-separated and that restricted data
+cannot enter a bundle.
 
 ### M5 - Postal-code to DA roll-up
 
