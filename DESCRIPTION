@@ -7,6 +7,9 @@ Description: Source-qualified, reproducible lookups from Ontario postal codes
     checksum-verified before use and retain their evidence source.
 License: MIT + file LICENSE
 Encoding: UTF-8
+Language: en-US
+URL: https://github.com/lennon-li/OPCC
+BugReports: https://github.com/lennon-li/OPCC/issues
 Roxygen: list(markdown = TRUE)
 Depends: R (>= 4.1)
 Imports: digest, jsonlite

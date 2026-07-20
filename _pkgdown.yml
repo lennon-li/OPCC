@@ -1,0 +1,25 @@
+url: https://lennon-li.github.io/OPCC/
+template:
+  bootstrap: 5
+reference:
+  - title: Correspondence lookups
+    contents:
+      - normalize_postal_code
+      - get_correspondence
+      - get_da_correspondence
+      - pc_to_geo
+      - pc_to_point
+  - title: Release verification
+    contents:
+      - list_vintages
+      - release_manifest
+      - validate_release
+  - title: Local source layers
+    contents:
+      - new_source_adapter
+      - validate_source_data
+      - build_source_layer
+      - profile_source_layer
+      - contribution_bundle
+      - contribution_issue_url
+      - open_contribution_issue

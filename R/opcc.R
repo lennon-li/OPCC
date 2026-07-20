@@ -544,17 +544,21 @@ profile_source_layer <- function(layer) {
 #' Create a reviewable local-source contribution bundle
 #'
 #' @param layer A layer created by [build_source_layer()].
-#' @param output_dir Directory in which to create a new bundle directory.
+#' @param output_dir Explicit directory in which to create a new bundle directory.
 #' @param fixture_rows Maximum normalized sample rows to include.
 #' @return A named list of generated bundle paths.
 #' @export
-contribution_bundle <- function(layer, output_dir = getwd(), fixture_rows = 100L) {
+contribution_bundle <- function(layer, output_dir = NULL, fixture_rows = 100L) {
   .contribution_message()
   if (!inherits(layer, "opcc_source_layer")) {
     stop("layer must be created by build_source_layer()", call. = FALSE)
   }
   adapter <- attr(layer, "opcc_adapter")
   .check_adapter(adapter)
+  if (is.null(output_dir) || !is.character(output_dir) || length(output_dir) != 1L ||
+      is.na(output_dir) || !nzchar(output_dir)) {
+    stop("output_dir must be an explicit non-empty directory path", call. = FALSE)
+  }
   fixture_rows <- as.integer(fixture_rows)
   if (is.na(fixture_rows) || fixture_rows < 1L) stop("fixture_rows must be at least one", call. = FALSE)
   bundle_dir <- file.path(output_dir, paste0("opcc-", adapter$source_id, "-contribution"))
@@ -597,4 +601,66 @@ contribution_bundle <- function(layer, output_dir = getwd(), fixture_rows = 100L
     ),
     class = "opcc_contribution_bundle"
   )
+}
+
+#' Create a GitHub source-proposal issue URL for a contribution bundle
+#'
+#' The returned URL opens GitHub's issue composer with bundle provenance
+#' prefilled. GitHub does not support file attachments through this URL, so the
+#' contributor must attach the generated bundle manually before submitting.
+#'
+#' @param bundle A bundle returned by [contribution_bundle()].
+#' @param repository GitHub repository in `owner/repository` form.
+#' @return A GitHub issue-composer URL.
+#' @export
+contribution_issue_url <- function(bundle, repository = "lennon-li/OPCC") {
+  if (!inherits(bundle, "opcc_contribution_bundle") || !file.exists(bundle$provenance)) {
+    stop("bundle must be an existing contribution_bundle() result", call. = FALSE)
+  }
+  if (!is.character(repository) || length(repository) != 1L ||
+      !grepl("^[^/[:space:]]+/[^/[:space:]]+$", repository)) {
+    stop("repository must use owner/repository form", call. = FALSE)
+  }
+  provenance <- jsonlite::read_json(bundle$provenance, simplifyVector = TRUE)
+  endpoint <- if (is.null(provenance$endpoint) || !is.character(provenance$endpoint) ||
+      length(provenance$endpoint) != 1L || !isTRUE(nzchar(provenance$endpoint))) {
+    "not supplied"
+  } else {
+    provenance$endpoint
+  }
+  body <- paste(
+    "## Source",
+    paste0("- Source name and stable identifier: ", provenance$source_id),
+    paste0("- Public endpoint: ", endpoint),
+    paste0("- Licence or permission statement: ", provenance$licence),
+    paste0("- Retrieval or creation date: ", provenance$retrieval_date),
+    paste0("- Source lineage and collection method: ", provenance$lineage),
+    "",
+    "## Contribution bundle",
+    "Attach the generated fixture, adapter configuration, quality report, and provenance files from this bundle before submitting.",
+    sep = "\n"
+  )
+  query <- paste0(
+    "template=source-proposal.md&title=Source%3A%20",
+    utils::URLencode(provenance$source_id, reserved = TRUE),
+    "&body=", utils::URLencode(body, reserved = TRUE)
+  )
+  paste0("https://github.com/", repository, "/issues/new?", query)
+}
+
+#' Open a GitHub source-proposal issue for a contribution bundle
+#'
+#' @inheritParams contribution_issue_url
+#' @param open Whether to open the returned URL in a browser. Defaults to
+#'   `FALSE` so submission remains an explicit user action.
+#' @return Invisibly, the GitHub issue-composer URL.
+#' @export
+open_contribution_issue <- function(bundle, repository = "lennon-li/OPCC", open = FALSE) {
+  url <- contribution_issue_url(bundle, repository)
+  if (isTRUE(open)) {
+    if (!interactive()) stop("open = TRUE requires an interactive R session", call. = FALSE)
+    utils::browseURL(url)
+  }
+  message("Attach the generated contribution bundle files, then submit the GitHub issue: ", url)
+  invisible(url)
 }

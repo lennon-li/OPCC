@@ -136,6 +136,11 @@ profile_source_layer(layer)
 contribution_bundle(layer, output_dir = "local-contributions")
 ```
 
+To start a GitHub Source Proposal with the bundle provenance prefilled, use
+`contribution_issue_url(bundle)` or, in an interactive R session,
+`open_contribution_issue(bundle, open = TRUE)`. Attach the generated bundle
+files before submitting; the package never uploads local data automatically.
+
 `geonames_supplementary_adapter()` supplies the checked, versioned metadata for
 the current GeoNames supplementary-point artifact. It remains a separate point
 layer and never promotes GeoNames coordinates to NAR address evidence.

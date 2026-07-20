@@ -197,6 +197,13 @@ bundle <- contribution_bundle(
 bundle
 ```
 
+Create a prefilled GitHub Source Proposal from the bundle provenance with
+`contribution_issue_url(bundle)`. In an interactive R session, use
+`open_contribution_issue(bundle, open = TRUE)` to open the issue composer.
+Attach the bundle's fixture, adapter configuration, quality report, and
+provenance files before submitting; the package never uploads local data
+automatically.
+
 Before contributing, review the licence, endpoint, lineage, checksum, fixture,
 and quality report. See [M4 source adapters](m4-contributing-source.md) for
 the maintainer review process.

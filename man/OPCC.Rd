@@ -13,6 +13,8 @@
 \alias{build_source_layer}
 \alias{profile_source_layer}
 \alias{contribution_bundle}
+\alias{contribution_issue_url}
+\alias{open_contribution_issue}
 \alias{release_manifest}
 \alias{validate_release}
 \title{Open Ontario Postal Code Correspondence}
@@ -30,7 +32,9 @@ pc_to_point(postal_code, vintage = "2026-07-19", point_file = NULL, cache_dir = 
 validate_source_data(data, adapter)
 build_source_layer(data, adapter)
 profile_source_layer(layer)
-contribution_bundle(layer, output_dir = getwd(), fixture_rows = 100L)
+contribution_bundle(layer, output_dir = NULL, fixture_rows = 100L)
+contribution_issue_url(bundle, repository = "lennon-li/OPCC")
+open_contribution_issue(bundle, repository = "lennon-li/OPCC", open = FALSE)
 release_manifest(vintage = "2026-06-26", cache_dir = tools::R_user_dir("OPCC", "cache"), offline = FALSE, level = c("DB", "DA"))
 validate_release(vintage = "2026-06-26", cache_dir = tools::R_user_dir("OPCC", "cache"), offline = FALSE, level = c("DB", "DA"))
 }
@@ -55,8 +59,11 @@ validate_release(vintage = "2026-06-26", cache_dir = tools::R_user_dir("OPCC", "
   \item{data}{A user-supplied postal-code evidence data frame.}
   \item{adapter}{Source metadata created by \code{new_source_adapter}.}
   \item{layer}{A local source layer created by \code{build_source_layer}.}
-  \item{output_dir}{Directory where a new contribution bundle is created.}
+  \item{output_dir}{Explicit directory where a new contribution bundle is created.}
   \item{fixture_rows}{Maximum normalized sample rows in the bundle.}
+  \item{bundle}{A contribution bundle returned by \code{contribution_bundle}.}
+  \item{repository}{GitHub repository in \code{owner/repository} form.}
+  \item{open}{Whether to open the issue-composer URL in an interactive browser.}
   \item{...}{Arguments passed to the selected correspondence getter.}
 }
 \value{Data frames or release metadata, depending on the function.}
@@ -64,4 +71,9 @@ validate_release(vintage = "2026-06-26", cache_dir = tools::R_user_dir("OPCC", "
 Local source layers are always source-separated and never modify a canonical
 OPCC release. Canada Post, PCCF, and PCCF+ data are rejected. Each local-data
 function invites users to contribute redistributable evidence through a
-reviewable bundle.}
+reviewable bundle. Use \code{contribution_issue_url} to create a prefilled
+GitHub Source Proposal URL from a bundle's provenance. In an interactive R
+session, \code{open_contribution_issue(bundle, open = TRUE)} opens that URL.
+GitHub issue URLs cannot attach files, so the contributor must attach the
+bundle's fixture, adapter configuration, quality report, and provenance files
+before submitting. The package never uploads local data automatically.}
