@@ -1,12 +1,15 @@
 Package: OPCC
 Title: Open Ontario Postal Code Correspondence
 Version: 0.0.1
-Authors@R: person("OPCC", "Maintainers", email = "maintainers@example.org", role = c("aut", "cre"))
+Authors@R: c(person("OPCC", "Maintainers", email = "maintainers@example.org", role = c("aut", "cre")))
 Description: Source-qualified, reproducible lookups from Ontario postal codes
     to Statistics Canada 2021 census geography. Release artifacts are
     checksum-verified before use and retain their evidence source.
 License: MIT + file LICENSE
 Encoding: UTF-8
+Language: en-US
+URL: https://github.com/lennon-li/OPCC
+BugReports: https://github.com/lennon-li/OPCC/issues
 Roxygen: list(markdown = TRUE)
 Depends: R (>= 4.1)
 Imports: digest, jsonlite

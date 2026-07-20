@@ -18,7 +18,10 @@ does not claim authoritative postal assignments.
 | M2 baseline | Published | 414,207 NAR postal-code/DBUID rows covering 282,409 postal codes |
 | M2 amendment | Review candidate | 431,541 rows / 299,743 postal codes: NAR plus 17,334 GeoNames point-in-polygon links |
 | M3 | Review candidate | Installable R package, tests, vignette, release index, and validator |
-| M4 foundation | Review candidate | Local source layers, contribution bundles, and source/correction issue templates |
+| M4 | Complete | Source-separated GeoNames coverage enrichment, local source layers, contribution bundles, and source/correction issue templates |
+| M5 | Complete | Direct weighted postal-code-to-DA artifact with DB-level lineage |
+| M6 | Complete | External Hermes release-assurance handoff with human publish gate |
+| M7 | In progress | Public governance, security, release, attribution, and citation policy |
 
 The M2 GeoNames amendment and M3 package are committed in the review branch
 `agent/m2-m3-community-package` and await review/merge. The immutable NAR
@@ -35,7 +38,7 @@ as NAR address evidence.
 
 From a source checkout, verify the versioned M2 baseline and its release index:
 
-```r
+```bash
 Rscript scripts/m3_validate_release.R
 ```
 
@@ -47,7 +50,51 @@ vignette. It exposes `normalize_postal_code()`, `pc_to_geo()`,
 The release index uses commit-pinned GitHub raw URLs so a published artifact
 cannot change when `main` advances. The repository must be public for those
 checksum-verified remote downloads to be available to unauthenticated clients.
-After publication, run the validator with `--remote` to test the endpoint.
+After publication, run the validator with `--remote` to test the endpoint:
+
+```bash
+Rscript scripts/m3_validate_release.R --remote
+```
+
+The remote command verifies the downloaded manifest and compressed CSV against
+their SHA-256 values, then checks unique postal-code/DBUID keys, allocation
+weights, and one `best_link` per postal code.
+
+## Direct DA lookup
+
+M5 rolls the versioned DB correspondence to Dissemination Areas through its
+tracked 2021 GAF DB-to-DA attributes. It aggregates DB allocation weights by
+DA, retains every contributing DB ID and source vintage, and recomputes one
+deterministic best DA per postal code. It does not create a new point or postal
+polygon assignment.
+
+```r
+pc_to_geo("K1A 0A6", level = "DA")
+```
+
+Use `get_da_correspondence()` for the full verified M5 artifact and
+`validate_release(level = "DA")` to verify it from the release index.
+
+## Rebuild the current candidate
+
+The frozen 2026-06-26 baseline is verified above. Rebuilding from the current
+public sources produces the newer NAR-plus-GeoNames candidate, not a
+byte-for-byte replacement for that baseline. The full workflow downloads large
+git-ignored inputs to `.scratch/`; never commit those inputs or overwrite a
+versioned release directory.
+
+```bash
+Rscript scripts/m1_nar_profile.R
+Rscript scripts/m4_geonames_profile.R
+Rscript scripts/m1_build_centroids.R
+Rscript scripts/m1_gaf_rollup.R
+Rscript scripts/m2_build_correspondence.R
+```
+
+Before the GAF rollup, place the public 2021 DB boundary shapefile and
+Geographic Attribute File at the paths documented in
+[`docs/m1-reproduction.md`](docs/m1-reproduction.md). The detailed, executable
+guide is [`docs/reproduce-m2-artifact.qmd`](docs/reproduce-m2-artifact.qmd).
 
 ## Product direction
 
@@ -64,32 +111,59 @@ Every published release must be useful without the bulk build inputs,
 rebuildable from public-source manifests and checksums, independently
 verifiable, and open to fixture-backed contributions.
 
+## Community and governance
+
+Contribute open, redistributable evidence through the
+[contribution guide](CONTRIBUTING.md). Review the [Code of Conduct](CODE_OF_CONDUCT.md),
+[governance](GOVERNANCE.md), [security policy](SECURITY.md),
+[release policy](docs/release-policy.md), and
+[maintainer guide](docs/maintainer-guide.md),
+[licence and attribution matrix](docs/license-attribution.md). Cite OPCC using
+[`CITATION.cff`](CITATION.cff). Immutable release artifacts are distributed
+through GitHub Releases; OPCC does not currently maintain a Zenodo/DOI mirror.
+
+## Optional: use your own open data locally
+
 The M4 foundation lets users validate and use their own postal-code evidence as
 an explicitly local, source-labeled layer. Every local-data function states
 that the layer is separate and invites users with redistributable evidence to
 generate a contribution bundle and open an OPCC issue or pull request. Local
-data never silently merges into a canonical OPCC release.
+data never silently merges into a canonical OPCC release. Do not use Canada
+Post, PCCF, PCCF+, or other restricted data.
 
 ```r
+source("R/opcc.R")
+my_postal_data <- utils::read.csv("/path/to/open-data.csv", stringsAsFactors = FALSE)
+
+# The source postal column is named "postal" here. Coordinates, if present,
+# must be named latitude and longitude and use decimal degrees.
 adapter <- new_source_adapter(
   source_id = "municipal_registry",
   licence = "Open Government Licence",
   lineage = "municipal address registry",
-  schema_map = list(postal_code = "postal")
+  schema_map = list(postal_code = "postal"),
+  checksum = digest::digest("/path/to/open-data.csv", algo = "sha256", file = TRUE)
 )
 layer <- build_source_layer(my_postal_data, adapter)
 profile_source_layer(layer)
-contribution_bundle(layer)
+contribution_bundle(layer, output_dir = "local-contributions")
 ```
+
+To start a GitHub Source Proposal with the bundle provenance prefilled, use
+`contribution_issue_url(bundle)` or, in an interactive R session,
+`open_contribution_issue(bundle, open = TRUE)`. Attach the generated bundle
+files before submitting; the package never uploads local data automatically.
 
 `geonames_supplementary_adapter()` supplies the checked, versioned metadata for
 the current GeoNames supplementary-point artifact. It remains a separate point
 layer and never promotes GeoNames coordinates to NAR address evidence.
 
 The reproducible GeoNames coverage/disagreement report is available at
-`docs/m4-geonames-coverage-report.md`. Its current result is deliberately an
-honest non-result: there are no shared NAR/GeoNames postal codes, so OPCC does
-not publish invented cross-source uncertainty weights.
+`docs/m4-geonames-coverage-report.md`. There are no shared NAR/GeoNames postal
+codes, so cross-source uncertainty weighting is not applicable to this layer.
+OPCC retains its deterministic, source-qualified point link and does not
+publish invented weights. Calibration becomes a requirement only for a future
+layer with independently overlapping evidence.
 
 The source table must contain the field declared as `postal_code` in the
 adapter schema map. Optional `latitude` and `longitude` must appear together
@@ -98,6 +172,8 @@ rejected; only redistributable evidence can enter a contribution bundle.
 
 See `docs/ROADMAP.md` for milestone contracts and
 `docs/m2-reproduction.md` for the current release schema and verification
-details. See `docs/m4-contributing-source.md` for the local-layer and
+details. See `docs/reproduce-m2-artifact.qmd` for executable verification,
+rebuild, and optional local-data import instructions. See
+`docs/m4-contributing-source.md` for the local-layer and
 contribution workflow. See `docs/uncertainty-and-allocation-design.md` for the uncertainty
 model and reproducible build, calibration, validation, and release pipeline.

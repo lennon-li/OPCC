@@ -45,10 +45,10 @@ report <- list(
   geonames_postal_codes_overlapping_baseline = length(intersect(geonames_pc, baseline_pc)),
   source_point_postal_codes_overlapping_baseline = length(intersect(point_pc, baseline_pc)),
   disagreement_status = "not_estimable_no_shared_postal_codes",
-  calibration_status = "not_run_no_paired_nar_geonames_evidence",
+  calibration_status = "not_required_no_paired_nar_geonames_evidence",
   interpretation = paste(
     "GeoNames is retained as a source-separated supplementary point layer.",
-    "No calibrated cross-source disagreement or uncertainty weights are published from these artifacts."
+    "No cross-source uncertainty weights are required or published from these artifacts."
   )
 )
 

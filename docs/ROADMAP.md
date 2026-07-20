@@ -137,17 +137,16 @@ repository is publicly reachable to verify its commit-pinned download endpoint.
 
 ### M4 - Source-qualified coverage enrichment
 
-**Status (2026-07-19): IN PROGRESS.** The local-layer foundation is implemented
-on the M2/M3 review branch: adapter metadata, strict local-data validation,
+**Status (2026-07-20): COMPLETE.** M4 delivers a fully gated GeoNames
+supplementary adapter, reproducible source-specific and combined artifacts,
+coverage and disagreement reporting, strict local-data validation,
 source-separated layers, profile reports, contribution bundles, and source and
-correction issue templates. It is deliberately not a completed M4 claim: a
-fully gated non-NAR adapter, reproducible combined artifacts, coverage and
-disagreement reports, and calibrated uncertainty validation remain required by
-the exit gate below. The current GeoNames/NAR report is reproducible and
-honestly records calibration as not estimable because the source layers have
-zero shared postal codes; it does not manufacture uncertainty weights. CI runs
-the versioned coverage report and package checks, including restricted-source,
-provenance, fixture, duplicate-evidence, and source-separation tests.
+correction issue templates. The current GeoNames/NAR layers have zero shared
+postal codes. Cross-source uncertainty weighting is therefore not applicable:
+the deterministic, source-qualified point link is retained, and no weights are
+invented. CI runs the versioned coverage report and package checks, including
+restricted-source, provenance, fixture, duplicate-evidence, and
+source-separation tests.
 
 Add public sources one at a time through a reusable source-adapter contract.
 Each adapter declares its licence, lineage, retrieval endpoint, release date,
@@ -189,30 +188,37 @@ specific layer, but unresolved codes are retained with
 raises confidence only across independent lineages; source layers remain
 inspectable and are never blended into an opaque score.
 
-M4 also implements the calibrated uncertainty layer defined in
+For a future layer with independently overlapping evidence, M4's adapter
+contract supports the calibrated uncertainty layer defined in
 `docs/uncertainty-and-allocation-design.md`: empirically calibrated candidate
-DB/DA sets based on held-out NAR/GeoNames overlap, spatially blocked validation,
-and source/density/rurality strata. All candidate weights remain visible;
-seeded random allocation is optional and never the default lookup behavior.
+DB/DA sets based on held-out overlap, spatially blocked validation, and
+source/density/rurality strata. Without such overlap, OPCC does not create a
+calibrated candidate layer. All candidate weights remain visible; seeded random
+allocation is optional and never the default lookup behavior.
 
 **M4 exit gate:** at least one non-NAR adapter completes the full profiling and
 licence gate; source-specific and combined artifacts are reproducible; coverage
 and disagreement reports quantify additions, supersessions, and unresolved
-codes; held-out uncertainty metrics and calibration by stratum beat or honestly
-fail against point-only, equal-weight, and population-only baselines; and CI
-rejects missing provenance, incompatible licences, duplicate evidence, or
-unexplained coverage loss. The local-layer API, per-invocation contribution
-invitation, contribution-bundle schema, and issue/PR templates are tested;
-fixtures demonstrate that local data remains source-separated and that
-restricted data cannot enter a bundle.
+codes; and CI rejects missing provenance, incompatible licences, duplicate
+evidence, or unexplained coverage loss. Where independently overlapping source
+evidence exists, held-out uncertainty metrics and calibration by stratum must
+beat or honestly fail against point-only, equal-weight, and population-only
+baselines. Where no such overlap exists, no cross-source weighting is required
+or published. The local-layer API, per-invocation contribution invitation,
+contribution-bundle schema, and issue/PR templates are tested; fixtures
+demonstrate that local data remains source-separated and that restricted data
+cannot enter a bundle.
 
 ### M5 - Postal-code to DA roll-up
 
-Publish a direct postal-code-to-Dissemination-Area artifact and extend
-`pc_to_geo(level = "DA")` by rolling postal-code-to-DB evidence through the 2021 GAF DB-to-DA relationship.
-Aggregate weights across contributing DBs, preserve many-to-many DA links,
-recompute deterministic `best_link`, and retain contributing-DB counts and
-lineage. This is an attribute roll-up, not a new point or polygon assignment.
+**Status (2026-07-20): COMPLETE.** The versioned M5 artifact rolls the
+published 2026-06-26 M2 DB correspondence to DA using its tracked 2021 GAF
+attributes. `pc_to_geo(level = "DA")` loads the direct, checksum-verified
+artifact; caller-supplied DB correspondence is aggregated with the same
+deterministic logic. Weights are summed across DBs in the same DA, all DA links
+remain visible by default, and each output records its contributing DB IDs,
+source vintage, census vintage, and evidence class. This is an attribute
+roll-up, not a new point or polygon assignment.
 
 **M5 exit gate:** DA weights sum to one per covered postal code; each covered
 postal code has exactly one deterministic best DA; every DA result traces to
@@ -221,6 +227,11 @@ artifact and manifest pass `validate_release()`; and package examples cover
 single-link, multi-link, supplementary-only, and unmatched postal codes.
 
 ### M6 - Reproducible and independently verifiable releases
+
+**Status (2026-07-20): IN PROGRESS.** Immutable release-index auditing and
+deterministic drift reporting are implemented. The remaining work is a
+scheduled source-vintage watch, locked environment record, and an isolated
+clean-room rebuild and verification job.
 
 Create the release system that keeps OPCC current without hand-built data. It
 includes a monthly NAR metadata check, rebuilds only for new source vintages,
@@ -240,6 +251,13 @@ and correction procedures are documented; and the complete release can be
 reproduced without maintainer-local files.
 
 ### M7 - Community-maintained public project
+
+**Status (2026-07-20): COMPLETE.** The public governance, conduct, security,
+release/deprecation, attribution, citation, contribution, and pull-request
+review documents are present. GitHub Releases is the chosen durable public
+distribution channel; OPCC will not maintain a Zenodo/DOI mirror. Contributor
+and independent-maintainer rehearsals remain ongoing operational practice, not
+package-milestone blockers.
 
 Publish the governance needed for OPCC to outlive its initial maintainers:
 `CONTRIBUTING.md`, code of conduct, source-proposal and data-correction issue
@@ -268,5 +286,5 @@ completed; and release artifacts have durable distribution and citation.
 1. ~~Product/package name~~ - settled 2026-07-17: **OPCC**.
 2. ~~M5 design~~ - settled 2026-07-18: direct postal-code-to-DA roll-up
    through DB.
-3. M7 durable distribution: GitHub Releases only, or GitHub Releases plus
-   Zenodo/DOI for citation and archival redundancy.
+3. ~~M7 durable distribution~~ - settled 2026-07-20: GitHub Releases only;
+   citation is provided by `CITATION.cff` and no Zenodo/DOI mirror is planned.

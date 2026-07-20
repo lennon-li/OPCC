@@ -14,6 +14,13 @@
   )$points
 }
 
+.da_index <- function() {
+  jsonlite::read_json(
+    system.file("extdata", "release-index.json", package = "OPCC"),
+    simplifyVector = FALSE
+  )$m5
+}
+
 .release_spec <- function(index, vintage) {
   spec <- index[[vintage]]
   if (is.null(spec)) {
@@ -58,6 +65,96 @@
   x
 }
 
+.coerce_da_correspondence <- function(x, vintage) {
+  numeric_columns <- intersect(c("allocation_weight"), names(x))
+  integer_columns <- intersect(c("n_contributing_dbs"), names(x))
+  for (column in numeric_columns) x[[column]] <- as.numeric(x[[column]])
+  for (column in integer_columns) x[[column]] <- as.integer(x[[column]])
+  if ("best_link" %in% names(x)) x$best_link <- x$best_link == "TRUE"
+  attr(x, "opcc_vintage") <- vintage
+  attr(x, "opcc_source") <- "OPCC direct postal-code-to-DA correspondence"
+  x
+}
+
+.collapse_values <- function(x) paste(sort(unique(as.character(x))), collapse = "|")
+
+#' Aggregate postal-code-to-DB evidence to DA links
+#'
+#' @param correspondence A postal-code-to-DB correspondence data frame.
+#' @return A data frame with one row per `postal_code` and `DAUID`.
+#' @export
+aggregate_da_correspondence <- function(correspondence) {
+  required <- c("postal_code", "DBUID", "DAUID")
+  if (!all(required %in% names(correspondence))) {
+    stop("Correspondence is missing postal_code, DBUID, or DAUID", call. = FALSE)
+  }
+  weight_column <- if ("allocation_weight" %in% names(correspondence)) {
+    "allocation_weight"
+  } else if ("address_weight" %in% names(correspondence)) {
+    "address_weight"
+  } else {
+    stop("Correspondence has no allocation-weight column", call. = FALSE)
+  }
+  x <- correspondence
+  x$postal_code <- as.character(x$postal_code)
+  x$DBUID <- as.character(x$DBUID)
+  x$DAUID <- as.character(x$DAUID)
+  x[[weight_column]] <- as.numeric(x[[weight_column]])
+  if (anyNA(x$postal_code) || anyNA(x$DBUID) || anyNA(x$DAUID) ||
+      any(!nzchar(x$postal_code) | !nzchar(x$DBUID) | !nzchar(x$DAUID))) {
+    stop("Correspondence has missing identifiers", call. = FALSE)
+  }
+  if (any(!is.finite(x[[weight_column]])) || any(x[[weight_column]] < 0)) {
+    stop("Correspondence has invalid allocation weights", call. = FALSE)
+  }
+  if (anyDuplicated(x[c("postal_code", "DBUID")])) {
+    stop("Duplicate postal-code/DB links", call. = FALSE)
+  }
+  input_weights <- tapply(x[[weight_column]], x$postal_code, sum)
+  if (any(abs(input_weights - 1) > 1e-8)) {
+    stop("Input allocation weights do not sum to one", call. = FALSE)
+  }
+  x <- x[order(x$postal_code, x$DAUID, x$DBUID), , drop = FALSE]
+  group_start <- c(TRUE, x$postal_code[-1L] != x$postal_code[-nrow(x)] |
+    x$DAUID[-1L] != x$DAUID[-nrow(x)])
+  groups <- cumsum(group_start)
+  starts <- which(group_start)
+  ends <- c(starts[-1L] - 1L, nrow(x))
+  output <- data.frame(
+    postal_code = x$postal_code[starts],
+    DAUID = x$DAUID[starts],
+    allocation_weight = as.numeric(rowsum(x[[weight_column]], groups, reorder = FALSE)),
+    n_contributing_dbs = ends - starts + 1L,
+    contributing_dbuids = vapply(seq_along(starts), function(i) {
+      paste(x$DBUID[starts[[i]]:ends[[i]]], collapse = "|")
+    }, character(1)),
+    source_vintages = vapply(seq_along(starts), function(i) {
+      if (!"source_vintage" %in% names(x)) return(NA_character_)
+      .collapse_values(x$source_vintage[starts[[i]]:ends[[i]]])
+    }, character(1)),
+    census_vintages = vapply(seq_along(starts), function(i) {
+      if (!"census_vintage" %in% names(x)) return(NA_character_)
+      .collapse_values(x$census_vintage[starts[[i]]:ends[[i]]])
+    }, character(1)),
+    evidence_classes = vapply(seq_along(starts), function(i) {
+      if (!"evidence_class" %in% names(x)) return(NA_character_)
+      .collapse_values(x$evidence_class[starts[[i]]:ends[[i]]])
+    }, character(1)),
+    stringsAsFactors = FALSE
+  )
+  winner_order <- order(output$postal_code, -output$allocation_weight, output$DAUID)
+  output$best_link <- FALSE
+  output$best_link[winner_order[!duplicated(output$postal_code[winner_order])]] <- TRUE
+  output <- output[order(output$postal_code, -output$allocation_weight, output$DAUID), , drop = FALSE]
+  rownames(output) <- NULL
+  output_weights <- tapply(output$allocation_weight, output$postal_code, sum)
+  output_best <- tapply(output$best_link, output$postal_code, sum)
+  if (any(abs(output_weights - 1) > 1e-8) || any(output_best != 1L)) {
+    stop("DA roll-up invariants failed", call. = FALSE)
+  }
+  output
+}
+
 #' Normalize Canadian postal codes
 #'
 #' @param x A character vector of postal codes.
@@ -78,9 +175,14 @@ normalize_postal_code <- function(x, strict = FALSE) {
 }
 
 #' List supported correspondence release vintages
+#'
+#' @param level Geography level, `"DB"` or `"DA"`.
 #' @return A character vector of release vintages.
 #' @export
-list_vintages <- function() names(.index())
+list_vintages <- function(level = c("DB", "DA")) {
+  level <- match.arg(level)
+  names(if (level == "DB") .index() else .da_index())
+}
 
 #' Download, cache, and verify a correspondence release
 #'
@@ -101,6 +203,27 @@ get_correspondence <- function(
     offline
   )
   .coerce_correspondence(.read_csv_gz(path), vintage)
+}
+
+#' Download, cache, and verify a direct DA correspondence release
+#'
+#' @param vintage A value returned by [list_vintages()] for `level = "DA"`.
+#' @param cache_dir Directory used for verified downloaded files.
+#' @param offline Require an already cached verified file.
+#' @return A data frame of postal-code-to-DA links with contributing DB lineage.
+#' @export
+get_da_correspondence <- function(
+    vintage = "2026-06-26",
+    cache_dir = tools::R_user_dir("OPCC", "cache"),
+    offline = FALSE) {
+  spec <- .release_spec(.da_index(), vintage)
+  path <- .download_verified(
+    spec$artifact,
+    .cache_path("m5", vintage, cache_dir, ".csv.gz"),
+    spec$sha256,
+    offline
+  )
+  .coerce_da_correspondence(.read_csv_gz(path), vintage)
 }
 
 #' Look up postal-code-to-geography links
@@ -124,13 +247,14 @@ pc_to_geo <- function(
     ...) {
   level <- match.arg(level)
   pcs <- unique(normalize_postal_code(postal_code, strict = TRUE))
-  x <- if (is.null(correspondence)) get_correspondence(...) else correspondence
+  x <- if (is.null(correspondence)) {
+    if (level == "DA") get_da_correspondence(...) else get_correspondence(...)
+  } else {
+    correspondence
+  }
+  if (level == "DA" && !is.null(correspondence)) x <- aggregate_da_correspondence(x)
   out <- x[x$postal_code %in% pcs, , drop = FALSE]
   if (!all_links) out <- out[out$best_link, , drop = FALSE]
-  if (level == "DA") {
-    if (!"DAUID" %in% names(out)) stop("Correspondence has no DAUID column", call. = FALSE)
-    out <- out[, setdiff(names(out), "DBUID"), drop = FALSE]
-  }
   attr(out, "unmatched") <- setdiff(pcs, unique(out$postal_code))
   out
 }
@@ -138,6 +262,7 @@ pc_to_geo <- function(
 #' Read and verify a release manifest
 #'
 #' @param vintage A value returned by [list_vintages()].
+#' @param level Geography level, `"DB"` or `"DA"`.
 #' @param cache_dir Directory used for verified downloaded files.
 #' @param offline Require an already cached verified file.
 #' @return A parsed JSON list.
@@ -145,11 +270,13 @@ pc_to_geo <- function(
 release_manifest <- function(
     vintage = "2026-06-26",
     cache_dir = tools::R_user_dir("OPCC", "cache"),
-    offline = FALSE) {
-  spec <- .release_spec(.index(), vintage)
+    offline = FALSE,
+    level = c("DB", "DA")) {
+  level <- match.arg(level)
+  spec <- .release_spec(if (level == "DB") .index() else .da_index(), vintage)
   path <- .download_verified(
     spec$manifest,
-    .cache_path("m2", vintage, cache_dir, ".manifest.json"),
+    .cache_path(if (level == "DB") "m2" else "m5", vintage, cache_dir, ".manifest.json"),
     spec$manifest_sha256,
     offline
   )
@@ -159,6 +286,7 @@ release_manifest <- function(
 #' Validate a verified correspondence release
 #'
 #' @param vintage A value returned by [list_vintages()].
+#' @param level Geography level, `"DB"` or `"DA"`.
 #' @param cache_dir Directory used for verified downloaded files.
 #' @param offline Require an already cached verified file.
 #' @return Invisibly `TRUE`, or an error describing a failed invariant.
@@ -166,19 +294,35 @@ release_manifest <- function(
 validate_release <- function(
     vintage = "2026-06-26",
     cache_dir = tools::R_user_dir("OPCC", "cache"),
-    offline = FALSE) {
-  x <- get_correspondence(vintage, cache_dir, offline)
-  required <- c("postal_code", "DBUID", "DAUID", "best_link", "confidence")
+    offline = FALSE,
+    level = c("DB", "DA")) {
+  level <- match.arg(level)
+  x <- if (level == "DB") {
+    get_correspondence(vintage, cache_dir, offline)
+  } else {
+    get_da_correspondence(vintage, cache_dir, offline)
+  }
+  manifest <- release_manifest(vintage, cache_dir, offline, level)
+  required <- if (level == "DB") {
+    c("postal_code", "DBUID", "DAUID", "best_link", "confidence")
+  } else {
+    c("postal_code", "DAUID", "best_link", "n_contributing_dbs", "contributing_dbuids", "source_vintages")
+  }
   if (!all(required %in% names(x))) stop("Release is missing required columns", call. = FALSE)
   weight_column <- if ("allocation_weight" %in% names(x)) "allocation_weight" else "address_weight"
   if (!weight_column %in% names(x)) stop("Release has no allocation-weight column", call. = FALSE)
-  if (anyDuplicated(x[c("postal_code", "DBUID")])) stop("Duplicate postal-code/DB links", call. = FALSE)
+  key_column <- if (level == "DB") "DBUID" else "DAUID"
+  if (anyDuplicated(x[c("postal_code", key_column)])) stop("Duplicate postal-code/geography links", call. = FALSE)
   weights <- tapply(x[[weight_column]], x$postal_code, sum)
   best <- tapply(x$best_link, x$postal_code, sum)
   if (any(!is.finite(weights)) || any(abs(weights - 1) > 1e-8)) {
     stop("Allocation weights do not sum to one", call. = FALSE)
   }
   if (any(best != 1L)) stop("Each postal code must have exactly one best link", call. = FALSE)
+  if (!identical(tolower(manifest$release_artifact$sha256),
+                 tolower(.release_spec(if (level == "DB") .index() else .da_index(), vintage)$sha256))) {
+    stop("Manifest/index disagreement", call. = FALSE)
+  }
   invisible(TRUE)
 }
 
@@ -400,17 +544,21 @@ profile_source_layer <- function(layer) {
 #' Create a reviewable local-source contribution bundle
 #'
 #' @param layer A layer created by [build_source_layer()].
-#' @param output_dir Directory in which to create a new bundle directory.
+#' @param output_dir Explicit directory in which to create a new bundle directory.
 #' @param fixture_rows Maximum normalized sample rows to include.
 #' @return A named list of generated bundle paths.
 #' @export
-contribution_bundle <- function(layer, output_dir = getwd(), fixture_rows = 100L) {
+contribution_bundle <- function(layer, output_dir = NULL, fixture_rows = 100L) {
   .contribution_message()
   if (!inherits(layer, "opcc_source_layer")) {
     stop("layer must be created by build_source_layer()", call. = FALSE)
   }
   adapter <- attr(layer, "opcc_adapter")
   .check_adapter(adapter)
+  if (is.null(output_dir) || !is.character(output_dir) || length(output_dir) != 1L ||
+      is.na(output_dir) || !nzchar(output_dir)) {
+    stop("output_dir must be an explicit non-empty directory path", call. = FALSE)
+  }
   fixture_rows <- as.integer(fixture_rows)
   if (is.na(fixture_rows) || fixture_rows < 1L) stop("fixture_rows must be at least one", call. = FALSE)
   bundle_dir <- file.path(output_dir, paste0("opcc-", adapter$source_id, "-contribution"))
@@ -453,4 +601,66 @@ contribution_bundle <- function(layer, output_dir = getwd(), fixture_rows = 100L
     ),
     class = "opcc_contribution_bundle"
   )
+}
+
+#' Create a GitHub source-proposal issue URL for a contribution bundle
+#'
+#' The returned URL opens GitHub's issue composer with bundle provenance
+#' prefilled. GitHub does not support file attachments through this URL, so the
+#' contributor must attach the generated bundle manually before submitting.
+#'
+#' @param bundle A bundle returned by [contribution_bundle()].
+#' @param repository GitHub repository in `owner/repository` form.
+#' @return A GitHub issue-composer URL.
+#' @export
+contribution_issue_url <- function(bundle, repository = "lennon-li/OPCC") {
+  if (!inherits(bundle, "opcc_contribution_bundle") || !file.exists(bundle$provenance)) {
+    stop("bundle must be an existing contribution_bundle() result", call. = FALSE)
+  }
+  if (!is.character(repository) || length(repository) != 1L ||
+      !grepl("^[^/[:space:]]+/[^/[:space:]]+$", repository)) {
+    stop("repository must use owner/repository form", call. = FALSE)
+  }
+  provenance <- jsonlite::read_json(bundle$provenance, simplifyVector = TRUE)
+  endpoint <- if (is.null(provenance$endpoint) || !is.character(provenance$endpoint) ||
+      length(provenance$endpoint) != 1L || !isTRUE(nzchar(provenance$endpoint))) {
+    "not supplied"
+  } else {
+    provenance$endpoint
+  }
+  body <- paste(
+    "## Source",
+    paste0("- Source name and stable identifier: ", provenance$source_id),
+    paste0("- Public endpoint: ", endpoint),
+    paste0("- Licence or permission statement: ", provenance$licence),
+    paste0("- Retrieval or creation date: ", provenance$retrieval_date),
+    paste0("- Source lineage and collection method: ", provenance$lineage),
+    "",
+    "## Contribution bundle",
+    "Attach the generated fixture, adapter configuration, quality report, and provenance files from this bundle before submitting.",
+    sep = "\n"
+  )
+  query <- paste0(
+    "template=source-proposal.md&title=Source%3A%20",
+    utils::URLencode(provenance$source_id, reserved = TRUE),
+    "&body=", utils::URLencode(body, reserved = TRUE)
+  )
+  paste0("https://github.com/", repository, "/issues/new?", query)
+}
+
+#' Open a GitHub source-proposal issue for a contribution bundle
+#'
+#' @inheritParams contribution_issue_url
+#' @param open Whether to open the returned URL in a browser. Defaults to
+#'   `FALSE` so submission remains an explicit user action.
+#' @return Invisibly, the GitHub issue-composer URL.
+#' @export
+open_contribution_issue <- function(bundle, repository = "lennon-li/OPCC", open = FALSE) {
+  url <- contribution_issue_url(bundle, repository)
+  if (isTRUE(open)) {
+    if (!interactive()) stop("open = TRUE requires an interactive R session", call. = FALSE)
+    utils::browseURL(url)
+  }
+  message("Attach the generated contribution bundle files, then submit the GitHub issue: ", url)
+  invisible(url)
 }

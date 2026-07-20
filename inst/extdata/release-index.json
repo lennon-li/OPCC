@@ -7,6 +7,14 @@
       "manifest_sha256": "d0b84a9b6d512a2579a81324a7ad43a08e0b78782ffd7dfe398865af6787da67"
     }
   },
+  "m5": {
+    "2026-06-26": {
+      "artifact": "https://raw.githubusercontent.com/lennon-li/OPCC/c9ce50444328e8f8c659e41d72658c0035bb9603/releases/m5/2026-06-26/opcc_m5_da_correspondence.csv.gz",
+      "manifest": "https://raw.githubusercontent.com/lennon-li/OPCC/c9ce50444328e8f8c659e41d72658c0035bb9603/releases/m5/2026-06-26/m5_manifest.json",
+      "sha256": "b0d7d79942634d2ba634761ccf10b9cea4e6d4256f1ff41d54d4a6cc20765068",
+      "manifest_sha256": "9c6c5b1151eb50de0a8b5711ba9a956c55d8b037d673bfcb40a70712afa88df9"
+    }
+  },
   "points": {
     "2026-07-19": {
       "artifact": "https://raw.githubusercontent.com/lennon-li/OPCC/2dcf7ec001bb2c06673bbd719c93f72f2e927de8/releases/m1/2026-07-19-geonames-points/opcc_m1_geonames_points.csv.gz",

@@ -1,0 +1,209 @@
+---
+title: "Reproduce and verify the M2 correspondence artifact"
+format:
+  html:
+    toc: true
+execute:
+  eval: false
+---
+
+## Purpose and scope
+
+This guide has two reproducibility paths:
+
+1. Verify the published 2026-06-26 M2 baseline exactly, using its public,
+   commit-pinned files and SHA-256 checksums.
+2. Rebuild the current correspondence candidate from its public source inputs.
+
+The published baseline is a frozen NAR-only artifact with 414,207
+postal-code/DBUID rows and 282,409 postal codes. The current build script also
+adds separately labeled GeoNames point-in-polygon evidence. Its output is a
+newer candidate, not a byte-for-byte replacement for the frozen baseline.
+
+OPCC represents observed postal associations. It does not reconstruct Canada
+Post assignments and must never use Canada Post, PCCF, or PCCF+ data.
+
+## Verify the published artifact
+
+Clone the repository and run this from its root. The remote check downloads
+the public manifest and compressed CSV, verifies their SHA-256 values, then
+checks unique postal-code/DBUID keys, allocation weights, and one `best_link`
+per postal code.
+
+```{r}
+status <- system2(
+  "Rscript",
+  c("scripts/m3_validate_release.R", "--remote")
+)
+stopifnot(identical(status, 0L))
+```
+
+The expected result identifies the remote release endpoint and reports
+414,207 rows and 282,409 postal codes. To verify the versioned files already
+present in a source checkout instead, omit `"--remote"`.
+
+```{r}
+status <- system2("Rscript", "scripts/m3_validate_release.R")
+stopifnot(identical(status, 0L))
+```
+
+## Rebuild the current candidate
+
+The full build is intentionally separate from package use. It downloads and
+creates large scratch inputs under `.scratch/`; these files are git-ignored and
+must not be committed.
+
+### Install R dependencies
+
+```{r}
+packages <- c("digest", "dplyr", "jsonlite", "readr", "sf")
+missing <- packages[!vapply(packages, requireNamespace, logical(1), quietly = TRUE)]
+if (length(missing)) install.packages(missing)
+```
+
+### Obtain public inputs and generate the M1 intermediates
+
+Download the Statistics Canada NAR release and the GeoNames reference layer.
+The scripts record their provenance and reuse cached downloads when present.
+
+```{r}
+stopifnot(system2("Rscript", "scripts/m1_nar_profile.R") == 0L)
+stopifnot(system2("Rscript", "scripts/m4_geonames_profile.R") == 0L)
+stopifnot(system2("Rscript", "scripts/m1_build_centroids.R") == 0L)
+```
+
+Download the 2021 Statistics Canada DB boundary shapefile and Geographic
+Attribute File (GAF) from the URLs in [M1 reproduction](m1-reproduction.md).
+Extract them so these paths exist:
+
+```text
+.scratch/shp/ldb_000b21a_e.shp
+.scratch/gaf/2021_92-151_X.csv
+```
+
+Then assign centroids to DBs and attach GAF geography columns.
+
+```{r}
+stopifnot(system2("Rscript", "scripts/m1_gaf_rollup.R") == 0L)
+```
+
+### Build and inspect the candidate
+
+```{r}
+stopifnot(system2("Rscript", "scripts/m2_build_correspondence.R") == 0L)
+
+candidate <- utils::read.csv(
+  ".scratch/m2/m2_correspondence.csv",
+  stringsAsFactors = FALSE
+)
+manifest <- jsonlite::read_json(".scratch/m2/m2_manifest.json", simplifyVector = TRUE)
+
+stopifnot(!anyDuplicated(candidate[c("postal_code", "DBUID")]))
+weights <- tapply(candidate$allocation_weight, candidate$postal_code, sum)
+stopifnot(all(abs(weights - 1) < 1e-8))
+stopifnot(all(tapply(candidate$best_link, candidate$postal_code, sum) == 1L))
+
+list(rows = nrow(candidate), postal_codes = length(unique(candidate$postal_code)), manifest = manifest)
+```
+
+The candidate and manifest are written to `.scratch/m2/`. Review their source
+labels and manifest before proposing a new release. Do not overwrite the
+versioned directory under `releases/m2/` or commit raw source data.
+
+## Build and verify the direct DA artifact
+
+M5 is a deterministic attribute roll-up from the versioned M2
+postal-code-to-DB artifact to 2021 Dissemination Areas (DAs). The M2 artifact
+already retains the 2021 GAF `DBUID` and `DAUID` mapping, so this step requires
+neither a new boundary download nor a spatial join. It sums allocation weights
+for DBs in the same DA, preserves every DA link, and records contributing DB
+IDs and source vintages.
+
+Run this from the repository root to build the versioned artifact:
+
+```{r}
+status <- system2("Rscript", "scripts/m5_build_da_correspondence.R")
+stopifnot(identical(status, 0L))
+```
+
+The artifact is written to `releases/m5/2026-06-26/`. Verify its checksums,
+schema, unique postal-code/DA keys, allocation weights, best links, and DB
+lineage with:
+
+```{r}
+status <- system2("Rscript", "scripts/m5_validate_release.R")
+stopifnot(identical(status, 0L))
+```
+
+After the immutable public endpoint is available and the package is installed,
+use the package API for direct DA lookup:
+
+```{r}
+library(OPCC)
+pc_to_geo("K1A 0A6", level = "DA")
+```
+
+`pc_to_geo(level = "DA")` returns all DA candidates by default. Set
+`all_links = FALSE` only when the deterministic best DA is required; the full
+result retains contributing DB IDs and release-vintage lineage.
+
+## Optional: import your own open evidence locally
+
+Use this section only for redistributable, open evidence that you are allowed
+to inspect and share. Local data stay separate from canonical OPCC releases.
+The API rejects Canada Post, PCCF, and PCCF+ identifiers and provenance.
+
+Create a CSV outside the repository or in an ignored directory. It needs a
+postal-code column; coordinates are optional, but if supplied they must be
+named `latitude` and `longitude` and be decimal degrees.
+
+```{r}
+# Run from a source checkout. This loads the local-layer API without installing
+# the package first.
+source("R/opcc.R")
+
+my_data <- utils::read.csv("/path/to/municipal-postal-data.csv", stringsAsFactors = FALSE)
+
+# Adapt column names once at import. Do not alter the original source file.
+names(my_data)[names(my_data) == "postal"] <- "postal_code"
+names(my_data)[names(my_data) == "lat"] <- "latitude"
+names(my_data)[names(my_data) == "lon"] <- "longitude"
+
+source_file <- "/path/to/municipal-postal-data.csv"
+adapter <- new_source_adapter(
+  source_id = "municipal_registry",
+  licence = "Open Government Licence - Municipality",
+  lineage = "Municipal open address registry",
+  retrieval_date = "2026-07-20",
+  schema_map = list(postal_code = "postal_code"),
+  endpoint = "https://example.org/open-data",
+  checksum = digest::digest(source_file, algo = "sha256", file = TRUE)
+)
+
+layer <- build_source_layer(my_data, adapter)
+profile_source_layer(layer)
+```
+
+The layer has explicit local-only provenance and never changes a canonical
+release. If the licence permits redistribution, create a small review bundle
+rather than sharing the full source file.
+
+```{r}
+bundle <- contribution_bundle(
+  layer,
+  output_dir = "local-contributions",
+  fixture_rows = 100L
+)
+bundle
+```
+
+Create a prefilled GitHub Source Proposal from the bundle provenance with
+`contribution_issue_url(bundle)`. In an interactive R session, use
+`open_contribution_issue(bundle, open = TRUE)` to open the issue composer.
+Attach the bundle's fixture, adapter configuration, quality report, and
+provenance files before submitting; the package never uploads local data
+automatically.
+
+Before contributing, review the licence, endpoint, lineage, checksum, fixture,
+and quality report. See [M4 source adapters](m4-contributing-source.md) for
+the maintainer review process.
