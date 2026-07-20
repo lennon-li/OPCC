@@ -18,6 +18,7 @@ does not claim authoritative postal assignments.
 | M2 baseline | Published | 414,207 NAR postal-code/DBUID rows covering 282,409 postal codes |
 | M2 amendment | Review candidate | 431,541 rows / 299,743 postal codes: NAR plus 17,334 GeoNames point-in-polygon links |
 | M3 | Review candidate | Installable R package, tests, vignette, release index, and validator |
+| M4 foundation | Review candidate | Local source layers, contribution bundles, and source/correction issue templates |
 
 The M2 GeoNames amendment and M3 package are committed in the review branch
 `agent/m2-m3-community-package` and await review/merge. The immutable NAR
@@ -63,13 +64,40 @@ Every published release must be useful without the bulk build inputs,
 rebuildable from public-source manifests and checksums, independently
 verifiable, and open to fixture-backed contributions.
 
-From M4, users will be able to validate and use their own postal-code evidence
-as an explicitly local, source-labeled layer. Every such function will invite
-users with redistributable evidence to generate a contribution bundle and open
-an OPCC issue or pull request. Local data will never be silently merged into a
-canonical OPCC release.
+The M4 foundation lets users validate and use their own postal-code evidence as
+an explicitly local, source-labeled layer. Every local-data function states
+that the layer is separate and invites users with redistributable evidence to
+generate a contribution bundle and open an OPCC issue or pull request. Local
+data never silently merges into a canonical OPCC release.
+
+```r
+adapter <- new_source_adapter(
+  source_id = "municipal_registry",
+  licence = "Open Government Licence",
+  lineage = "municipal address registry",
+  schema_map = list(postal_code = "postal")
+)
+layer <- build_source_layer(my_postal_data, adapter)
+profile_source_layer(layer)
+contribution_bundle(layer)
+```
+
+`geonames_supplementary_adapter()` supplies the checked, versioned metadata for
+the current GeoNames supplementary-point artifact. It remains a separate point
+layer and never promotes GeoNames coordinates to NAR address evidence.
+
+The reproducible GeoNames coverage/disagreement report is available at
+`docs/m4-geonames-coverage-report.md`. Its current result is deliberately an
+honest non-result: there are no shared NAR/GeoNames postal codes, so OPCC does
+not publish invented cross-source uncertainty weights.
+
+The source table must contain the field declared as `postal_code` in the
+adapter schema map. Optional `latitude` and `longitude` must appear together
+and be valid decimal-degree coordinates. Canada Post, PCCF, and PCCF+ data are
+rejected; only redistributable evidence can enter a contribution bundle.
 
 See `docs/ROADMAP.md` for milestone contracts and
 `docs/m2-reproduction.md` for the current release schema and verification
-details. See `docs/uncertainty-and-allocation-design.md` for the uncertainty
+details. See `docs/m4-contributing-source.md` for the local-layer and
+contribution workflow. See `docs/uncertainty-and-allocation-design.md` for the uncertainty
 model and reproducible build, calibration, validation, and release pipeline.

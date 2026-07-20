@@ -16,5 +16,5 @@
     "compression": "gzip",
     "sha256": "b3edbab3aee3c4fbcac004d978fa2635e83cdad0abada1f4e44f02e7cc36cbfa"
   },
-  "candidate_status": "independently generated from the local M1 rollup; uncommitted and unpublished"
+  "candidate_status": "committed on the OPCC M2/M3 review branch; pending review and merge"
 }

@@ -137,6 +137,18 @@ repository/release is publicly reachable to verify its public download endpoint.
 
 ### M4 - Source-qualified coverage enrichment
 
+**Status (2026-07-19): IN PROGRESS.** The local-layer foundation is implemented
+on the M2/M3 review branch: adapter metadata, strict local-data validation,
+source-separated layers, profile reports, contribution bundles, and source and
+correction issue templates. It is deliberately not a completed M4 claim: a
+fully gated non-NAR adapter, reproducible combined artifacts, coverage and
+disagreement reports, and calibrated uncertainty validation remain required by
+the exit gate below. The current GeoNames/NAR report is reproducible and
+honestly records calibration as not estimable because the source layers have
+zero shared postal codes; it does not manufacture uncertainty weights. CI runs
+the versioned coverage report and package checks, including restricted-source,
+provenance, fixture, duplicate-evidence, and source-separation tests.
+
 Add public sources one at a time through a reusable source-adapter contract.
 Each adapter declares its licence, lineage, retrieval endpoint, release date,
 checksum, schema mapping, normalization rules, quality metrics, and fixtures.

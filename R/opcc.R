@@ -218,3 +218,239 @@ pc_to_point <- function(
   attr(out, "opcc_source") <- "GeoNames supplementary point; not NAR address evidence"
   out
 }
+
+.contribution_message <- function() {
+  message(
+    "This source layer remains local and separate from canonical OPCC releases. ",
+    "If redistribution is permitted, submit its contribution bundle as an OPCC issue or pull request."
+  )
+}
+
+.restricted_source <- function(...) {
+  text <- paste(unlist(list(...), use.names = FALSE), collapse = " ")
+  grepl("canada[[:space:]-]*post|pccf\\+?", text, ignore.case = TRUE)
+}
+
+.check_adapter <- function(adapter) {
+  if (!inherits(adapter, "opcc_source_adapter")) {
+    stop("adapter must be created by new_source_adapter()", call. = FALSE)
+  }
+  if (.restricted_source(adapter$source_id, adapter$licence, adapter$lineage)) {
+    stop("Canada Post, PCCF, and PCCF+ sources cannot enter OPCC", call. = FALSE)
+  }
+  invisible(adapter)
+}
+
+.json_safe <- function(x) {
+  if (inherits(x, "Date")) return(as.character(x))
+  if (is.list(x)) return(lapply(x, .json_safe))
+  x
+}
+
+#' Define a source adapter for a local evidence layer
+#'
+#' @param source_id Stable, lower-case source identifier.
+#' @param licence Licence or permission statement for the source.
+#' @param lineage Source lineage and collection method.
+#' @param retrieval_date Source retrieval or creation date.
+#' @param schema_map Named mapping from OPCC fields to source fields.
+#' @param endpoint Optional public retrieval endpoint.
+#' @param checksum Optional SHA-256 checksum of the source artifact.
+#' @return An `opcc_source_adapter` object.
+#' @export
+new_source_adapter <- function(
+    source_id,
+    licence,
+    lineage,
+    retrieval_date = Sys.Date(),
+    schema_map = list(postal_code = "postal_code"),
+    endpoint = NULL,
+    checksum = NULL) {
+  .contribution_message()
+  required <- c(source_id, licence, lineage)
+  if (any(lengths(list(source_id, licence, lineage)) != 1L) || any(is.na(required)) ||
+      any(!nzchar(trimws(required)))) {
+    stop("source_id, licence, and lineage must be non-missing scalar strings", call. = FALSE)
+  }
+  if (!grepl("^[a-z][a-z0-9_-]*$", source_id)) {
+    stop("source_id must use lower-case letters, digits, underscores, or hyphens", call. = FALSE)
+  }
+  if (.restricted_source(source_id, licence, lineage, endpoint)) {
+    stop("Canada Post, PCCF, and PCCF+ sources cannot enter OPCC", call. = FALSE)
+  }
+  if (!is.list(schema_map) || is.null(names(schema_map)) || !"postal_code" %in% names(schema_map)) {
+    stop("schema_map must be a named list containing postal_code", call. = FALSE)
+  }
+  if (!is.null(checksum) && (!is.character(checksum) || length(checksum) != 1L ||
+      !grepl("^[0-9a-fA-F]{64}$", checksum))) {
+    stop("checksum must be a 64-character SHA-256 hex string", call. = FALSE)
+  }
+  retrieval_date <- as.Date(retrieval_date)
+  if (is.na(retrieval_date)) stop("retrieval_date must be a valid date", call. = FALSE)
+  structure(
+    list(
+      source_id = source_id,
+      licence = licence,
+      lineage = lineage,
+      retrieval_date = retrieval_date,
+      schema_map = schema_map,
+      endpoint = endpoint,
+      checksum = checksum
+    ),
+    class = "opcc_source_adapter"
+  )
+}
+
+#' Load the versioned GeoNames supplementary-point adapter
+#'
+#' @return An `opcc_source_adapter` for the packaged GeoNames point artifact.
+#' @export
+geonames_supplementary_adapter <- function() {
+  path <- system.file("extdata", "adapters", "geonames-2026-07-19.json", package = "OPCC")
+  if (!nzchar(path)) stop("Packaged GeoNames adapter metadata is unavailable", call. = FALSE)
+  spec <- jsonlite::read_json(path, simplifyVector = TRUE)
+  new_source_adapter(
+    source_id = spec$source_id,
+    licence = spec$licence,
+    lineage = spec$lineage,
+    retrieval_date = spec$retrieval_date,
+    schema_map = as.list(spec$schema_map),
+    endpoint = spec$endpoint,
+    checksum = spec$artifact_sha256
+  )
+}
+
+#' Validate local postal-code evidence
+#'
+#' @param data A data frame with a postal-code field named by `adapter`.
+#' @param adapter Source metadata created by [new_source_adapter()].
+#' @return A normalized data frame with `postal_code` and validation metadata.
+#' @export
+validate_source_data <- function(data, adapter) {
+  .contribution_message()
+  .check_adapter(adapter)
+  if (!is.data.frame(data)) stop("data must be a data frame", call. = FALSE)
+  source_column <- adapter$schema_map$postal_code
+  if (length(source_column) != 1L || !source_column %in% names(data)) {
+    stop("data is missing the adapter postal_code field", call. = FALSE)
+  }
+  out <- data
+  out$postal_code <- normalize_postal_code(as.character(data[[source_column]]), strict = TRUE)
+  if (anyDuplicated(out)) stop("data contains duplicate evidence rows", call. = FALSE)
+  coordinate_columns <- intersect(c("latitude", "longitude"), names(out))
+  if (length(coordinate_columns) == 1L) {
+    stop("latitude and longitude must be supplied together", call. = FALSE)
+  }
+  if (length(coordinate_columns) == 2L) {
+    out$latitude <- suppressWarnings(as.numeric(out$latitude))
+    out$longitude <- suppressWarnings(as.numeric(out$longitude))
+    if (any(!is.finite(out$latitude) | !is.finite(out$longitude))) {
+      stop("coordinates must be finite numeric values", call. = FALSE)
+    }
+    if (any(out$latitude < -90 | out$latitude > 90 | out$longitude < -180 | out$longitude > 180)) {
+      stop("coordinates are outside longitude/latitude bounds", call. = FALSE)
+    }
+  }
+  attr(out, "opcc_adapter") <- adapter
+  attr(out, "opcc_validation") <- list(rows = nrow(out), unique_postal_codes = length(unique(out$postal_code)))
+  out
+}
+
+#' Build a source-separated local evidence layer
+#'
+#' @param data A user-supplied postal-code evidence data frame.
+#' @param adapter Source metadata created by [new_source_adapter()].
+#' @return An `opcc_source_layer` data frame, never merged into a release.
+#' @export
+build_source_layer <- function(data, adapter) {
+  .contribution_message()
+  .check_adapter(adapter)
+  out <- suppressMessages(validate_source_data(data, adapter))
+  out$source_id <- adapter$source_id
+  out$source_licence <- adapter$licence
+  out$source_lineage <- adapter$lineage
+  out$source_retrieval_date <- as.character(adapter$retrieval_date)
+  attr(out, "opcc_adapter") <- adapter
+  attr(out, "opcc_source") <- "Local source-separated evidence; not a canonical OPCC release"
+  class(out) <- c("opcc_source_layer", class(out))
+  out
+}
+
+#' Profile a local source layer
+#'
+#' @param layer A layer created by [build_source_layer()].
+#' @return A list of coverage and coordinate-quality metrics.
+#' @export
+profile_source_layer <- function(layer) {
+  .contribution_message()
+  if (!inherits(layer, "opcc_source_layer")) {
+    stop("layer must be created by build_source_layer()", call. = FALSE)
+  }
+  has_coordinates <- all(c("latitude", "longitude") %in% names(layer))
+  list(
+    source_id = unique(layer$source_id),
+    rows = nrow(layer),
+    postal_codes = length(unique(layer$postal_code)),
+    duplicate_postal_codes = sum(duplicated(layer$postal_code)),
+    coordinate_rows = if (has_coordinates) sum(stats::complete.cases(layer[c("latitude", "longitude")])) else 0L,
+    missing_coordinate_rows = if (has_coordinates) sum(!stats::complete.cases(layer[c("latitude", "longitude")])) else nrow(layer)
+  )
+}
+
+#' Create a reviewable local-source contribution bundle
+#'
+#' @param layer A layer created by [build_source_layer()].
+#' @param output_dir Directory in which to create a new bundle directory.
+#' @param fixture_rows Maximum normalized sample rows to include.
+#' @return A named list of generated bundle paths.
+#' @export
+contribution_bundle <- function(layer, output_dir = getwd(), fixture_rows = 100L) {
+  .contribution_message()
+  if (!inherits(layer, "opcc_source_layer")) {
+    stop("layer must be created by build_source_layer()", call. = FALSE)
+  }
+  adapter <- attr(layer, "opcc_adapter")
+  .check_adapter(adapter)
+  fixture_rows <- as.integer(fixture_rows)
+  if (is.na(fixture_rows) || fixture_rows < 1L) stop("fixture_rows must be at least one", call. = FALSE)
+  bundle_dir <- file.path(output_dir, paste0("opcc-", adapter$source_id, "-contribution"))
+  if (dir.exists(bundle_dir) || file.exists(bundle_dir)) {
+    stop("Contribution bundle path already exists", call. = FALSE)
+  }
+  dir.create(bundle_dir, recursive = TRUE)
+  fixture <- layer[order(layer$postal_code), , drop = FALSE]
+  fixture <- utils::head(fixture, fixture_rows)
+  fixture_path <- file.path(bundle_dir, "fixture.csv")
+  adapter_path <- file.path(bundle_dir, "adapter.json")
+  profile_path <- file.path(bundle_dir, "quality-report.json")
+  provenance_path <- file.path(bundle_dir, "provenance.json")
+  utils::write.csv(fixture, fixture_path, row.names = FALSE, na = "")
+  jsonlite::write_json(.json_safe(adapter), adapter_path, auto_unbox = TRUE, pretty = TRUE)
+  jsonlite::write_json(suppressMessages(profile_source_layer(layer)), profile_path, auto_unbox = TRUE, pretty = TRUE)
+  jsonlite::write_json(
+    list(
+      source_id = adapter$source_id,
+      licence = adapter$licence,
+      lineage = adapter$lineage,
+      retrieval_date = as.character(adapter$retrieval_date),
+      endpoint = adapter$endpoint,
+      schema_map = adapter$schema_map,
+      checksum = adapter$checksum,
+      local_only = TRUE,
+      canonical_release_modified = FALSE
+    ),
+    provenance_path,
+    auto_unbox = TRUE,
+    pretty = TRUE
+  )
+  structure(
+    list(
+      directory = bundle_dir,
+      fixture = fixture_path,
+      adapter = adapter_path,
+      quality_report = profile_path,
+      provenance = provenance_path
+    ),
+    class = "opcc_contribution_bundle"
+  )
+}
