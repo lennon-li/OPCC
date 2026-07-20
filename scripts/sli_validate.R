@@ -13,11 +13,16 @@
 #   validation_metrics.json
 #   validation_manifest.json
 #
+# All committed outputs are deterministic: no wall-clock time is embedded.
+# Reproducibility is anchored to the generator commit, input manifest hashes,
+# and an explicit seed.
+#
 # USAGE:
 #   Rscript scripts/sli_validate.R \
 #     --centroid-csv releases/m1/2026-06-26-nar-geonames-centroids/opcc_m1_centroids.csv.gz \
 #     --centroid-manifest releases/m1/2026-06-26-nar-geonames-centroids/m1_manifest.json \
 #     --sli-csv /restricted/local/sli_2017.csv \
+#     --sli-label "PCCF SLI 2017 QA" \
 #     --output-dir docs
 #
 #   Rscript scripts/sli_validate.R \
@@ -30,6 +35,9 @@
 
 library(ggplot2)
 library(scales)
+library(dplyr)
+library(digest)
+library(jsonlite)
 
 # Source shared helper functions from the test directory.
 # Resolve the helper relative to this script so the script works from any cwd.
@@ -64,8 +72,8 @@ write_report <- function(metrics, inputs, output_path) {
     paste("**Mode:**", mode_label),
     paste("**Centroid artifact:**", inputs$centroid_csv),
     paste("**Centroid manifest:**", inputs$centroid_manifest),
-    if (!inputs$synthetic) paste("**SLI/PCCF input:**", inputs$sli_csv) else NULL,
-    paste("**Generated:**", format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC")),
+    paste("**Generator commit:**", inputs$build_ref),
+    if (!inputs$synthetic) paste("**SLI/PCCF input label:**", inputs$sli_label) else NULL,
     "",
     "## Inputs and boundary",
     "",
@@ -162,6 +170,7 @@ parse_args <- function() {
     centroid_csv      = NULL,
     centroid_manifest = NULL,
     sli_csv           = NULL,
+    sli_label         = NULL,
     output_dir        = "docs",
     synthetic         = FALSE,
     seed              = 42L
@@ -172,6 +181,7 @@ parse_args <- function() {
     if (a == "--centroid-csv") { out$centroid_csv <- args[i + 1]; i <- i + 2
     } else if (a == "--centroid-manifest") { out$centroid_manifest <- args[i + 1]; i <- i + 2
     } else if (a == "--sli-csv") { out$sli_csv <- args[i + 1]; i <- i + 2
+    } else if (a == "--sli-label") { out$sli_label <- args[i + 1]; i <- i + 2
     } else if (a == "--output-dir") { out$output_dir <- args[i + 1]; i <- i + 2
     } else if (a == "--seed") { out$seed <- as.integer(args[i + 1]); i <- i + 2
     } else if (a == "--synthetic") { out$synthetic <- TRUE; i <- i + 1
@@ -180,15 +190,20 @@ parse_args <- function() {
   if (is.null(out$centroid_csv) || is.null(out$centroid_manifest)) {
     stop("--centroid-csv and --centroid-manifest are required.")
   }
+  if (out$synthetic && !is.null(out$sli_csv)) {
+    stop("--synthetic and --sli-csv are mutually exclusive.")
+  }
   if (!out$synthetic && is.null(out$sli_csv)) {
     stop("Either --sli-csv or --synthetic must be supplied.")
+  }
+  if (!out$synthetic && is.null(out$sli_label)) {
+    stop("--sli-label is required when using --sli-csv.")
   }
   out
 }
 
 main <- function() {
   Sys.setenv(LANGUAGE = "en")
-  set.seed(42L)
 
   inputs <- parse_args()
   if (!dir.exists(inputs$output_dir)) {
@@ -199,14 +214,31 @@ main <- function() {
   cat("Centroid artifact:", inputs$centroid_csv, "\n")
   cat("Centroid manifest:", inputs$centroid_manifest, "\n")
 
+  if (!file.exists(inputs$centroid_manifest)) {
+    stop("Centroid manifest not found: ", inputs$centroid_manifest)
+  }
+  parent_manifest <- jsonlite::read_json(inputs$centroid_manifest)
+  parent_manifest_sha256 <- digest::digest(inputs$centroid_manifest,
+                                           algo = "sha256", file = TRUE)
+
+  # Validate the parent M1 artifact before any metrics are computed.
+  sli_verify_m1_artifact(inputs$centroid_csv, parent_manifest)
+  cat("Parent M1 artifact verified against manifest.\n")
+
+  inputs$build_ref <- system("git rev-parse HEAD", intern = TRUE)
+  cat("Generator commit:", inputs$build_ref, "\n")
+
+  set.seed(inputs$seed)
+
   centroids <- sli_read_centroids(inputs$centroid_csv)
-  cat("Distinct open centroids:", format(n_distinct(centroids$postal_code), big.mark = ","), "\n")
+  cat("Distinct open centroids:", format(dplyr::n_distinct(centroids$postal_code), big.mark = ","), "\n")
 
   if (inputs$synthetic) {
     cat("Mode: synthetic benchmark\n")
     sli <- sli_make_synthetic_qa(centroids, seed = inputs$seed)
   } else {
-    cat("Mode: local SLI/PCCF QA input:", inputs$sli_csv, "\n")
+    cat("Mode: local SLI/PCCF QA input\n")
+    cat("SLI label:", inputs$sli_label, "\n")
     sli <- sli_read_sli(inputs$sli_csv)
   }
   cat("QA rows:", format(nrow(sli), big.mark = ","), "\n")
@@ -214,12 +246,12 @@ main <- function() {
   metrics <- sli_compute_metrics(centroids, sli)
 
   joined <- centroids %>%
-    inner_join(sli, by = "postal_code", suffix = c("", "_sli")) %>%
-    mutate(distance_km = sli_haversine_km(latitude, longitude,
-                                          latitude_sli, longitude_sli))
+    dplyr::inner_join(sli, by = "postal_code", suffix = c("", "_sli")) %>%
+    dplyr::mutate(distance_km = sli_haversine_km(latitude, longitude,
+                                                 latitude_sli, longitude_sli))
 
-  png(file.path(inputs$output_dir, "validation_ecdf.png"),
-      width = 2400, height = 1800, res = 300, type = "cairo")
+  grDevices::png(file.path(inputs$output_dir, "validation_ecdf.png"),
+                 width = 2400, height = 1800, res = 300, type = "cairo")
   p <- ggplot(joined, aes(x = distance_km, colour = point_source)) +
     stat_ecdf(geom = "step", linewidth = 0.8) +
     scale_x_continuous(trans = log1p_trans(),
@@ -231,12 +263,12 @@ main <- function() {
     theme_minimal(base_size = 14) +
     theme(legend.position = "bottom")
   print(p)
-  dev.off()
+  grDevices::dev.off()
 
-  png(file.path(inputs$output_dir, "validation_hist.png"),
-      width = 2400, height = 1800, res = 300, type = "cairo")
-  p <- ggplot(joined %>% filter(distance_km < 5),
-              aes(x = distance_km, fill = point_source)) +
+  grDevices::png(file.path(inputs$output_dir, "validation_hist.png"),
+                 width = 2400, height = 1800, res = 300, type = "cairo")
+  p <- ggplot(joined %>% dplyr::filter(distance_km < 5),
+               aes(x = distance_km, fill = point_source)) +
     geom_histogram(bins = 50, colour = "white") +
     facet_wrap(vars(point_source), ncol = 1, scales = "free_y") +
     labs(x = "Distance (km)", y = "Count",
@@ -245,10 +277,10 @@ main <- function() {
     theme_minimal(base_size = 14) +
     theme(legend.position = "bottom")
   print(p)
-  dev.off()
+  grDevices::dev.off()
 
-  png(file.path(inputs$output_dir, "validation_box.png"),
-      width = 2400, height = 1800, res = 300, type = "cairo")
+  grDevices::png(file.path(inputs$output_dir, "validation_box.png"),
+                 width = 2400, height = 1800, res = 300, type = "cairo")
   p <- ggplot(joined, aes(x = point_source, y = distance_km,
                           fill = point_source)) +
     geom_boxplot(outlier.size = 0.8) +
@@ -259,21 +291,35 @@ main <- function() {
     theme_minimal(base_size = 14) +
     theme(legend.position = "bottom")
   print(p)
-  dev.off()
+  grDevices::dev.off()
 
   write_report(metrics, inputs, file.path(inputs$output_dir, "validation_report.md"))
 
+  restricted_input <- if (inputs$synthetic) {
+    list(recorded = FALSE, reason = "synthetic benchmark")
+  } else {
+    list(
+      recorded = TRUE,
+      label = inputs$sli_label,
+      hash = digest::digest(inputs$sli_csv, algo = "sha256", file = TRUE)
+    )
+  }
+
   metrics_out <- list(
     mode = if (inputs$synthetic) "synthetic" else "sli_qa",
+    build_ref = inputs$build_ref,
     overall = metrics$overall,
     by_source = as.data.frame(metrics$by_source),
     coverage = metrics$coverage,
     inputs = list(
       centroid_csv = inputs$centroid_csv,
       centroid_manifest = inputs$centroid_manifest,
-      sli_csv = inputs$sli_csv,
+      parent_manifest_sha256 = parent_manifest_sha256,
+      centroid_csv_sha256 = parent_manifest$artifact$csv_sha256,
+      centroid_gz_sha256 = parent_manifest$artifact$gz_sha256,
       synthetic = inputs$synthetic
-    )
+    ),
+    restricted_input = restricted_input
   )
   jsonlite::write_json(metrics_out,
                        path = file.path(inputs$output_dir, "validation_metrics.json"),
@@ -292,17 +338,20 @@ main <- function() {
 
   manifest <- list(
     manifest_version = 1L,
-    run_timestamp = format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC"),
+    build_ref = inputs$build_ref,
     generator = list(
       script = "scripts/sli_validate.R",
-      repo_sha = system("git rev-parse HEAD", intern = TRUE),
+      repo_sha = inputs$build_ref,
       r_version = paste0(R.version$major, ".", R.version$minor)
     ),
     inputs = list(
       centroid_csv = inputs$centroid_csv,
       centroid_manifest = inputs$centroid_manifest,
-      centroid_csv_sha256 = digest::digest(inputs$centroid_csv, algo = "sha256", file = TRUE),
-      sli_csv = inputs$sli_csv,
+      parent_manifest_sha256 = parent_manifest_sha256,
+      centroid_csv_sha256 = parent_manifest$artifact$csv_sha256,
+      centroid_gz_sha256 = parent_manifest$artifact$gz_sha256,
+      sli_label = if (inputs$synthetic) NULL else inputs$sli_label,
+      sli_hash = if (inputs$synthetic) NULL else restricted_input$hash,
       synthetic = inputs$synthetic
     ),
     outputs = list(

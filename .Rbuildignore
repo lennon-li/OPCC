@@ -5,6 +5,7 @@
 ^docs$
 ^releases$
 ^README\.md$
+^\.git$
 ^\.gitignore$
 ^\.mailmap$
 ^_pkgdown\.yml$

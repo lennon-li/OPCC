@@ -76,3 +76,33 @@ test_that("synthetic QA is deterministic", {
   expect_equal(q1, q2)
   expect_equal(nrow(q1), 4)
 })
+
+test_that("M1 release artifact verifies against its manifest", {
+  manifest_path <- testthat::test_path("../../releases/m1/2026-06-26-nar-geonames-centroids/m1_manifest.json")
+  gz_path <- testthat::test_path("../../releases/m1/2026-06-26-nar-geonames-centroids/opcc_m1_centroids.csv.gz")
+  testthat::skip_if_not(file.exists(manifest_path))
+  testthat::skip_if_not(file.exists(gz_path))
+
+  manifest <- jsonlite::read_json(manifest_path)
+  df <- sli_verify_m1_artifact(gz_path, manifest)
+
+  expect_equal(nrow(df), manifest$artifact$total_rows)
+  expect_true(all(c("postal_code", "latitude", "longitude", "point_source") %in% names(df)))
+})
+
+test_that("tampered M1 manifest fails verification", {
+  manifest_path <- testthat::test_path("../../releases/m1/2026-06-26-nar-geonames-centroids/m1_manifest.json")
+  gz_path <- testthat::test_path("../../releases/m1/2026-06-26-nar-geonames-centroids/opcc_m1_centroids.csv.gz")
+  testthat::skip_if_not(file.exists(manifest_path))
+  testthat::skip_if_not(file.exists(gz_path))
+
+  manifest <- jsonlite::read_json(manifest_path)
+  manifest$artifact$csv_sha256 <- paste(rep("0", 64), collapse = "")
+  tmp_manifest <- withr::local_tempfile(fileext = ".json")
+  jsonlite::write_json(manifest, tmp_manifest, auto_unbox = TRUE, pretty = TRUE)
+
+  expect_error(
+    sli_verify_m1_artifact(gz_path, jsonlite::read_json(tmp_manifest)),
+    "hash mismatch"
+  )
+})

@@ -2,16 +2,15 @@
 #
 # Shared helper functions for the SLI/PCCF validation pipeline and its tests.
 # This file is auto-sourced by testthat and is also sourced by
-# scripts/sli_validate.R.  It defines only pure functions; it does not run a
-# CLI or touch restricted data.
+# scripts/sli_validate.R and scripts/m1_release.R. It defines only pure
+# functions; it does not run a CLI or touch restricted data.
 #
 # All exported names carry the sli_ prefix to avoid collisions with package
 # functions (e.g. normalize_postal_code).
 
-library(readr)
-library(dplyr)
-library(jsonlite)
-library(digest)
+# Deliberate dependency boundary: these packages are used only inside the
+# helper functions and the scripts that source this file. All calls are
+# namespace-qualified to avoid relying on the search path.
 
 sli_normalize_postal_code <- function(x) {
   x <- toupper(trimws(as.character(x)))
@@ -41,8 +40,8 @@ sli_read_centroids <- function(path) {
   }
   df$postal_code <- sli_normalize_postal_code(df$postal_code)
   df <- df %>%
-    filter(!is.na(latitude), !is.na(longitude)) %>%
-    distinct(postal_code, .keep_all = TRUE)
+    dplyr::filter(!is.na(latitude), !is.na(longitude)) %>%
+    dplyr::distinct(postal_code, .keep_all = TRUE)
   df
 }
 
@@ -61,79 +60,79 @@ sli_read_sli <- function(path) {
     stop("SLI CSV must contain postal-code, latitude, and longitude columns.")
   }
   df <- df %>%
-    select(postal_code = all_of(pc_col[1]),
-           latitude    = all_of(lat_col[1]),
-           longitude   = all_of(lon_col[1])) %>%
-    mutate(postal_code = sli_normalize_postal_code(postal_code),
-           latitude    = suppressWarnings(as.numeric(latitude)),
-           longitude   = suppressWarnings(as.numeric(longitude))) %>%
-    filter(!is.na(latitude), !is.na(longitude)) %>%
-    distinct(postal_code, .keep_all = TRUE)
+    dplyr::select(postal_code = dplyr::all_of(pc_col[1]),
+                  latitude    = dplyr::all_of(lat_col[1]),
+                  longitude   = dplyr::all_of(lon_col[1])) %>%
+    dplyr::mutate(postal_code = sli_normalize_postal_code(postal_code),
+                  latitude    = suppressWarnings(as.numeric(latitude)),
+                  longitude   = suppressWarnings(as.numeric(longitude))) %>%
+    dplyr::filter(!is.na(latitude), !is.na(longitude)) %>%
+    dplyr::distinct(postal_code, .keep_all = TRUE)
   df
 }
 
 sli_make_synthetic_qa <- function(centroids, seed = 42L, n_per_source = 100L) {
   set.seed(seed)
   out <- centroids %>%
-    group_by(point_source) %>%
-    slice_sample(n = n_per_source) %>%
-    ungroup() %>%
-    mutate(
-      lat_noise = case_when(
-        point_source == "nar_centroid" ~ rnorm(n(), 0, 0.001),
-        point_source == "geonames"     ~ rnorm(n(), 0, 0.02),
-        TRUE                           ~ rnorm(n(), 0, 0.05)
+    dplyr::group_by(point_source) %>%
+    dplyr::slice_sample(n = n_per_source) %>%
+    dplyr::ungroup() %>%
+    dplyr::mutate(
+      lat_noise = dplyr::case_when(
+        point_source == "nar_centroid" ~ stats::rnorm(dplyr::n(), 0, 0.001),
+        point_source == "geonames"     ~ stats::rnorm(dplyr::n(), 0, 0.02),
+        TRUE                           ~ stats::rnorm(dplyr::n(), 0, 0.05)
       ),
-      lon_noise = case_when(
-        point_source == "nar_centroid" ~ rnorm(n(), 0, 0.001),
-        point_source == "geonames"     ~ rnorm(n(), 0, 0.02),
-        TRUE                           ~ rnorm(n(), 0, 0.05)
+      lon_noise = dplyr::case_when(
+        point_source == "nar_centroid" ~ stats::rnorm(dplyr::n(), 0, 0.001),
+        point_source == "geonames"     ~ stats::rnorm(dplyr::n(), 0, 0.02),
+        TRUE                           ~ stats::rnorm(dplyr::n(), 0, 0.05)
       ),
       latitude  = latitude + lat_noise,
       longitude = longitude + lon_noise
     ) %>%
-    select(postal_code, latitude, longitude)
+    dplyr::select(postal_code, latitude, longitude)
   out
 }
 
 sli_compute_metrics <- function(centroids, sli) {
   joined <- centroids %>%
-    inner_join(sli, by = "postal_code", suffix = c("", "_sli"))
+    dplyr::inner_join(sli, by = "postal_code", suffix = c("", "_sli"))
 
   joined <- joined %>%
-    mutate(distance_km = sli_haversine_km(latitude, longitude,
-                                        latitude_sli, longitude_sli))
+    dplyr::mutate(distance_km = sli_haversine_km(latitude, longitude,
+                                                 latitude_sli, longitude_sli))
 
   overall <- joined %>%
-    summarise(
-      n                     = n(),
-      median_distance_km    = median(distance_km, na.rm = TRUE),
-      mean_distance_km      = mean(distance_km, na.rm = TRUE),
-      p90_distance_km       = quantile(distance_km, 0.90, na.rm = TRUE),
-      p95_distance_km       = quantile(distance_km, 0.95, na.rm = TRUE),
-      p99_distance_km       = quantile(distance_km, 0.99, na.rm = TRUE),
-      max_distance_km       = max(distance_km, na.rm = TRUE)
+    dplyr::summarise(
+      n                     = dplyr::n(),
+      median_distance_km    = stats::median(distance_km, na.rm = TRUE),
+      mean_distance_km      = base::mean(distance_km, na.rm = TRUE),
+      p90_distance_km       = stats::quantile(distance_km, 0.90, na.rm = TRUE),
+      p95_distance_km       = stats::quantile(distance_km, 0.95, na.rm = TRUE),
+      p99_distance_km       = stats::quantile(distance_km, 0.99, na.rm = TRUE),
+      max_distance_km       = base::max(distance_km, na.rm = TRUE)
     )
 
   by_source <- joined %>%
-    group_by(point_source) %>%
-    summarise(
-      n                     = n(),
-      median_distance_km    = median(distance_km, na.rm = TRUE),
-      mean_distance_km      = mean(distance_km, na.rm = TRUE),
-      p90_distance_km       = quantile(distance_km, 0.90, na.rm = TRUE),
-      p95_distance_km       = quantile(distance_km, 0.95, na.rm = TRUE),
-      p99_distance_km       = quantile(distance_km, 0.99, na.rm = TRUE),
-      max_distance_km       = max(distance_km, na.rm = TRUE),
+    dplyr::group_by(point_source) %>%
+    dplyr::summarise(
+      n                     = dplyr::n(),
+      median_distance_km    = stats::median(distance_km, na.rm = TRUE),
+      mean_distance_km      = base::mean(distance_km, na.rm = TRUE),
+      p90_distance_km       = stats::quantile(distance_km, 0.90, na.rm = TRUE),
+      p95_distance_km       = stats::quantile(distance_km, 0.95, na.rm = TRUE),
+      p99_distance_km       = stats::quantile(distance_km, 0.99, na.rm = TRUE),
+      max_distance_km       = base::max(distance_km, na.rm = TRUE),
       .groups = "drop"
     )
 
   coverage <- list(
-    distinct_open_postal_codes   = n_distinct(centroids$postal_code),
-    distinct_sli_postal_codes    = n_distinct(sli$postal_code),
-    matched_postal_codes         = n_distinct(joined$postal_code),
-    coverage_pct                 = 100 * n_distinct(joined$postal_code) /
-      n_distinct(sli$postal_code)
+    distinct_open_postal_codes   = dplyr::n_distinct(centroids$postal_code),
+    distinct_sli_postal_codes    = dplyr::n_distinct(sli$postal_code),
+    matched_postal_codes         = dplyr::n_distinct(joined$postal_code),
+    coverage_pct                 = 100 * dplyr::n_distinct(joined$postal_code) /
+      dplyr::n_distinct(sli$postal_code)
   )
 
   list(
@@ -142,4 +141,54 @@ sli_compute_metrics <- function(centroids, sli) {
     coverage   = coverage,
     joined_n   = nrow(joined)
   )
+}
+
+# Verify a released M1 centroid artifact against its manifest.
+#
+# manifest: a list with an `artifact` element containing at least
+#   csv_sha256, gz_sha256, total_rows, and schema$columns.
+# Returns the decompressed centroid data frame invisibly.
+sli_verify_m1_artifact <- function(gz_path, manifest) {
+  if (!file.exists(gz_path)) {
+    stop("M1 artifact not found: ", gz_path)
+  }
+
+  art <- manifest$artifact
+  if (is.null(art)) {
+    stop("Manifest has no artifact section")
+  }
+
+  gz_bytes <- readBin(gz_path, what = raw(), n = file.info(gz_path)$size)
+  gz_sha256 <- digest::digest(gz_bytes, algo = "sha256", serialize = FALSE)
+  if (!identical(gz_sha256, art$gz_sha256)) {
+    stop("M1 gzip hash mismatch: expected ", art$gz_sha256,
+         ", got ", gz_sha256)
+  }
+
+  csv_bytes <- memDecompress(gz_bytes, type = "gzip")
+  csv_sha256 <- digest::digest(csv_bytes, algo = "sha256", serialize = FALSE)
+  if (!identical(csv_sha256, art$csv_sha256)) {
+    stop("M1 decompressed CSV hash mismatch: expected ", art$csv_sha256,
+         ", got ", csv_sha256)
+  }
+
+  con <- rawConnection(csv_bytes, "r")
+  on.exit(try(close(con), silent = TRUE), add = TRUE)
+  df <- readr::read_csv(con, show_col_types = FALSE)
+
+  req_cols <- art$schema$columns
+  if (is.null(req_cols)) {
+    req_cols <- c("postal_code", "latitude", "longitude", "point_source")
+  }
+  miss <- setdiff(req_cols, names(df))
+  if (length(miss) > 0) {
+    stop("M1 schema missing columns: ", paste(miss, collapse = ", "))
+  }
+
+  if (nrow(df) != art$total_rows) {
+    stop("M1 row count mismatch: expected ", art$total_rows,
+         ", got ", nrow(df))
+  }
+
+  invisible(df)
 }
