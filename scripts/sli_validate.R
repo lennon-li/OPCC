@@ -232,8 +232,10 @@ main <- function() {
   sli_verify_m1_artifact(inputs$centroid_csv, parent_manifest)
   cat("Parent M1 artifact verified against manifest.\n")
 
-  sli_validate_producer_ref(inputs$producer_ref, c("scripts/sli_validate.R"))
-  inputs$build_ref <- inputs$producer_ref
+  inputs$build_ref <- sli_validate_producer_ref(
+    inputs$producer_ref,
+    c("scripts/sli_validate.R")
+  )
   cat("Producer revision:", inputs$build_ref, "\n")
 
   set.seed(inputs$seed)

@@ -193,34 +193,43 @@ sli_verify_m1_artifact <- function(gz_path, manifest) {
   invisible(df)
 }
 
-# Validate that a producer revision exists and contains every named generator
-# script. Returns the full SHA invisibly.
+# Resolve and validate that a producer revision exists and contains every named
+# generator script. Returns the full 40-character SHA.
 sli_validate_producer_ref <- function(producer_ref, scripts) {
   if (is.null(producer_ref) || !nzchar(producer_ref)) {
     stop("--producer-ref is required.")
   }
-  res <- tryCatch(
+  
+  # Resolve to full SHA
+  full_sha <- tryCatch(
     suppressWarnings(
-      system2("git", c("cat-file", "-e", producer_ref),
+      system2("git", c("rev-parse", producer_ref),
               stdout = TRUE, stderr = TRUE)
     ),
     error = function(e) e
   )
-  if (inherits(res, "error") || !is.null(attr(res, "status"))) {
-    stop("Producer revision not found: ", producer_ref)
+  
+  if (inherits(full_sha, "error") || !is.null(attr(full_sha, "status")) ||
+      length(full_sha) == 0 || !grepl("^[0-9a-f]{40}$", full_sha[1])) {
+    stop("Producer revision not found or invalid: ", producer_ref)
   }
+  
+  full_sha <- full_sha[1]
+  
+  # Validate that the resolved SHA contains all named scripts
   for (s in scripts) {
-    res2 <- tryCatch(
+    res <- tryCatch(
       suppressWarnings(
-        system2("git", c("cat-file", "-e", paste0(producer_ref, ":", s)),
+        system2("git", c("cat-file", "-e", paste0(full_sha, ":", s)),
                 stdout = TRUE, stderr = TRUE)
       ),
       error = function(e) e
     )
-    if (inherits(res2, "error") || !is.null(attr(res2, "status"))) {
-      stop("Producer revision ", producer_ref,
+    if (inherits(res, "error") || !is.null(attr(res, "status"))) {
+      stop("Producer revision ", full_sha,
            " does not contain script: ", s)
     }
   }
-  invisible(producer_ref)
+  
+  full_sha
 }

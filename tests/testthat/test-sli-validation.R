@@ -137,3 +137,47 @@ test_that("producer revision validation works", {
     "does not contain script"
   )
 })
+
+test_that("malformed producer refs are rejected", {
+  testthat::skip_if_not(exists("sli_validate_producer_ref"))
+  testthat::skip_on_cran()
+
+  # Empty string
+  expect_error(
+    sli_validate_producer_ref("", c("scripts/sli_validate.R")),
+    "required"
+  )
+
+  # NULL
+  expect_error(
+    sli_validate_producer_ref(NULL, c("scripts/sli_validate.R")),
+    "required"
+  )
+
+  # Invalid git ref (not a commit)
+  expect_error(
+    sli_validate_producer_ref("not-a-valid-ref", c("scripts/sli_validate.R")),
+    "not found|invalid"
+  )
+})
+
+test_that("manifest stores full 40-character SHA", {
+  testthat::skip_if_not(exists("sli_validate_producer_ref"))
+  testthat::skip_on_cran()
+
+  # Get current HEAD
+  head_sha <- tryCatch({
+    res <- system("git rev-parse HEAD", intern = TRUE)
+    if (length(res) > 0 && grepl("^[0-9a-f]{40}$", res[1])) res[1] else NULL
+  }, error = function(e) NULL, warning = function(w) NULL)
+  testthat::skip_if(is.null(head_sha))
+
+  # Test with abbreviated SHA
+  abbrev_sha <- substr(head_sha, 1, 7)
+  result <- sli_validate_producer_ref(abbrev_sha, c("scripts/sli_validate.R"))
+
+  # Should return full 40-character SHA, not the abbreviation
+  expect_equal(nchar(result), 40)
+  expect_equal(result, head_sha)
+  expect_true(grepl("^[0-9a-f]{40}$", result))
+})

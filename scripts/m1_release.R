@@ -80,11 +80,11 @@ cat("=== m1_release.R ===\n")
 cat("Vintage:", vintage, "\n")
 cat("Producer ref:", inputs$producer_ref, "\n")
 
-sli_validate_producer_ref(
+full_producer_sha <- sli_validate_producer_ref(
   inputs$producer_ref,
   c("scripts/m1_build_centroids.R", "scripts/m1_release.R")
 )
-cat("Producer revision validated.\n")
+cat("Producer revision validated:", full_producer_sha, "\n")
 
 combined <- readr::read_csv(SCRATCH_CSV, show_col_types = FALSE)
 cat("Rows read:", format(nrow(combined), big.mark = ","), "\n")
@@ -125,7 +125,7 @@ release_manifest <- list(
   generator = list(
     script = "scripts/m1_build_centroids.R",
     release_script = "scripts/m1_release.R",
-    repo_sha = inputs$producer_ref
+    repo_sha = full_producer_sha
   ),
   artifact = list(
     file = basename(RELEASE_CSV_GZ),
