@@ -110,6 +110,43 @@ The candidate and manifest are written to `.scratch/m2/`. Review their source
 labels and manifest before proposing a new release. Do not overwrite the
 versioned directory under `releases/m2/` or commit raw source data.
 
+## Build and verify the direct DA artifact
+
+M5 is a deterministic attribute roll-up from the versioned M2
+postal-code-to-DB artifact to 2021 Dissemination Areas (DAs). The M2 artifact
+already retains the 2021 GAF `DBUID` and `DAUID` mapping, so this step requires
+neither a new boundary download nor a spatial join. It sums allocation weights
+for DBs in the same DA, preserves every DA link, and records contributing DB
+IDs and source vintages.
+
+Run this from the repository root to build the versioned artifact:
+
+```{r}
+status <- system2("Rscript", "scripts/m5_build_da_correspondence.R")
+stopifnot(identical(status, 0L))
+```
+
+The artifact is written to `releases/m5/2026-06-26/`. Verify its checksums,
+schema, unique postal-code/DA keys, allocation weights, best links, and DB
+lineage with:
+
+```{r}
+status <- system2("Rscript", "scripts/m5_validate_release.R")
+stopifnot(identical(status, 0L))
+```
+
+After the immutable public endpoint is available and the package is installed,
+use the package API for direct DA lookup:
+
+```{r}
+library(OPCC)
+pc_to_geo("K1A 0A6", level = "DA")
+```
+
+`pc_to_geo(level = "DA")` returns all DA candidates by default. Set
+`all_links = FALSE` only when the deterministic best DA is required; the full
+result retains contributing DB IDs and release-vintage lineage.
+
 ## Optional: import your own open evidence locally
 
 Use this section only for redistributable, open evidence that you are allowed
