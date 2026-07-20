@@ -6,6 +6,7 @@
 ^releases$
 ^README\.md$
 ^\.gitignore$
+^\.mailmap$
 ^_pkgdown\.yml$
 ^cran-comments\.md$
 ^NEWS\.md$

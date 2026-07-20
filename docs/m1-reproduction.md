@@ -20,7 +20,7 @@ To run the pipeline, the following external, authoritative datasets must be down
 * **Download URL:** [https://www12.statcan.gc.ca/census-recensement/2021/geo/aip-pia/attribute-attribs/files-fichiers/2021_92-151_X.zip](https://www12.statcan.gc.ca/census-recensement/2021/geo/aip-pia/attribute-attribs/files-fichiers/2021_92-151_X.zip)
 * **Local Path (Git-ignored):** Extract to `.scratch/gaf/`
 
-*(Note: The National Address Register and GeoNames postal centroids datasets are generated earlier in the pipeline by `m1_build_centroids.R`.)*
+*(Note: The National Address Register and GeoNames postal centroids datasets are generated earlier in the pipeline by `m1_build_centroids.R`. The latest published full centroid artifact is in `releases/m1/2026-06-26-nar-geonames-centroids/` with its manifest.)*
 
 ## 2. Execution
 

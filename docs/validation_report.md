@@ -1,65 +1,63 @@
-# Open Data Postal Centroids Validation Report
+# OPCC Centroid Validation Report
 
-## Overview
-This report validates the open data derived Ontario postal centroids against the official Statistics Canada Postal Code Conversion File (PCCF_JUN2017_ON_SLI). Since official PCCF data contains Canada Post proprietary information and cannot be legally shared or distributed openly, validating an open-source approximation is crucial to ensuring data reliability for open research and public tooling.
+**Mode:** synthetic benchmark
+**Centroid artifact:** releases/m1/2026-06-26-nar-geonames-centroids/opcc_m1_centroids.csv.gz
+**Centroid manifest:** releases/m1/2026-06-26-nar-geonames-centroids/m1_manifest.json
+**Generated:** 2026-07-20T18:52:12Z
 
-The open data centroids (`ontario_postal_centroids.csv`) are derived from two primary sources:
-1. **National Address Register (NAR)** centroids.
-2. **Geonames** data.
+## Inputs and boundary
 
-## 1. Coverage Validation
+This run used a synthetic benchmark generated from the public centroid table. It demonstrates the validation pipeline and does not assert empirical accuracy against an official PCCF/SLI extract.
 
-The open data centroids successfully replicate the vast majority of postal codes found in the official Statistics Canada 2017 SLI dataset.
+The Statistics Canada Postal Code Conversion File (PCCF) and related
+SLI extracts contain Canada Post proprietary information. They are used
+only as local, read-only QA material under an explicit maintainer exception.
+They are not package inputs, release artifacts, contribution evidence, or
+redistributed OPCC content. Public users can reproduce the pipeline, but
+empirical comparison against an official extract requires their own
+authorised access to that restricted input.
 
-* **Total Distinct Postal Codes (Open Data):** 299,796
-* **Total Distinct Postal Codes (Official 2017 SLI):** 282,624
-* **Total Matched Postal Codes:** 282,616
-* **Coverage:** **~100%**
+## Coverage
 
-*Virtually all postal codes present in the 2017 SLI file are successfully matched in the open data approximation.*
+- Open-data distinct postal codes: 299,782
+- QA distinct postal codes: 200
+- Matched postal codes: 200
+- Coverage: 100.00 %
 
-## 2. Spatial Accuracy (Distance Deviations)
+## Spatial accuracy
 
-We calculated the Haversine distance between the official SLI coordinate and the open data coordinate for each matched postal code.
+- Matched comparisons: 200
+- Median distance: 0.309 km
+- Mean distance: 1.287 km
+- 90th percentile: 3.540 km
+- 95th percentile: 4.240 km
+- 99th percentile: 5.494 km
+- Max distance: 7.192 km
 
-**Overall Distance Statistics:**
-* **Median Distance:** ~0.00 km (Exact matches for >50% of the dataset)
-* **Mean Distance:** 0.285 km (285 meters)
-* **90th Percentile:** 0.213 km
-* **95th Percentile:** 0.717 km
-* **99th Percentile:** 4.237 km
-* **Max Distance:** ~2,583 km (A small number of extreme outliers exist)
+## Accuracy by centroid source
 
-### Accuracy by Data Source
+| point_source | count | median_km | mean_km | p90_km | p95_km | p99_km | max_km |
+| :--- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| geonames | 100 | 2.336 | 2.446 | 4.242 | 4.833 | 6.818 | 7.192 |
+| nar_centroid | 100 | 0.120 | 0.127 | 0.226 | 0.251 | 0.277 | 0.336 |
 
-| Source | Count | Median Distance | Mean Distance |
-| :--- | :--- | :--- | :--- |
-| **NAR Centroid** | 271,268 | ~0.00 km | 0.199 km (199 meters) |
-| **Geonames** | 11,348 | 0.27 km (270 meters) | 2.35 km |
+## Visualisations
 
-**Conclusion:** The NAR-derived centroids are exceptionally accurate, often mirroring the official SLI coordinates precisely. Geonames serves as a solid fallback but introduces slightly more spatial variance.
+All plots are rendered deterministically from the same input set. They
+illustrate the validation output and are committed only as documentation.
 
-## 3. Visualizations
+### Cumulative accuracy (ECDF)
 
-The following plots illustrate the spatial reliability of the open data file compared to the official SLI.
+![Cumulative accuracy](./validation_ecdf.png)
 
-### Cumulative Accuracy (ECDF)
-This plot shows the cumulative percentage of postal codes that fall within a specific distance threshold (log scale). The NAR centroids curve steeply at 0, indicating exact matches.
+### Distribution of deviations under 5 km
 
-![Cumulative Accuracy](./validation_ecdf.png)
+![Deviations under 5 km](./validation_hist.png)
 
-### Distribution of Deviations (Under 5km)
-This histogram highlights the deviations that are under 5 kilometers. The vast majority of the spatial deviations fall well under 500 meters.
+### Distance variance by source
 
-![Distribution of Deviations](./validation_hist.png)
+![Distance by source](./validation_box.png)
 
-### Distance Variance by Source
-A boxplot showcasing the variance in accuracy based on the open data source used. The NAR centroids consistently exhibit tighter bounds compared to the Geonames approximations.
+## Result
 
-![Distance Variance](./validation_box.png)
-
-## Final Verdict
-The open data approximation (`ontario_postal_centroids.csv`) is **highly reliable**. 
-It covers 100% of the official 2017 SLI file, with over 90% of the coordinates falling within 213 meters of the official Statistics Canada points, and more than 50% matching precisely.
-
-Users can confidently utilize this dataset as an open-source, legally shareable alternative to the proprietary PCCF for almost all non-critical spatial operations (e.g. mapping, neighborhood approximations, distance estimates).
+This is a synthetic benchmark run. See the metrics JSON and manifest for reproducibility metadata.

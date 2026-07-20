@@ -13,6 +13,6 @@ BugReports: https://github.com/lennon-li/OPCC/issues
 Roxygen: list(markdown = TRUE)
 Depends: R (>= 4.1)
 Imports: digest, jsonlite
-Suggests: testthat (>= 3.0.0), dplyr, readr, sf, knitr, rmarkdown
+Suggests: testthat (>= 3.0.0), dplyr, readr, sf, ggplot2, scales, knitr, rmarkdown
 Config/testthat/edition: 3
 VignetteBuilder: knitr

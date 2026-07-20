@@ -11,6 +11,7 @@ redistributed only when those terms allow it.
 | Census geography | Statistics Canada, 2021 census geography | Open Government Licence - Canada; cite source and vintage | Used for geographic assignment |
 | GeoNames supplementary points | GeoNames | CC BY 4.0; retain GeoNames attribution and source date | Separate supplementary layer |
 | Canada Post, PCCF, PCCF+ | Canada Post / licensed products | Restricted or licensed | Never ingest, redistribute, or accept as contribution evidence |
+| PCCF/SLI QA extracts | Statistics Canada / licensed products | Restricted; maintainer-held local QA exception only | Local, read-only QA material; never committed, cached, redistributed, or accepted as contribution evidence |
 
 Contributors must add a row or an equivalent manifest record for each proposed
 source, including its stable identifier, licence, attribution text, retrieval

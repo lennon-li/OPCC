@@ -1,0 +1,39 @@
+{
+  "manifest_version": 1,
+  "run_timestamp": "2026-07-20T18:52:12Z",
+  "generator": {
+    "script": "scripts/sli_validate.R",
+    "repo_sha": "382c2fbceefcdddea174e834f4f87ce1b7c284b4",
+    "r_version": "4.6.0"
+  },
+  "inputs": {
+    "centroid_csv": "releases/m1/2026-06-26-nar-geonames-centroids/opcc_m1_centroids.csv.gz",
+    "centroid_manifest": "releases/m1/2026-06-26-nar-geonames-centroids/m1_manifest.json",
+    "centroid_csv_sha256": "1b0666cc94550955c8879a9931f750c3e5794b0ba9a0161939627a04c227297d",
+    "sli_csv": {},
+    "synthetic": true
+  },
+  "outputs": {
+    "validation_report_md": {
+      "path": "validation_report.md",
+      "sha256": "6d269c30cd046291d26f73ca37ffeaa79d0851e91e83659f06d9c27ec4513522"
+    },
+    "validation_ecdf_png": {
+      "path": "validation_ecdf.png",
+      "sha256": "8c3a742f3dfaafafff4c44ec3613ad20d9a0c321e5a592258f1817732775df0f"
+    },
+    "validation_hist_png": {
+      "path": "validation_hist.png",
+      "sha256": "409b90a706c08903dcc2de9ce1cbacf2d35557a57932b5023bd87f320c4ce74b"
+    },
+    "validation_box_png": {
+      "path": "validation_box.png",
+      "sha256": "5e20ced285e4e1dba23cf93656199c5880301798eef39bbbc5e4aa04c44d4c12"
+    },
+    "validation_metrics_json": {
+      "path": "validation_metrics.json",
+      "sha256": "1ba54b51932327be8182aa81c48876e7378f838a8c1205d61c24d0876510f19f"
+    }
+  },
+  "restricted_input_note": "No SLI/PCCF rows, coordinates, or screenshots are committed. If a local SLI/PCCF input was used, only permitted identity/hash metadata and aggregate statistics appear above."
+}
