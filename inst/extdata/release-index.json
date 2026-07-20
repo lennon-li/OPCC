@@ -1,15 +1,15 @@
 {
   "m2": {
     "2026-06-26": {
-      "artifact": "https://raw.githubusercontent.com/lennon-li/OPCC/main/releases/m2/2026-06-26/opcc_m2_correspondence.csv.gz",
-      "manifest": "https://raw.githubusercontent.com/lennon-li/OPCC/main/releases/m2/2026-06-26/m2_manifest.json",
+      "artifact": "https://raw.githubusercontent.com/lennon-li/OPCC/2dcf7ec001bb2c06673bbd719c93f72f2e927de8/releases/m2/2026-06-26/opcc_m2_correspondence.csv.gz",
+      "manifest": "https://raw.githubusercontent.com/lennon-li/OPCC/2dcf7ec001bb2c06673bbd719c93f72f2e927de8/releases/m2/2026-06-26/m2_manifest.json",
       "sha256": "184b7a107049b145c98a3ab37e0fb789c492272aa26e5ab6a41bb5d400bc63e7",
       "manifest_sha256": "d0b84a9b6d512a2579a81324a7ad43a08e0b78782ffd7dfe398865af6787da67"
     }
   },
   "points": {
     "2026-07-19": {
-      "artifact": "https://raw.githubusercontent.com/lennon-li/OPCC/main/releases/m1/2026-07-19-geonames-points/opcc_m1_geonames_points.csv.gz",
+      "artifact": "https://raw.githubusercontent.com/lennon-li/OPCC/2dcf7ec001bb2c06673bbd719c93f72f2e927de8/releases/m1/2026-07-19-geonames-points/opcc_m1_geonames_points.csv.gz",
       "sha256": "b3edbab3aee3c4fbcac004d978fa2635e83cdad0abada1f4e44f02e7cc36cbfa"
     }
   }

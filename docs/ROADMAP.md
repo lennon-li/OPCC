@@ -133,7 +133,7 @@ published M2 artifact.
 Run `Rscript scripts/m3_validate_release.R` from the repository root to
 checksum-verify the release index, manifest, and versioned M2 baseline and to
 check its key, weight, and best-link invariants. Add `--remote` after the
-repository/release is publicly reachable to verify its public download endpoint.
+repository is publicly reachable to verify its commit-pinned download endpoint.
 
 ### M4 - Source-qualified coverage enrichment
 

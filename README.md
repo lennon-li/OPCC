@@ -44,10 +44,10 @@ vignette. It exposes `normalize_postal_code()`, `pc_to_geo()`,
 `get_correspondence()`, `list_vintages()`, `release_manifest()`,
 `validate_release()`, and `pc_to_point()`.
 
-The GitHub repository is currently private to unauthenticated clients. As a
-result, checksum-verified remote artifact downloads are an external-publication
-gate rather than a currently usable public service. Once an intentional public
-release endpoint exists, run the validator with `--remote` to test it.
+The release index uses commit-pinned GitHub raw URLs so a published artifact
+cannot change when `main` advances. The repository must be public for those
+checksum-verified remote downloads to be available to unauthenticated clients.
+After publication, run the validator with `--remote` to test the endpoint.
 
 ## Product direction
 
