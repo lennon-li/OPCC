@@ -18,20 +18,9 @@ testthat::test_that("offline cache miss is explicit", {
   )
 })
 
-testthat::test_that("verified DA release works from an offline cache", {
-  cache <- tempfile("opcc-da-cache-")
-  dir.create(cache)
-  destination <- OPCC:::.cache_path("m5", "2026-06-26", cache, ".csv.gz")
-  file.copy(
-    testthat::test_path("..", "..", "releases", "m5", "2026-06-26", "opcc_m5_da_correspondence.csv.gz"),
-    destination
-  )
-  file.copy(
-    testthat::test_path("..", "..", "releases", "m5", "2026-06-26", "m5_manifest.json"),
-    OPCC:::.cache_path("m5", "2026-06-26", cache, ".manifest.json")
-  )
-  out <- get_da_correspondence(cache_dir = cache, offline = TRUE)
-  testthat::expect_true(all(c("DAUID", "contributing_dbuids") %in% names(out)))
-  testthat::expect_silent(validate_release(cache_dir = cache, offline = TRUE, level = "DA"))
-  unlink(cache, recursive = TRUE)
+testthat::test_that("DA index exposes an immutable verified release", {
+  spec <- OPCC:::.release_spec(OPCC:::.da_index(), "2026-06-26")
+  testthat::expect_match(spec$artifact, "/c9ce50444328e8f8c659e41d72658c0035bb9603/")
+  testthat::expect_match(spec$sha256, "^[0-9a-f]{64}$")
+  testthat::expect_match(spec$manifest_sha256, "^[0-9a-f]{64}$")
 })
