@@ -113,11 +113,12 @@ test_that("producer revision validation works", {
   testthat::skip_on_cran()
 
   # Get current HEAD as a valid producer ref
-  head_sha <- tryCatch(
-    system("git rev-parse HEAD", intern = TRUE),
-    error = function(e) NULL
-  )
-  testthat::skip_if(is.null(head_sha) || !nzchar(head_sha))
+  head_sha <- tryCatch({
+    res <- system("git rev-parse HEAD", intern = TRUE)
+    # Check if result looks like a SHA (40 hex chars)
+    if (length(res) > 0 && grepl("^[0-9a-f]{40}$", res[1])) res[1] else NULL
+  }, error = function(e) NULL, warning = function(w) NULL)
+  testthat::skip_if(is.null(head_sha))
 
   # Valid ref with existing scripts should succeed
   result <- sli_validate_producer_ref(head_sha, c("scripts/sli_validate.R"))
