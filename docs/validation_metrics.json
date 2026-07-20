@@ -1,5 +1,6 @@
 {
   "mode": "synthetic",
+  "build_ref": "43d56fc333d8024a2d08efc98d6a8487dbdea28e",
   "overall": {
     "n": 200,
     "median_distance_km": 0.3088,
@@ -40,7 +41,13 @@
   "inputs": {
     "centroid_csv": "releases/m1/2026-06-26-nar-geonames-centroids/opcc_m1_centroids.csv.gz",
     "centroid_manifest": "releases/m1/2026-06-26-nar-geonames-centroids/m1_manifest.json",
-    "sli_csv": {},
+    "parent_manifest_sha256": "aff20695ca30c39418802b0a07959a996e7d644e5894ef32101652263268628a",
+    "centroid_csv_sha256": "a94a541925ae3db59929e88de5eeafecc3eda57d39a7db02baa661a6911d5098",
+    "centroid_gz_sha256": "79b6eaf29480a5f151c307a5a103174c072f99701c3247661f001d9ffd338b62",
     "synthetic": true
+  },
+  "restricted_input": {
+    "recorded": false,
+    "reason": "synthetic benchmark"
   }
 }

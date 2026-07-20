@@ -3,7 +3,7 @@
 **Mode:** synthetic benchmark
 **Centroid artifact:** releases/m1/2026-06-26-nar-geonames-centroids/opcc_m1_centroids.csv.gz
 **Centroid manifest:** releases/m1/2026-06-26-nar-geonames-centroids/m1_manifest.json
-**Generated:** 2026-07-20T19:09:20Z
+**Generator commit:** 43d56fc333d8024a2d08efc98d6a8487dbdea28e
 
 ## Inputs and boundary
 

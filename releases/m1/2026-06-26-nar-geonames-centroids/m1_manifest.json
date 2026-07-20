@@ -2,21 +2,30 @@
   "manifest_version": 2,
   "release_type": "m1_centroids",
   "release_date": "2026-06-26",
-  "run_timestamp": "2026-07-20T18:50:24Z",
   "generator": {
     "script": "scripts/m1_build_centroids.R",
     "release_script": "scripts/m1_release.R",
-    "repo_sha": "382c2fbceefcdddea174e834f4f87ce1b7c284b4"
+    "repo_sha": "43d56fc333d8024a2d08efc98d6a8487dbdea28e"
   },
   "artifact": {
     "file": "opcc_m1_centroids.csv.gz",
     "format": "gzip-compressed CSV",
-    "schema": "postal_code, latitude, longitude, point_source, point_method, ...",
+    "schema": {
+      "columns": ["postal_code", "latitude", "longitude", "point_source", "point_method"],
+      "point_source_values": ["nar_centroid", "geonames", "none"]
+    },
     "total_rows": 299796,
-    "csv_sha256": "84a5c9bf945066628113b50e9f09eeca39b047aeff178e1f0043bc61c9d41ec2",
-    "csv_size_bytes": 91705461,
-    "gz_sha256": "1b0666cc94550955c8879a9931f750c3e5794b0ba9a0161939627a04c227297d",
-    "gz_size_bytes": 6598875
+    "csv_sha256": "a94a541925ae3db59929e88de5eeafecc3eda57d39a7db02baa661a6911d5098",
+    "csv_size_bytes": 94866935,
+    "gz_sha256": "79b6eaf29480a5f151c307a5a103174c072f99701c3247661f001d9ffd338b62",
+    "gz_size_bytes": 6542037,
+    "serialization": {
+      "quote": true,
+      "na": "",
+      "row.names": false,
+      "compression": 9,
+      "encoding": "UTF-8"
+    }
   },
   "sources": {
     "nar": {
