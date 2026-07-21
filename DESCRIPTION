@@ -1,10 +1,14 @@
 Package: OPCC
-Title: Open Ontario Postal Code Correspondence
+Title: Open Postal Code Correspondence
 Version: 0.0.1
 Authors@R: c(person("Lennon", "Li", email = "yeli@biostats.ai", role = c("aut", "cre")))
-Description: Source-qualified, reproducible lookups from Ontario postal codes
-    to Statistics Canada 2021 census geography. Release artifacts are
-    checksum-verified before use and retain their evidence source.
+Description: Provides source-qualified, reproducible many-to-many
+    correspondence between Ontario postal codes and Statistics Canada 2021
+    census geographies. Lookup results retain allocation weights, evidence
+    source, lineage, method, and vintage; unmatched postal codes remain
+    explicit. Versioned release artifacts are checksum-verified before use.
+    The package does not redistribute Canada Post, 'PCCF', or 'PCCF+' data and
+    does not claim authoritative postal assignments.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Language: en-US
