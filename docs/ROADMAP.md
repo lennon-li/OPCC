@@ -1,290 +1,117 @@
-# OPCC Roadmap: Open Postal Code Conversion
+# OPCC Roadmap: Open Postal Code Correspondence
 
-Status: adopted 2026-07-17; M3-M7 community-package audit completed
-2026-07-18. Product name: **OPCC (Open Postal Code Conversion)**.
+Status updated: 2026-07-21
 
-OPCC aims to be the go-to open Ontario package for common workflows that
-otherwise require PCCF/PCCF+: normalize postal codes, resolve them to census
-geography, retain all plausible links and weights, select an explicit best
-link when needed, and inspect vintage, source, confidence, and lineage. It is
-not a drop-in or authoritative replacement for Canada Post or licensed PCCF
-products; unsupported use cases and unmatched codes must remain visible.
+OPCC is an open, reproducible Ontario postal-code-to-census-geography package
+and data pipeline. The name expands to **Open Postal Code Correspondence** so
+the project can retain the same identity if coverage expands beyond Ontario.
+Ontario remains the only supported jurisdiction at present.
 
-Guiding principle: **OPCC is both a reproducible pipeline and a usable
-package.** Published data are immutable, versioned outputs of public inputs
-and committed code. Every release must be rebuildable from recorded source
-metadata and checksums, independently verifiable, and usable without access
-to the bulk build inputs.
+OPCC is not a drop-in or authoritative replacement for Canada Post, PCCF, or
+PCCF+. It publishes source-qualified observed postal associations derived from
+redistributable public evidence.
 
-Non-negotiable constraints (apply to every milestone):
+## Non-negotiable constraints
 
-- The evidence unit is an **observed postal association** (postal_code,
-  address, lat/lon, source, lineage fields) - never a reconstructed Canada
-  Post assignment, never a postal polygon.
-- Postal-to-geography links are many-to-many with weights and confidence.
-- The Ontario "Canada Postal Code Data" resource and all Canada Post / PCCF
-  licensed products stay quarantined: never downloaded, ingested, or
-  redistributed.
-- Bulk downloaded data is never committed; every ingested file is recorded
-  by URL, release date, and checksum so builds are reproducible.
-- ODbL sources (OSM) live in a separately designed layer, never the default
-  combined product.
-- Committed text files are ASCII-only.
-- APIs never hide coverage gaps: unmatched, NAR-backed, and supplementary-only
-  results are distinguishable in returned data.
-- A release is not complete until its schema, hashes, row counts, key
-  invariants, source licences, and rebuild instructions are machine-checkable.
-- New sources enter through a documented adapter and profiling contract, not
-  through one-off merges.
+- The evidence unit is an observed postal association, never a reconstructed
+  Canada Post assignment or a postal polygon.
+- Postal-to-geography relationships may be many-to-many.
+- Allocation weights describe observed evidence distribution; they are not
+  automatically probabilities or calibrated confidence scores.
+- Canada Post, PCCF, PCCF+, and restricted Ontario postal data are never
+  downloaded, ingested, or redistributed.
+- ODbL sources require a separately designed layer and are not silently merged
+  into the default product.
+- Published releases are immutable and independently verifiable using manifests
+  and checksums.
+- Unmatched, NAR-backed, and supplementary-only results remain distinguishable.
+- New sources enter through documented adapters, provenance review, licensing
+  review, profiling, fixtures, and regression checks.
 
-## Product acceptance standards
+## Completed milestones
 
-Every remaining milestone must improve at least one of these standards without
-weakening the others:
+### M1 - NAR profiling and geographic assignment
 
-1. **Useful**: common postal-to-census workflows are available through a small,
-   documented API with honest many-to-many behavior and explicit fallbacks.
-2. **Reproducible**: a clean environment can rebuild each derived artifact
-   from versioned code, public input references, checksums, and locked
-   dependencies.
-3. **Verifiable**: users and CI can validate downloaded artifacts, schemas,
-   invariants, vintages, and provenance without trusting the maintainer.
-4. **Contributable**: a contributor can propose a source, implement its adapter,
-   run fixtures and checks, and submit a reviewable change from documented
-   instructions.
-5. **Maintainable**: releases, compatibility, corrections, and maintainer
-   responsibilities follow a public process that does not depend on one person.
+**Complete.** Profiles the Statistics Canada NAR, extracts Ontario observations,
+normalizes postal codes, builds address-derived postal centroids, retains a
+separate GeoNames supplementary point layer, assigns points to 2021
+Dissemination Blocks, and derives higher geographies through the GAF.
 
-## Milestones
+### M2 - Source-qualified DB correspondence
 
-### M1 - NAR profiling proof of concept
+**Published.** Provides immutable, versioned postal-code-to-DB correspondence.
+The NAR baseline and GeoNames amendment remain source-separated. All defensible
+links, allocation weights, best-link indicators, methods, lineages, and
+vintages remain visible.
 
-Status: **COMPLETE**. The pipeline downloads and profiles the NAR, extracts
-Ontario, normalizes postal codes, creates NAR address-derived centroids, retains
-a separate GeoNames supplementary point layer, assigns points to 2021
-Dissemination Blocks, and derives higher geographies through the GAF. Build
-inputs and generated artifacts retain release, licence, method, and lineage
-metadata.
+### M3 - R package foundation
 
-### M2 - Source-qualified correspondence table
+**Complete.** Provides the installable package, lookup API, release cache,
+release index, fixtures, vignette, tests, and standalone release validator.
+Core functions include `normalize_postal_code()`, `pc_to_geo()`,
+`pc_to_point()`, `get_correspondence()`, `get_da_correspondence()`,
+`list_vintages()`, `release_manifest()`, and `validate_release()`.
 
-Status: **VERIFIED REVIEW CANDIDATE** (2026-07-19; scope corrected
-2026-07-18). The immutable NAR 2026-06-26 baseline and portable build manifest
-remain tracked under `releases/m2/2026-06-26/`. The amended candidate is
-committed on `agent/m2-m3-community-package` and is not published until review
-and merge.
+### M4 - Source-qualified enrichment and contributions
 
-The first artifact that is actually OPCC: `postal_code x DBUID` with DAUID
-and higher identifiers, `n_observations`, `n_unique_addresses`,
-`n_sources`, source-qualified weights, `best_link`, source method and quality,
-`source_vintage`, and `census_vintage`. NAR rows retain all observed-address
-DB links and address weights. Of the 17,373 GeoNames-sourced fallback points,
-17,334 intersect a 2021 Ontario DB/DA and are included with their
-point-in-polygon assignment, `gn_accuracy`, missing address evidence fields,
-and a distinct supplementary evidence class. The other 39 remain explicitly
-unmatched points in M1/M3 rather than fabricated M2 links.
+**Complete.** Provides source adapters, GeoNames coverage reporting, strict
+local-data validation, source-separated local layers, contribution bundles,
+and source/correction issue templates. Restricted data cannot enter a bundle.
+No cross-source probability is invented where independent overlapping evidence
+does not exist.
 
-The independently rebuilt amendment contains 431,541 rows covering 299,743
-postal codes: the 414,207-row NAR baseline plus 17,334 resolved GeoNames rows.
-A GeoNames allocation weight of one means that its point join generated one
-candidate; it does not mean certainty. The existing baseline is not
-overwritten. The full semantics and reproducible build gates are defined in
-`docs/uncertainty-and-allocation-design.md`.
+### M5 - Direct DA correspondence
 
-**M2 amendment exit gate:** the combined artifact preserves source separation,
-includes every GeoNames point that has DBUID and DAUID with `gn_accuracy`,
-method, and vintage, explicitly retains and reports unmatched points,
-reproduces or explains the target counts, passes key,
-weight, nullability, and deterministic-order invariants, and is independently
-rebuilt and verified before publication.
+**Published.** Rolls the versioned DB correspondence to Dissemination Areas
+through tracked GAF attributes. DA allocation weights, deterministic best links,
+contributing DB identifiers, source vintages, census vintage, and evidence class
+remain inspectable.
 
-### M3 - Usable R package foundation
+### M6 - Release assurance
 
-**Status (2026-07-19): VERIFIED REVIEW CANDIDATE.** The package, source-qualified
-point artifact, fixtures, rendered vignette, and standalone release validator
-are complete and pass `R CMD check`; publication remains gated on review and
-merge of `agent/m2-m3-community-package`.
+**Complete.** The external Hermes maintenance workflow performs source-vintage
+monitoring, isolated producing and verification rebuilds, deterministic drift
+reporting, and a mandatory human publication gate. Operational run evidence is
+maintained outside package and CRAN scope.
 
-Build an installable `OPCC` package around the published releases. The first
-public contract includes:
+### M7 - Public governance
 
-- `normalize_postal_code()` for strict `ANA NAN` normalization and validation;
-- `pc_to_geo()` for postal-code-to-DB lookup with all links, weights,
-  `best_link`, confidence, source class, and vintage;
-- `get_correspondence()` for checksum-verified download and local caching of a
-  selected release;
-- `list_vintages()`, `release_manifest()`, and `validate_release()` so users
-  can inspect and verify what they loaded; and
-- a source-labeled `pc_to_point()` lookup retaining the 17,373 current
-  GeoNames-only M1 records instead of dropping them when NAR has no match.
+**Complete.** Governance, conduct, security, release and deprecation policy,
+attribution, citation, contribution procedures, and maintainer guidance are
+public. GitHub Releases is the durable artifact distribution channel.
 
-The package ships a lightweight release index and test fixtures; full artifacts
-remain versioned release downloads. Defaults return all defensible links.
-Selecting one link must be explicit and must preserve the reason it won.
-Returned objects carry provenance attributes and never silently substitute a
-GeoNames point for NAR address evidence.
+## Deferred work
 
-**M3 exit gate:** package installation and `R CMD check` pass in a clean
-environment; API, cache, offline, invalid-input, unmatched-code, many-to-many,
-and checksum-failure tests pass; a vignette reproduces a postal-to-DB lookup
-from a fresh library; and one command validates the bundled release index and
-published M2 artifact.
+### CRAN readiness
 
-Run `Rscript scripts/m3_validate_release.R` from the repository root to
-checksum-verify the release index, manifest, and versioned M2 baseline and to
-check its key, weight, and best-link invariants. Add `--remote` after the
-repository is publicly reachable to verify its commit-pinned download endpoint.
+Resolve current `R CMD check --as-cran` notes and complete a full manual- and
+vignette-enabled CRAN-level check before any CRAN submission.
 
-### M4 - Source-qualified coverage enrichment
+### External validation and adoption
 
-**Status (2026-07-20): COMPLETE.** M4 delivers a fully gated GeoNames
-supplementary adapter, reproducible source-specific and combined artifacts,
-coverage and disagreement reporting, strict local-data validation,
-source-separated layers, profile reports, contribution bundles, and source and
-correction issue templates. The current GeoNames/NAR layers have zero shared
-postal codes. Cross-source uncertainty weighting is therefore not applicable:
-the deterministic, source-qualified point link is retained, and no weights are
-invented. CI runs the versioned coverage report and package checks, including
-restricted-source, provenance, fixture, duplicate-evidence, and
-source-separation tests.
+Independent external validation is intentionally deferred and tracked in OPCC
+project memory. It should test real Ontario workflows, urban and rural cases,
+PO-box and unmatched behavior, many-to-many outputs, source-class coverage,
+installation usability, and legally permissible benchmark comparisons.
 
-Add public sources one at a time through a reusable source-adapter contract.
-Each adapter declares its licence, lineage, retrieval endpoint, release date,
-checksum, schema mapping, normalization rules, quality metrics, and fixtures.
-The initial order remains ODA for lineage/regression comparison, GeoNames as a
-separate supplementary point layer, Toronto as the first municipal source, and
-then verified municipal or facility sources.
+### Additional source coverage
 
-#### User-supplied data and contribution path
+Municipal address-source discovery beyond Toronto, facility anchors,
+business/regulated sources, and consolidated geography-endpoint documentation
+remain future enrichment work.
 
-M4 provides an explicit local-layer API for organizations and researchers that
-hold postal-code evidence OPCC does not yet publish. The planned functions are
-`validate_source_data()`, `new_source_adapter()`, `build_source_layer()`,
-`profile_source_layer()`, and `contribution_bundle()`. They validate a user
-table, normalize it into a source-labeled layer, report coverage/conflicts and
-uncertainty, and create a reviewable contribution bundle. A local layer can be
-passed explicitly to lookup/build functions, but is never silently merged into
-a canonical OPCC release or used to overwrite NAR evidence.
+## Release artifact policy
 
-**Contribution invitation:** every public function that accepts, creates, or
-profiles user-supplied postal-code data must emit a concise `message()` on
-every invocation: the layer remains local and source-separated; if its licence
-permits redistribution, the user is invited to submit the generated bundle as
-an OPCC issue or pull request. `contribution_bundle()` must produce a
-normalized sample/fixture, provenance and licence declaration, retrieval or
-creation date, schema map, quality/coverage report, and reproducible adapter
-configuration. It must never package restricted Canada Post/PCCF/PCCF+ data.
+Git should retain code, manifests, checksums, schemas, documentation, and small
+fixtures. Production data artifacts should be published as immutable,
+checksum-pinned GitHub Release assets rather than accumulated indefinitely in
+repository history.
 
-The repository will provide issue and pull-request templates for new sources
-and corrections. CI applies the same licence, provenance, fixture, duplicate,
-and regression checks to contributed layers as to maintainer-built layers;
-acceptance remains a maintainer review decision with the evidence layer kept
-inspectable.
+## Current scope declaration
 
-The 17,373 current GeoNames-sourced fallback codes remain available. Better
-open address or facility evidence may supersede their coordinates for a
-specific layer, but unresolved codes are retained with
-`source_class = supplementary` and explicit precision limitations. Agreement
-raises confidence only across independent lineages; source layers remain
-inspectable and are never blended into an opaque score.
-
-For a future layer with independently overlapping evidence, M4's adapter
-contract supports the calibrated uncertainty layer defined in
-`docs/uncertainty-and-allocation-design.md`: empirically calibrated candidate
-DB/DA sets based on held-out overlap, spatially blocked validation, and
-source/density/rurality strata. Without such overlap, OPCC does not create a
-calibrated candidate layer. All candidate weights remain visible; seeded random
-allocation is optional and never the default lookup behavior.
-
-**M4 exit gate:** at least one non-NAR adapter completes the full profiling and
-licence gate; source-specific and combined artifacts are reproducible; coverage
-and disagreement reports quantify additions, supersessions, and unresolved
-codes; and CI rejects missing provenance, incompatible licences, duplicate
-evidence, or unexplained coverage loss. Where independently overlapping source
-evidence exists, held-out uncertainty metrics and calibration by stratum must
-beat or honestly fail against point-only, equal-weight, and population-only
-baselines. Where no such overlap exists, no cross-source weighting is required
-or published. The local-layer API, per-invocation contribution invitation,
-contribution-bundle schema, and issue/PR templates are tested; fixtures
-demonstrate that local data remains source-separated and that restricted data
-cannot enter a bundle.
-
-### M5 - Postal-code to DA roll-up
-
-**Status (2026-07-20): COMPLETE.** The versioned M5 artifact rolls the
-published 2026-06-26 M2 DB correspondence to DA using its tracked 2021 GAF
-attributes. `pc_to_geo(level = "DA")` loads the direct, checksum-verified
-artifact; caller-supplied DB correspondence is aggregated with the same
-deterministic logic. Weights are summed across DBs in the same DA, all DA links
-remain visible by default, and each output records its contributing DB IDs,
-source vintage, census vintage, and evidence class. This is an attribute
-roll-up, not a new point or polygon assignment.
-
-**M5 exit gate:** DA weights sum to one per covered postal code; each covered
-postal code has exactly one deterministic best DA; every DA result traces to
-its contributing DB rows and release vintages; no identifier is missing; the
-artifact and manifest pass `validate_release()`; and package examples cover
-single-link, multi-link, supplementary-only, and unmatched postal codes.
-
-### M6 - Reproducible and independently verifiable releases
-
-**Status (2026-07-20): IN PROGRESS.** Immutable release-index auditing and
-deterministic drift reporting are implemented. The remaining work is a
-scheduled source-vintage watch, locked environment record, and an isolated
-clean-room rebuild and verification job.
-
-Create the release system that keeps OPCC current without hand-built data. It
-includes a monthly NAR metadata check, rebuilds only for new source vintages,
-locked R dependencies, recorded build environment, deterministic artifacts,
-schema and invariant checks, successive-vintage drift reports, and a clean-room
-rebuild job independent of the producing job.
-
-Automation opens a release branch and run-brief issue containing source diffs,
-checksums, coverage changes, validation results, and reviewer actions. A human
-publish gate remains mandatory. Published vintages are immutable and can only
-be superseded.
-
-**M6 exit gate:** a clean runner rebuilds the candidate from manifests and
-public inputs; a separate verification job confirms artifact hashes and
-semantic invariants; deliberate source/schema/hash drift fails loudly; rollback
-and correction procedures are documented; and the complete release can be
-reproduced without maintainer-local files.
-
-### M7 - Community-maintained public project
-
-**Status (2026-07-20): COMPLETE.** The public governance, conduct, security,
-release/deprecation, attribution, citation, contribution, and pull-request
-review documents are present. GitHub Releases is the chosen durable public
-distribution channel; OPCC will not maintain a Zenodo/DOI mirror. Contributor
-and independent-maintainer rehearsals remain ongoing operational practice, not
-package-milestone blockers.
-
-Publish the governance needed for OPCC to outlive its initial maintainers:
-`CONTRIBUTING.md`, code of conduct, source-proposal and data-correction issue
-templates, adapter scaffolding, reviewer checklist, maintainer roles, decision
-record process, release and deprecation policy, security/contact policy, and a
-licence/attribution matrix for every layer.
-
-Community review requires two separable approvals for data changes: technical
-validation and provenance/licence review. Contributor fixtures must be small
-and redistributable. CI provides the same checks maintainers use. Governance
-defines how maintainers are added or removed, how disputed source claims are
-resolved, and how abandoned releases remain reproducible.
-
-The standing disclaimer remains: OPCC is not affiliated with Canada Post or
-Statistics Canada, is not PCCF/PCCF+, and publishes source-qualified observed
-postal associations from open data. Documentation also states which common
-PCCF/PCCF+ workflows OPCC supports and which it does not.
-
-**M7 exit gate:** a new contributor can add a fixture-backed source adapter by
-following only public documentation; a new maintainer can execute and verify a
-release without private instructions; governance and correction drills are
-completed; and release artifacts have durable distribution and citation.
-
-## Open decisions
-
-1. ~~Product/package name~~ - settled 2026-07-17: **OPCC**.
-2. ~~M5 design~~ - settled 2026-07-18: direct postal-code-to-DA roll-up
-   through DB.
-3. ~~M7 durable distribution~~ - settled 2026-07-20: GitHub Releases only;
-   citation is provided by `CITATION.cff` and no Zenodo/DOI mirror is planned.
+- Product: OPCC - Open Postal Code Correspondence
+- Supported jurisdiction: Ontario
+- Census vintage: 2021
+- Primary current source vintage: NAR 2026-06-26
+- Durable distribution: GitHub Releases
+- DOI mirror: none planned
