@@ -13,6 +13,12 @@
       "manifest": "https://raw.githubusercontent.com/lennon-li/OPCC/c9ce50444328e8f8c659e41d72658c0035bb9603/releases/m5/2026-06-26/m5_manifest.json",
       "sha256": "b0d7d79942634d2ba634761ccf10b9cea4e6d4256f1ff41d54d4a6cc20765068",
       "manifest_sha256": "9c6c5b1151eb50de0a8b5711ba9a956c55d8b037d673bfcb40a70712afa88df9"
+    },
+    "2026-07-20": {
+      "artifact": "https://raw.githubusercontent.com/lennon-li/OPCC/4b8fb74f04a27d31b8601e94a00de98d6a7281c6/releases/m5/2026-07-20/opcc_m5_da_correspondence.csv.gz",
+      "manifest": "https://raw.githubusercontent.com/lennon-li/OPCC/4b8fb74f04a27d31b8601e94a00de98d6a7281c6/releases/m5/2026-07-20/m5_manifest.json",
+      "sha256": "b0d7d79942634d2ba634761ccf10b9cea4e6d4256f1ff41d54d4a6cc20765068",
+      "manifest_sha256": "193ac02b29405a6305e72075ae7480d78dfae7f467386cc9d53adc0971f4e221"
     }
   },
   "points": {

@@ -252,7 +252,7 @@ pc_to_geo <- function(
   } else {
     correspondence
   }
-  if (level == "DA" && !is.null(correspondence)) x <- aggregate_da_correspondence(x)
+  if (level == "DA" && !is.null(correspondence) && "DBUID" %in% names(x)) x <- aggregate_da_correspondence(x)
   out <- x[x$postal_code %in% pcs, , drop = FALSE]
   if (!all_links) out <- out[out$best_link, , drop = FALSE]
   attr(out, "unmatched") <- setdiff(pcs, unique(out$postal_code))

@@ -1,0 +1,30 @@
+{
+  "source_m2": {
+    "vintage": "2026-06-26",
+    "artifact_sha256": "184b7a107049b145c98a3ab37e0fb789c492272aa26e5ab6a41bb5d400bc63e7",
+    "manifest_sha256": "d0b84a9b6d512a2579a81324a7ad43a08e0b78782ffd7dfe398865af6787da67",
+    "census_vintage": "2021"
+  },
+  "build": {
+    "method": "deterministic_db_to_da_attribute_rollup",
+    "code_version": "86498fc211a84ade95c7a29e0d75b7413abb2aa4"
+  },
+  "row_counts": {
+    "correspondence_rows": 315813,
+    "postal_codes": 282409,
+    "contributing_db_rows": 414207
+  },
+  "validation_results": {
+    "weights_sum_to_one": true,
+    "unique_best_link": true,
+    "unique_postal_dauid": true,
+    "complete_db_lineage": true
+  },
+  "release_artifact": {
+    "path": "opcc_m5_da_correspondence.csv.gz",
+    "compression": "gzip",
+    "bytes": 2314616,
+    "sha256": "b0d7d79942634d2ba634761ccf10b9cea4e6d4256f1ff41d54d4a6cc20765068",
+    "uncompressed_sha256": "a34f607befa5961ab71ccde04eec48c0e32fba8eb42c1d951e0752f1da490fd2"
+  }
+}
