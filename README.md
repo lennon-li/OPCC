@@ -25,7 +25,7 @@ remotes::install_github("lennon-li/OPCC")
 library(OPCC)
 
 # Direct postal-code-to-DA lookup
-pc_to_geo("K1A 0A6", level = "DA")
+pc_to_geo("M5V 3A8", level = "DA")
 
 # Retain every defensible DB link and its allocation weight
 pc_to_geo("M5V 3A8", level = "DB", all_links = TRUE)

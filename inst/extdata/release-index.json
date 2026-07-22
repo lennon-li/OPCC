@@ -5,6 +5,12 @@
       "manifest": "https://raw.githubusercontent.com/lennon-li/OPCC/2dcf7ec001bb2c06673bbd719c93f72f2e927de8/releases/m2/2026-06-26/m2_manifest.json",
       "sha256": "184b7a107049b145c98a3ab37e0fb789c492272aa26e5ab6a41bb5d400bc63e7",
       "manifest_sha256": "d0b84a9b6d512a2579a81324a7ad43a08e0b78782ffd7dfe398865af6787da67"
+    },
+    "2026-07-19-geonames-amendment": {
+      "artifact": "https://raw.githubusercontent.com/lennon-li/OPCC/2dcf7ec001bb2c06673bbd719c93f72f2e927de8/releases/m2/2026-07-19-geonames-amendment/opcc_m2_correspondence.csv.gz",
+      "manifest": "https://raw.githubusercontent.com/lennon-li/OPCC/2dcf7ec001bb2c06673bbd719c93f72f2e927de8/releases/m2/2026-07-19-geonames-amendment/m2_manifest.json",
+      "sha256": "812c94cadded5d24de44ea163c4c6a630d8d991ae0c480e88f32738087e00e15",
+      "manifest_sha256": "54f37574bf96cca946fa349646d6b3856588772589cc425958ad2f9f319c7268"
     }
   },
   "m5": {
