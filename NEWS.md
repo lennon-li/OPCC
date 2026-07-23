@@ -7,4 +7,6 @@
   quarantine reasons and validation-report counts.
 - Added exact Ontario-boundary and 2021 DB assignment safeguards for canonical
   point candidates, including explicit matched and unmatched statuses.
+- Added an aggregate-only, many-to-many DB/DA validation engine for
+  maintainer-held licensed benchmarks, with fail-closed private output paths.
 - Added immutable release-index validation and release-control auditing.

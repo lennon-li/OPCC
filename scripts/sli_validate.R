@@ -41,13 +41,13 @@ library(dplyr)
 library(digest)
 library(jsonlite)
 
-# Source shared helper functions from the test directory.
-# Resolve the helper relative to this script so the script works from any cwd.
+# Resolve the validation engine relative to this script so it works from any
+# working directory.
 cmd_args <- commandArgs(trailingOnly = FALSE)
 script_arg <- grep("^--file=", cmd_args, value = TRUE)
 script_path <- normalizePath(sub("^--file=", "", script_arg), mustWork = TRUE)
 repo_root <- dirname(dirname(script_path))
-helper <- file.path(repo_root, "tests", "testthat", "helper-sli-validation.R")
+helper <- file.path(repo_root, "R", "validation-metrics.R")
 if (!file.exists(helper)) {
   stop("Helper not found at ", helper)
 }
@@ -174,7 +174,7 @@ parse_args <- function() {
     producer_ref      = NULL,
     sli_csv           = NULL,
     sli_label         = NULL,
-    output_dir        = "docs",
+    output_dir        = NULL,
     synthetic         = FALSE,
     seed              = 42L
   )
@@ -197,6 +197,9 @@ parse_args <- function() {
   if (is.null(out$producer_ref)) {
     stop("--producer-ref is required.")
   }
+  if (is.null(out$output_dir)) {
+    stop("--output-dir is required.")
+  }
   if (out$synthetic && !is.null(out$sli_csv)) {
     stop("--synthetic and --sli-csv are mutually exclusive.")
   }
@@ -213,6 +216,11 @@ main <- function() {
   Sys.setenv(LANGUAGE = "en")
 
   inputs <- parse_args()
+  sli_validate_output_directory(
+    inputs$output_dir,
+    repo_root,
+    inputs$synthetic
+  )
   if (!dir.exists(inputs$output_dir)) {
     dir.create(inputs$output_dir, recursive = TRUE)
   }
@@ -255,10 +263,7 @@ main <- function() {
 
   metrics <- sli_compute_metrics(centroids, sli)
 
-  joined <- centroids %>%
-    dplyr::inner_join(sli, by = "postal_code", suffix = c("", "_sli")) %>%
-    dplyr::mutate(distance_km = sli_haversine_km(latitude, longitude,
-                                                 latitude_sli, longitude_sli))
+  joined <- sli_compute_point_distances(centroids, sli)
 
   grDevices::png(file.path(inputs$output_dir, "validation_ecdf.png"),
                  width = 2400, height = 1800, res = 300, type = "cairo")

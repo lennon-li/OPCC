@@ -34,16 +34,16 @@ test_that("centroid reader validates required columns", {
   expect_error(sli_read_centroids(bad), "Missing required centroid columns")
 })
 
-test_that("SLI reader accepts flexible column names", {
+test_that("SLI reader accepts flexible names and preserves reference points", {
   tmp <- withr::local_tempfile(fileext = ".csv")
   write.csv(data.frame(
-    pc = c("K1A 0B1", "M5V 3A8"),
-    lat = c(45.42, 43.64),
-    long = c(-75.70, -79.39)
+    pc = c("K1A 0B1", "K1A 0B1", "M5V 3A8"),
+    lat = c(45.42, 45.43, 43.64),
+    long = c(-75.70, -75.71, -79.39)
   ), tmp, row.names = FALSE)
   df <- sli_read_sli(tmp)
-  expect_equal(nrow(df), 2)
-  expect_equal(df$postal_code, c("K1A 0B1", "M5V 3A8"))
+  expect_equal(nrow(df), 3)
+  expect_equal(sum(df$postal_code == "K1A 0B1"), 2)
 })
 
 test_that("metrics computation stratifies by source", {
@@ -62,6 +62,28 @@ test_that("metrics computation stratifies by source", {
   expect_equal(m$coverage$matched_postal_codes, 3)
   expect_equal(nrow(m$by_source), 2)
   expect_true(all(m$by_source$point_source %in% c("nar_centroid", "geonames")))
+})
+
+test_that("point validation uses the nearest reference coordinate", {
+  centroids <- data.frame(
+    postal_code = "K1A 0B1",
+    latitude = 45,
+    longitude = -75,
+    point_source = "nar_centroid"
+  )
+  sli <- data.frame(
+    postal_code = c("K1A 0B1", "K1A 0B1"),
+    latitude = c(45, 46),
+    longitude = c(-75, -75)
+  )
+
+  distances <- sli_compute_point_distances(centroids, sli)
+  metrics <- sli_compute_metrics(centroids, sli)
+
+  expect_equal(nrow(distances), 1)
+  expect_equal(distances$distance_km, 0, tolerance = 1e-9)
+  expect_equal(metrics$joined_n, 1)
+  expect_equal(metrics$overall$mean_distance_km, 0, tolerance = 1e-9)
 })
 
 test_that("synthetic QA is deterministic", {

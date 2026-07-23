@@ -19,9 +19,9 @@ library(readr)
 library(digest)
 library(jsonlite)
 
-# Shared verification helper is also used by scripts/sli_validate.R.
+# Shared verification engine is also used by scripts/sli_validate.R.
 repo_root <- dirname(dirname(normalizePath("scripts/m1_release.R", mustWork = FALSE)))
-helper_path <- file.path(repo_root, "tests", "testthat", "helper-sli-validation.R")
+helper_path <- file.path(repo_root, "R", "validation-metrics.R")
 if (file.exists(helper_path)) {
   source(helper_path)
 } else {

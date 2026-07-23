@@ -20,6 +20,9 @@ A rigorous comparison against the official Statistics Canada PCCF/SLI extracts r
 - PCCF/SLI extracts are **maintainer-held, local, read-only QA material** under an explicit maintainer exception.
 - They are **not** a package input, release artifact, contribution input, fixture, or redistributed OPCC content.
 - The validation pipeline accepts a local SLI/PCCF CSV path, but it never copies, caches, serialises, or commits row-level SLI/PCCF data.
+- Licensed validation output must be written outside the repository. The
+  current licensed report and plots are private review material, not approved
+  public aggregate attestations.
 - Public users can reproduce the pipeline, but an empirical PCCF/SLI comparison requires their own authorised access to the required restricted input.
 - The repository does not assert any licence, access right, or legal conclusion for PCCF/SLI beyond the maintainer exception described here.
 
@@ -62,10 +65,33 @@ Rscript scripts/sli_validate.R \
   --producer-ref 707bd743c8f0805010bee5cd60c5055a3081c206 \
   --sli-csv /path/to/local/sli_qa.csv \
   --sli-label "PCCF SLI QA" \
-  --output-dir docs
+  --output-dir /path/outside/opcc/private-validation
 ```
 
-The pipeline will normalise postal codes, compute Haversine distances, stratify results by `point_source`, and emit the report, PNGs, metrics JSON, and a validation manifest. Only aggregate metrics and permitted identity/hash metadata are written.
+The pipeline will normalise postal codes, preserve distinct reference
+coordinates, compare each OPCC point with its nearest same-code reference
+coordinate, stratify Haversine distances by `point_source`, and emit a private
+report, plots, metrics JSON, and validation manifest. Do not copy these outputs
+into the repository. A separate allowlisted publisher is required before
+licensed aggregate results can become public. The parent of a new licensed
+output directory must already exist so its canonical location, including any
+symbolic links, can be checked before writing.
+
+## Many-to-many correspondence metric engine
+
+`R/validation-metrics.R` also provides pure internal helpers for
+licensed DB/DA benchmark work:
+
+- `sli_normalize_link_table()` preserves distinct postal-code/geography pairs,
+  collapses only exact duplicate reference pairs, and validates Ontario DB or
+  DA identifiers.
+- `sli_compute_link_metrics()` compares OPCC and reference geography sets for
+  shared codes and returns aggregate-only coverage, precision, recall, F1,
+  missing/excess links, micro/macro Jaccard, any-link agreement, exact-set
+  agreement, and OPCC-best-link containment.
+
+The engine is exercised with synthetic PCCF-shaped fixtures. It does not read,
+publish, or ship licensed data, and it is not yet a public package API.
 
 ## Output files
 
