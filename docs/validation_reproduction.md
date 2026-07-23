@@ -93,6 +93,42 @@ licensed DB/DA benchmark work:
 The engine is exercised with synthetic PCCF-shaped fixtures. It does not read,
 publish, or ship licensed data, and it is not yet a public package API.
 
+## Private M1/M2/M5 PCCF runner
+
+`scripts/pccf_validate.R` runs the complete private benchmark against an
+authorised Ontario PCCF extract. It verifies M1, checks M2 and M5 against
+`inst/extdata/release-index.json`, and requires M5 to name the exact selected
+M2 artifact and manifest hashes. Matching 2021 census vintages and M1/M2 NAR
+vintages are also required before the licensed input is read.
+
+The PCCF CSV must remain outside the repository. Copy
+`config/pccf-validation-contract.example.json` to a private location, replace
+`product_vintage`, and adjust only the five source column names. The contract
+fixes the benchmark to Ontario, 2021 census geographies, EPSG:4326 coordinates,
+strict missing-value handling, and exact-duplicate deduplication.
+
+Both existing M5 releases descend from M2 `2026-06-26`; they are intentionally
+incompatible with M2 `2026-07-19-geonames-amendment` for this benchmark.
+
+After this runner is committed, use that commit as `--producer-ref`:
+
+```bash
+Rscript --vanilla scripts/pccf_validate.R \
+  --m1-release-dir releases/m1/2026-06-26-nar-geonames-centroids \
+  --m2-release-id 2026-06-26 \
+  --m5-release-id 2026-07-20 \
+  --pccf-csv /path/outside/opcc/ontario-pccf.csv \
+  --pccf-contract /path/outside/opcc/pccf-contract.json \
+  --output-dir /path/outside/opcc/private-pccf-validation \
+  --producer-ref <full-commit-sha>
+```
+
+The output directory must not already exist and its parent must exist. The
+runner creates it with owner-only permissions and writes aggregate metrics, an
+aggregate report, and a hash manifest. Outputs contain no postal codes,
+coordinates, DBUIDs, DAUIDs, examples, joined rows, or local paths. They remain
+private diagnostic evidence; public attestation is a separate future workflow.
+
 ## Output files
 
 | File | Purpose |

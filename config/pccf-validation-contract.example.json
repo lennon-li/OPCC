@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "product": "PCCF",
+  "product_vintage": "YYYY-MM",
+  "census_vintage": "2021",
+  "province_uid": "35",
+  "coordinate_crs": "EPSG:4326",
+  "point_semantics": "pccf_representative_point",
+  "columns": {
+    "postal_code": "PC",
+    "latitude": "LAT",
+    "longitude": "LONG",
+    "DBUID": "DBUID",
+    "DAUID": "DAUID"
+  },
+  "missing_value_policy": "error",
+  "duplicate_row_policy": "count_then_deduplicate_exact"
+}

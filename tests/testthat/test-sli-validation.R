@@ -86,6 +86,51 @@ test_that("point validation uses the nearest reference coordinate", {
   expect_equal(metrics$overall$mean_distance_km, 0, tolerance = 1e-9)
 })
 
+test_that("point metrics handle an empty comparison without non-finite values", {
+  centroids <- data.frame(
+    postal_code = "K1A 0B1",
+    latitude = 45,
+    longitude = -75,
+    point_source = "nar_centroid"
+  )
+  reference <- data.frame(
+    postal_code = character(),
+    latitude = numeric(),
+    longitude = numeric()
+  )
+
+  expect_no_warning(metrics <- sli_compute_metrics(centroids, reference))
+  expect_equal(metrics$joined_n, 0)
+  expect_equal(metrics$coverage$coverage_pct, NA_real_)
+  expect_equal(metrics$overall$n, 0)
+  expect_true(all(vapply(
+    metrics$overall[-1],
+    function(value) length(value) == 1L && is.na(value),
+    logical(1)
+  )))
+  expect_equal(nrow(metrics$by_source), 0)
+})
+
+test_that("point coverage is zero for disjoint non-empty inputs", {
+  centroids <- data.frame(
+    postal_code = "K1A 0B1",
+    latitude = 45,
+    longitude = -75,
+    point_source = "nar_centroid"
+  )
+  reference <- data.frame(
+    postal_code = "M5V 3A8",
+    latitude = 44,
+    longitude = -79
+  )
+
+  metrics <- sli_compute_metrics(centroids, reference)
+
+  expect_equal(metrics$joined_n, 0)
+  expect_equal(metrics$coverage$coverage_pct, 0)
+  expect_equal(metrics$coverage$distinct_sli_postal_codes, 1)
+})
+
 test_that("synthetic QA is deterministic", {
   centroids <- data.frame(
     postal_code = c("K1A 0B1", "M5V 3A8", "H3A 0G4", "V6B 1A1"),

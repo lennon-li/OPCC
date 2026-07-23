@@ -9,4 +9,7 @@
   point candidates, including explicit matched and unmatched statuses.
 - Added an aggregate-only, many-to-many DB/DA validation engine for
   maintainer-held licensed benchmarks, with fail-closed private output paths.
+- Added a private PCCF runner that checksum-binds M1, M2, and M5, rejects
+  incompatible M5-to-M2 ancestry, validates an explicit Ontario PCCF contract,
+  and writes aggregate-only outputs outside the repository.
 - Added immutable release-index validation and release-control auditing.
