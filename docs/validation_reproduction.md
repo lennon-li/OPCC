@@ -22,7 +22,8 @@ A rigorous comparison against the official Statistics Canada PCCF/SLI extracts r
 - The validation pipeline accepts a local SLI/PCCF CSV path, but it never copies, caches, serialises, or commits row-level SLI/PCCF data.
 - Licensed validation output must be written outside the repository. The
   current licensed report and plots are private review material, not approved
-  public aggregate attestations.
+  public artifacts. The M5 DA benchmark has a separate, disclosure-minimised
+  public aggregate attestation under `docs/validation/`.
 - Public users can reproduce the pipeline, but an empirical PCCF/SLI comparison requires their own authorised access to the required restricted input.
 - The repository does not assert any licence, access right, or legal conclusion for PCCF/SLI beyond the maintainer exception described here.
 
@@ -127,7 +128,8 @@ The output directory must not already exist and its parent must exist. The
 runner creates it with owner-only permissions and writes aggregate metrics, an
 aggregate report, and a hash manifest. Outputs contain no postal codes,
 coordinates, DBUIDs, DAUIDs, examples, joined rows, or local paths. They remain
-private diagnostic evidence; public attestation is a separate future workflow.
+private diagnostic evidence; any public attestation requires a separate,
+reviewed aggregate allowlist.
 
 ### DA-only PCCF-derived XLSX exports
 
@@ -154,6 +156,11 @@ Rscript --vanilla scripts/pccf_da_validate.R \
 The output remains private. Because the reference is March 2023 while OPCC
 uses 2026 source evidence, disagreements may reflect real assignment changes
 between vintages as well as OPCC error.
+
+The reviewed public subset from the completed M5 comparison is
+`docs/validation/pccf-da-2023-public-attestation.json`. It intentionally omits
+the licensed workbook hash, private-output hashes, paths, and row-level values.
+See `docs/validation-summary.md` for interpretation.
 
 ## Output files
 

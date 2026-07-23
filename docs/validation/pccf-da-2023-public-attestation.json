@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "attestation_kind": "maintainer_run_external_reference_comparison",
+  "published_date": "2026-07-23",
+  "scope": {
+    "validated_milestone": "M5",
+    "unvalidated_milestones": [
+      "M1",
+      "M2"
+    ],
+    "geography_level": "DA"
+  },
+  "reference": {
+    "description": "licensed PCCF-derived Ontario export",
+    "product_vintage": "2023-03",
+    "census_vintage": "2021",
+    "reference_cardinality": "one DA link per postal code"
+  },
+  "opcc_release": {
+    "release_id": "2026-07-20",
+    "source_vintage": "2026-06-26",
+    "census_vintage": "2021",
+    "manifest_sha256": "193ac02b29405a6305e72075ae7480d78dfae7f467386cc9d53adc0971f4e221",
+    "artifact_sha256": "b0d7d79942634d2ba634761ccf10b9cea4e6d4256f1ff41d54d4a6cc20765068",
+    "release_index_sha256": "4558d5060378c2ce7e19f5048ca46eb4abd947be5a7c025c8689fc3d31029a7f"
+  },
+  "comparison": {
+    "shared_postal_codes": 280649,
+    "reference_code_coverage": 0.9598,
+    "opcc_code_coverage": 0.9938,
+    "any_link_agreement": 0.9946,
+    "best_link_containment": 0.9565,
+    "exact_set_agreement": 0.9183,
+    "pair_precision": 0.8897,
+    "pair_recall": 0.9946,
+    "pair_f1": 0.9392
+  },
+  "provenance": {
+    "runner_commit": "cca04648913a855fdc99d00a4c6fd5f2ee591025",
+    "contract_sha256": "7a11d7fc61f5dc597c446c53ad0062231cb993d77adde004bfcc79577140c5fa"
+  },
+  "disclosure": {
+    "aggregate_only": true,
+    "row_level_values_published": false,
+    "licensed_input_hash_published": false,
+    "local_paths_published": false,
+    "private_output_hashes_published": false
+  },
+  "limitations": [
+    "This is a maintainer-run comparison, not an independent audit or certification.",
+    "The March 2023 reference and June 2026 OPCC source vintage differ; disagreement can reflect temporal assignment change.",
+    "The reference contains no coordinates or DBUID field, so M1 and M2 are not externally validated by this comparison.",
+    "OPCC preserves additional candidate DA links while the reference supplies one DA link per postal code."
+  ]
+}

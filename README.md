@@ -55,8 +55,50 @@ fabricated assignment.
 | M6 | Complete | External release-assurance workflow with human publication gate |
 | M7 | Complete | Governance, security, release, attribution, citation, and contribution policy |
 
-CRAN submission work and independent external validation are intentionally
+CRAN submission work and independent third-party validation are intentionally
 tracked separately from the completed product milestones.
+
+## Validation evidence
+
+OPCC M5 was benchmarked by the maintainer against an authorised, PCCF-derived
+Ontario DA export using the aggregate-only validation runner. This is an
+external-reference comparison, not an independent audit, certification, or
+claim that OPCC is authoritative.
+
+| Measure | Result |
+| --- | ---: |
+| Comparable postal codes | 280,649 |
+| Reference codes covered by OPCC | 95.98% |
+| OPCC codes covered by the reference | 99.38% |
+| Any-link agreement / pair recall | 99.46% |
+| OPCC best-link contained in reference | 95.65% |
+| Exact-set agreement | 91.83% |
+| Pair precision | 88.97% |
+| Pair F1 | 93.92% |
+
+The reference assigns one DA per postal code, while OPCC deliberately preserves
+additional defensible many-to-many links. Pair precision and exact-set
+agreement therefore penalize OPCC's additional candidate links. The benchmark
+compared a March 2023 reference with M5 release `2026-07-20`, built from June
+2026 source evidence; disagreements can reflect real assignment changes
+between vintages as well as OPCC error.
+
+This evidence validates M5 DA correspondence only. The reference contains
+neither coordinates nor DBUIDs, so M1 coordinate accuracy and M2 DB
+correspondence remain without an empirical PCCF comparison. No licensed rows,
+workbook hash, private-output hash, or local path is published.
+
+See the [validation summary](docs/validation-summary.md), [public aggregate
+attestation](docs/validation/pccf-da-2023-public-attestation.json),
+[reproduction guide](docs/validation_reproduction.md), [DA validation
+runner](scripts/pccf_da_validate.R), and [checksum-bound M5
+manifest](releases/m5/2026-07-20/m5_manifest.json).
+
+Additional safeguards verify release hashes, M5-to-M2 ancestry, schemas,
+allocation-weight sums, deterministic best links, Ontario bounds and exact
+boundary membership, and 2021 DB assignment. Synthetic PCCF-shaped fixtures
+exercise the validation and privacy pipeline without redistributing licensed
+data.
 
 ## Verify a release
 

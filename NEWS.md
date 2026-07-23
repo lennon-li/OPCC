@@ -15,4 +15,7 @@
 - Added a DA-only XLSX validation path for PCCF-derived exports that lack
   coordinates and DBUIDs, with explicit M1/M2 non-validation and vintage-gap
   reporting.
+- Published a disclosure-minimised M5 external-reference attestation and
+  validation summary, including agreement, coverage, provenance, and scope
+  limitations.
 - Added immutable release-index validation and release-control auditing.

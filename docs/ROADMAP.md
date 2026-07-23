@@ -87,12 +87,18 @@ public. GitHub Releases is the durable artifact distribution channel.
 Resolve current `R CMD check --as-cran` notes and complete a full manual- and
 vignette-enabled CRAN-level check before any CRAN submission.
 
-### External validation and adoption
+### Third-party validation and adoption
 
-Independent external validation is intentionally deferred and tracked in OPCC
-project memory. It should test real Ontario workflows, urban and rural cases,
-PO-box and unmatched behavior, many-to-many outputs, source-class coverage,
-installation usability, and legally permissible benchmark comparisons.
+A maintainer-run external-reference comparison is complete for M5 DA
+correspondence using a licensed, PCCF-derived March 2023 Ontario export. The
+aggregate results and limitations are published in
+`docs/validation-summary.md`; M1 coordinates and M2 DB correspondence were
+outside that reference's schema.
+
+Independent third-party validation remains deferred. It should test real
+Ontario workflows, urban and rural cases, PO-box and unmatched behavior,
+many-to-many outputs, source-class coverage, installation usability, and
+legally permissible benchmark comparisons.
 
 ### Additional source coverage
 

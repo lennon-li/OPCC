@@ -44,3 +44,17 @@ pc_to_geo("K1A 0A6", level = "DA")
 DA weights must sum to one per covered postal code, every postal code must have
 exactly one `best_link`, and every row must retain DB and release-vintage
 lineage.
+
+## External-reference comparison
+
+M5 release `2026-07-20` was compared by the maintainer with a licensed,
+PCCF-derived March 2023 Ontario DA export. The aggregate-only result reports
+99.46% any-link agreement across 280,649 shared postal codes, 95.65% OPCC
+best-link containment, 91.83% exact-set agreement, and 88.97% pair precision.
+The reference supplies one DA per code while OPCC retains additional candidate
+links, and the source vintages differ.
+
+See `docs/validation-summary.md` and
+`docs/validation/pccf-da-2023-public-attestation.json` for the complete scope,
+provenance, and limitations. This comparison does not validate M1 coordinates
+or M2 DB correspondence.
