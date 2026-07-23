@@ -422,14 +422,38 @@ new_source_adapter <- function(
   if (.restricted_source(source_id, licence, lineage, endpoint)) {
     stop("Canada Post, PCCF, and PCCF+ sources cannot enter OPCC", call. = FALSE)
   }
-  if (!is.list(schema_map) || is.null(names(schema_map)) || !"postal_code" %in% names(schema_map)) {
+  if (!is.list(schema_map) || is.null(names(schema_map)) ||
+      !"postal_code" %in% names(schema_map)) {
     stop("schema_map must be a named list containing postal_code", call. = FALSE)
+  }
+  map_names <- names(schema_map)
+  if (anyNA(map_names) || any(!nzchar(trimws(map_names))) ||
+      anyDuplicated(map_names)) {
+    stop("schema_map must have unique, non-empty canonical field names", call. = FALSE)
+  }
+  scalar_fields <- vapply(
+    schema_map,
+    function(field) {
+      is.character(field) && length(field) == 1L &&
+        !is.na(field) && nzchar(trimws(field))
+    },
+    logical(1)
+  )
+  if (!all(scalar_fields)) {
+    stop("schema_map values must be non-empty scalar source field names", call. = FALSE)
+  }
+  source_fields <- unname(unlist(schema_map, use.names = FALSE))
+  if (anyDuplicated(source_fields)) {
+    stop("schema_map must use unique source fields", call. = FALSE)
   }
   if (!is.null(checksum) && (!is.character(checksum) || length(checksum) != 1L ||
       !grepl("^[0-9a-fA-F]{64}$", checksum))) {
     stop("checksum must be a 64-character SHA-256 hex string", call. = FALSE)
   }
-  retrieval_date <- as.Date(retrieval_date)
+  retrieval_date <- tryCatch(
+    as.Date(retrieval_date),
+    error = function(error) as.Date(NA)
+  )
   if (is.na(retrieval_date)) stop("retrieval_date must be a valid date", call. = FALSE)
   structure(
     list(
@@ -468,35 +492,133 @@ geonames_supplementary_adapter <- function() {
 #'
 #' @param data A data frame with a postal-code field named by `adapter`.
 #' @param adapter Source metadata created by [new_source_adapter()].
+#' @param on_invalid How to handle invalid rows: error, drop them, or retain
+#'   them in the `opcc_quarantine` attribute.
 #' @return A normalized data frame with `postal_code` and validation metadata.
 #' @export
-validate_source_data <- function(data, adapter) {
+validate_source_data <- function(
+    data,
+    adapter,
+    on_invalid = c("error", "drop", "quarantine")) {
   .contribution_message()
   .check_adapter(adapter)
+  on_invalid <- match.arg(on_invalid)
   if (!is.data.frame(data)) stop("data must be a data frame", call. = FALSE)
-  source_column <- adapter$schema_map$postal_code
-  if (length(source_column) != 1L || !source_column %in% names(data)) {
-    stop("data is missing the adapter postal_code field", call. = FALSE)
+  missing_fields <- setdiff(
+    unname(unlist(adapter$schema_map, use.names = FALSE)),
+    names(data)
+  )
+  if (length(missing_fields) > 0L) {
+    stop(
+      sprintf(
+        "data is missing mapped source field(s): %s",
+        paste(missing_fields, collapse = ", ")
+      ),
+      call. = FALSE
+    )
   }
   out <- data
-  out$postal_code <- normalize_postal_code(as.character(data[[source_column]]), strict = TRUE)
-  if (anyDuplicated(out)) stop("data contains duplicate evidence rows", call. = FALSE)
+  for (canonical_field in names(adapter$schema_map)) {
+    source_field <- adapter$schema_map[[canonical_field]]
+    out[[canonical_field]] <- data[[source_field]]
+  }
+
+  raw_postal_code <- as.character(out$postal_code)
+  missing_postal <- is.na(raw_postal_code) | !nzchar(trimws(raw_postal_code))
+  out$postal_code <- normalize_postal_code(raw_postal_code, strict = FALSE)
+  invalid_postal <- !missing_postal & is.na(out$postal_code)
+
   coordinate_columns <- intersect(c("latitude", "longitude"), names(out))
   if (length(coordinate_columns) == 1L) {
     stop("latitude and longitude must be supplied together", call. = FALSE)
   }
+  incomplete_coordinate <- rep(FALSE, nrow(out))
+  nonfinite_coordinate <- rep(FALSE, nrow(out))
+  out_of_bounds <- rep(FALSE, nrow(out))
+  invalid_coordinate <- rep(FALSE, nrow(out))
   if (length(coordinate_columns) == 2L) {
-    out$latitude <- suppressWarnings(as.numeric(out$latitude))
-    out$longitude <- suppressWarnings(as.numeric(out$longitude))
-    if (any(!is.finite(out$latitude) | !is.finite(out$longitude))) {
-      stop("coordinates must be finite numeric values", call. = FALSE)
-    }
-    if (any(out$latitude < -90 | out$latitude > 90 | out$longitude < -180 | out$longitude > 180)) {
-      stop("coordinates are outside longitude/latitude bounds", call. = FALSE)
-    }
+    raw_latitude <- as.character(out$latitude)
+    raw_longitude <- as.character(out$longitude)
+    missing_latitude <- is.na(raw_latitude) | !nzchar(trimws(raw_latitude))
+    missing_longitude <- is.na(raw_longitude) | !nzchar(trimws(raw_longitude))
+    incomplete_coordinate <- xor(missing_latitude, missing_longitude)
+    out$latitude <- suppressWarnings(as.numeric(raw_latitude))
+    out$longitude <- suppressWarnings(as.numeric(raw_longitude))
+    supplied_coordinates <- !missing_latitude & !missing_longitude
+    nonfinite_coordinate <- supplied_coordinates &
+      (!is.finite(out$latitude) | !is.finite(out$longitude))
+    bounded_coordinates <- supplied_coordinates & !nonfinite_coordinate
+    out_of_bounds <- bounded_coordinates & (
+      out$latitude < -90 | out$latitude > 90 |
+        out$longitude < -180 | out$longitude > 180
+    )
+    invalid_coordinate <- incomplete_coordinate |
+      nonfinite_coordinate |
+      out_of_bounds
   }
+
+  duplicate_evidence <- duplicated(out)
+  invalid_row <- missing_postal |
+    invalid_postal |
+    invalid_coordinate |
+    duplicate_evidence
+  validation_reason <- rep("", nrow(out))
+  reason_flags <- list(
+    missing_postal_code = missing_postal,
+    invalid_postal_code = invalid_postal,
+    invalid_coordinate = invalid_coordinate,
+    duplicate_evidence = duplicate_evidence
+  )
+  for (reason in names(reason_flags)) {
+    index <- reason_flags[[reason]]
+    validation_reason[index] <- ifelse(
+      nzchar(validation_reason[index]),
+      paste(validation_reason[index], reason, sep = ";"),
+      reason
+    )
+  }
+
+  report <- list(
+    input_rows = nrow(out),
+    accepted_rows = sum(!invalid_row),
+    rejected_rows = sum(invalid_row),
+    invalid_postal_rows = sum(invalid_postal),
+    missing_postal_rows = sum(missing_postal),
+    invalid_coordinate_rows = sum(invalid_coordinate),
+    duplicate_evidence_rows = sum(duplicate_evidence)
+  )
+  if (on_invalid == "error" && any(invalid_row)) {
+    if (any(missing_postal | invalid_postal | duplicate_evidence)) {
+      error_message <- sprintf(
+        "Invalid source data: %d of %d row(s) failed validation",
+        report$rejected_rows,
+        report$input_rows
+      )
+    } else if (any(incomplete_coordinate)) {
+      error_message <- "latitude and longitude must be supplied together"
+    } else if (any(nonfinite_coordinate)) {
+      error_message <- "coordinates must be finite numeric values"
+    } else {
+      error_message <- "coordinates are outside longitude/latitude bounds"
+    }
+    stop(
+      error_message,
+      call. = FALSE
+    )
+  }
+  quarantine <- NULL
+  if (on_invalid == "quarantine") {
+    quarantine <- out[invalid_row, , drop = FALSE]
+    quarantine$.opcc_validation_reason <- validation_reason[invalid_row]
+  }
+  out <- out[!invalid_row, , drop = FALSE]
   attr(out, "opcc_adapter") <- adapter
-  attr(out, "opcc_validation") <- list(rows = nrow(out), unique_postal_codes = length(unique(out$postal_code)))
+  attr(out, "opcc_validation") <- list(
+    rows = nrow(out),
+    unique_postal_codes = length(unique(out$postal_code))
+  )
+  attr(out, "opcc_validation_report") <- report
+  if (!is.null(quarantine)) attr(out, "opcc_quarantine") <- quarantine
   out
 }
 
@@ -504,17 +626,28 @@ validate_source_data <- function(data, adapter) {
 #'
 #' @param data A user-supplied postal-code evidence data frame.
 #' @param adapter Source metadata created by [new_source_adapter()].
+#' @param on_invalid How to handle invalid rows: error, drop them, or retain
+#'   them in the `opcc_quarantine` attribute.
 #' @return An `opcc_source_layer` data frame, never merged into a release.
 #' @export
-build_source_layer <- function(data, adapter) {
+build_source_layer <- function(
+    data,
+    adapter,
+    on_invalid = c("error", "drop", "quarantine")) {
   .contribution_message()
   .check_adapter(adapter)
-  out <- suppressMessages(validate_source_data(data, adapter))
+  out <- suppressMessages(validate_source_data(data, adapter, on_invalid))
+  validation <- attr(out, "opcc_validation")
+  validation_report <- attr(out, "opcc_validation_report")
+  quarantine <- attr(out, "opcc_quarantine")
   out$source_id <- adapter$source_id
   out$source_licence <- adapter$licence
   out$source_lineage <- adapter$lineage
   out$source_retrieval_date <- as.character(adapter$retrieval_date)
   attr(out, "opcc_adapter") <- adapter
+  attr(out, "opcc_validation") <- validation
+  attr(out, "opcc_validation_report") <- validation_report
+  if (!is.null(quarantine)) attr(out, "opcc_quarantine") <- quarantine
   attr(out, "opcc_source") <- "Local source-separated evidence; not a canonical OPCC release"
   class(out) <- c("opcc_source_layer", class(out))
   out

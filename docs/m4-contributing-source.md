@@ -22,9 +22,21 @@ bundle <- contribution_bundle(layer, output_dir = "contributions")
 ```
 
 All calls announce that the layer remains local and invite contributions when
-redistribution is permitted. Postal codes are normalized strictly. If supplied,
-latitude and longitude must be paired, finite decimal-degree values within
-their geographic bounds.
+redistribution is permitted. Every named `schema_map` entry is copied to its
+normalized OPCC field before validation, while the original source fields
+remain available for review. Core mappings include `postal_code`, `latitude`,
+`longitude`, `address`, `source_record_id`, `municipality`, and
+`source_vintage`; adapters may retain additional source-qualified fields.
+
+Postal codes are normalized strictly. If supplied, latitude and longitude must
+be paired, finite decimal-degree values within their geographic bounds.
+`build_source_layer()` and `validate_source_data()` accept
+`on_invalid = "error"`, `"drop"`, or `"quarantine"`. The default preserves the
+original fail-fast behavior. Drop mode returns accepted rows only. Quarantine
+mode also attaches rejected rows and their reasons as `opcc_quarantine`.
+Accepted output carries an `opcc_validation_report` attribute with input,
+accepted, rejected, invalid-postal, missing-postal, invalid-coordinate, and
+duplicate-evidence row counts.
 
 ## Bundle contents
 

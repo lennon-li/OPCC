@@ -29,8 +29,8 @@ geonames_supplementary_adapter()
 new_source_adapter(source_id, licence, lineage, retrieval_date = Sys.Date(), schema_map = list(postal_code = "postal_code"), endpoint = NULL, checksum = NULL)
 pc_to_geo(postal_code, level = c("DB", "DA"), all_links = TRUE, correspondence = NULL, ...)
 pc_to_point(postal_code, vintage = "2026-07-19", point_file = NULL, cache_dir = tools::R_user_dir("OPCC", "cache"), offline = FALSE)
-validate_source_data(data, adapter)
-build_source_layer(data, adapter)
+validate_source_data(data, adapter, on_invalid = c("error", "drop", "quarantine"))
+build_source_layer(data, adapter, on_invalid = c("error", "drop", "quarantine"))
 profile_source_layer(layer)
 contribution_bundle(layer, output_dir = NULL, fixture_rows = 100L)
 contribution_issue_url(bundle, repository = "lennon-li/OPCC")
@@ -49,7 +49,8 @@ validate_release(vintage = "2026-06-26", cache_dir = tools::R_user_dir("OPCC", "
   \item{licence}{The source licence or permission statement.}
   \item{lineage}{The source lineage and collection method.}
   \item{retrieval_date}{The source retrieval or creation date.}
-  \item{schema_map}{A named mapping containing a postal_code field.}
+  \item{schema_map}{A named mapping from normalized OPCC fields to source fields.
+  It must contain a \code{postal_code} entry and may contain additional fields.}
   \item{endpoint}{An optional source retrieval endpoint.}
   \item{checksum}{An optional SHA-256 checksum of the source artifact.}
   \item{postal_code}{A character vector of Canadian postal codes.}
@@ -58,6 +59,8 @@ validate_release(vintage = "2026-06-26", cache_dir = tools::R_user_dir("OPCC", "
   \item{point_file}{Optional local verified GeoNames point artifact.}
   \item{data}{A user-supplied postal-code evidence data frame.}
   \item{adapter}{Source metadata created by \code{new_source_adapter}.}
+  \item{on_invalid}{How invalid rows are handled: error, drop, or attach them
+  to the accepted output as \code{opcc_quarantine}.}
   \item{layer}{A local source layer created by \code{build_source_layer}.}
   \item{output_dir}{Explicit directory where a new contribution bundle is created.}
   \item{fixture_rows}{Maximum normalized sample rows in the bundle.}
@@ -69,7 +72,9 @@ validate_release(vintage = "2026-06-26", cache_dir = tools::R_user_dir("OPCC", "
 \value{Data frames or release metadata, depending on the function.}
 \details{OPCC does not substitute GeoNames point evidence for NAR address evidence.
 Local source layers are always source-separated and never modify a canonical
-OPCC release. Canada Post, PCCF, and PCCF+ data are rejected. Each local-data
+OPCC release. Adapter mappings are applied before validation, and accepted
+output carries an \code{opcc_validation_report} attribute. Canada Post, PCCF,
+and PCCF+ data are rejected. Each local-data
 function invites users to contribute redistributable evidence through a
 reviewable bundle. Use \code{contribution_issue_url} to create a prefilled
 GitHub Source Proposal URL from a bundle's provenance. In an interactive R
