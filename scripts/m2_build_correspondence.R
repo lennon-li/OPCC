@@ -3,6 +3,16 @@
 # joined to 2021 DBUID geography.  GeoNames points without a DB/DA assignment
 # remain available to M1/M3 point consumers and are not fabricated as M2 links.
 
+helper_candidates <- c(
+  file.path("scripts", "lib", "canonical_point_assignment.R"),
+  file.path("..", "..", "scripts", "lib", "canonical_point_assignment.R")
+)
+helper_path <- helper_candidates[file.exists(helper_candidates)][1]
+if (is.na(helper_path)) {
+  stop("Missing canonical point-assignment helper")
+}
+source(helper_path)
+
 normalize_pc <- function(x) {
   x <- toupper(trimws(as.character(x)))
   x <- gsub("[[:space:]]+", "", x)
@@ -95,20 +105,23 @@ append_geonames_supplementary <- function(nar_result, rollup_path, geography_col
   }
   rollup <- readr::read_csv(rollup_path, col_types = readr::cols(.default = "c"),
                             show_col_types = FALSE, name_repair = "minimal")
-  required <- c("postal_code", "point_source", "DBUID", "DAUID_ADIDU", "latitude",
-                "longitude", "gn_accuracy")
+  required <- c(
+    "postal_code", "point_source", "DBUID", "DAUID_ADIDU",
+    "db_match_status", "latitude", "longitude", "gn_accuracy"
+  )
   missing <- setdiff(required, names(rollup))
   if (length(missing) > 0) {
     stop("M1 rollup is missing required GeoNames fields: ", paste(missing, collapse = ", "),
          "\nRegenerate M1 before building M2.")
   }
-  geo <- rollup[
-    rollup$point_source == "geonames" &
-      !is.na(rollup$postal_code) & rollup$postal_code != "" &
-      !is.na(rollup$DBUID) & rollup$DBUID != "" &
-      !is.na(rollup$DAUID_ADIDU) & rollup$DAUID_ADIDU != "" &
-      !is.na(rollup$latitude) & !is.na(rollup$longitude) &
-      !is.na(rollup$gn_accuracy), , drop = FALSE
+  geonames <- rollup[rollup$point_source == "geonames", , drop = FALSE]
+  point_report <- validate_canonical_point_geography(geonames)
+  matched_status <- geonames$db_match_status == "matched_2021_ontario_db"
+  geo <- geonames[
+    matched_status &
+      !is.na(geonames$postal_code) & geonames$postal_code != "" &
+      !is.na(geonames$latitude) & !is.na(geonames$longitude) &
+      !is.na(geonames$gn_accuracy), , drop = FALSE
   ]
   geo <- geo[!(geo$postal_code %in% nar_result$postal_code), , drop = FALSE]
   if (anyDuplicated(geo$postal_code)) stop("GeoNames supplementary evidence must be one point per postal code")
@@ -148,6 +161,7 @@ append_geonames_supplementary <- function(nar_result, rollup_path, geography_col
   combined <- combined[order(combined$postal_code, -combined$best_link,
                              -combined$allocation_weight, combined$DBUID), , drop = FALSE]
   rownames(combined) <- NULL
+  attr(combined, "opcc_point_assignment_report") <- point_report
   combined
 }
 
@@ -285,6 +299,7 @@ build_m2_correspondence <- function() {
     "confidence", "source_vintage", "census_vintage"
   ), drop = FALSE]
   result <- append_geonames_supplementary(result, rollup_path, geography_columns)
+  point_assignment_report <- attr(result, "opcc_point_assignment_report")
   validate_m2_result(result)
 
   dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
@@ -307,7 +322,9 @@ build_m2_correspondence <- function() {
     code_version = code_version,
     build_timestamp_utc = format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC"),
     row_counts = list(correspondence_rows = nrow(result), input_observations = nrow(joined),
-                      geonames_supplementary_rows = sum(result$evidence_class == "geonames_supplementary")),
+                      geonames_supplementary_rows = sum(result$evidence_class == "geonames_supplementary"),
+                      geonames_matched_points = point_assignment_report$matched_points,
+                      geonames_unmatched_points = point_assignment_report$unmatched_points),
     validation_results = list(weights_sum_to_one = TRUE, unique_best_link = TRUE,
                               unique_postal_dbuid = TRUE, restricted_sources_used = FALSE)
   )

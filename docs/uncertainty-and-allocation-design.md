@@ -142,16 +142,24 @@ reason codes and counts.
 
 ### Stage 3 - Assign points to 2021 DBs
 
-All source points are transformed from their declared source CRS to the pinned
-DB boundary CRS, then spatially joined to Ontario DB polygons.
+All source points are first tested against the pinned Ontario
+province/territory polygon, then transformed to the pinned DB boundary CRS and
+spatially joined to Ontario DB polygons.
 
 The build stops on:
 
-- a valid source point outside every Ontario DB;
+- a valid source point outside the Ontario province/territory polygon;
 - a point intersecting multiple DBs without an explicit boundary-resolution
   rule;
 - a DB missing from the pinned GAF; or
 - a DB whose GAF row lacks DAUID.
+
+An inside-Ontario point that intersects no 2021 DB remains in the
+source-qualified point artifact with missing DB/DA identifiers and
+`db_match_status = "unmatched_no_2021_ontario_db"`. A point with exactly one
+DB intersection uses `matched_2021_ontario_db`. Canonical correspondence
+tables consume only matched points and record both status counts; they never
+fabricate a DB for an unmatched point.
 
 Spatial library versions and CRS definitions are recorded because boundary
 behavior and coordinate transforms can affect edge cases.

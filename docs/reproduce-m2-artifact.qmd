@@ -72,16 +72,18 @@ stopifnot(system2("Rscript", "scripts/m4_geonames_profile.R") == 0L)
 stopifnot(system2("Rscript", "scripts/m1_build_centroids.R") == 0L)
 ```
 
-Download the 2021 Statistics Canada DB boundary shapefile and Geographic
-Attribute File (GAF) from the URLs in [M1 reproduction](m1-reproduction.md).
-Extract them so these paths exist:
+Download the 2021 Statistics Canada province/territory and DB boundary
+shapefiles plus the Geographic Attribute File (GAF) from the URLs in
+[M1 reproduction](m1-reproduction.md). Extract them so these paths exist:
 
 ```text
+.scratch/shp/lpr_000b21a_e.shp
 .scratch/shp/ldb_000b21a_e.shp
 .scratch/gaf/2021_92-151_X.csv
 ```
 
-Then assign centroids to DBs and attach GAF geography columns.
+Then validate exact Ontario membership, assign centroids to DBs, preserve
+explicit unmatched status, and attach GAF geography columns.
 
 ```{r}
 stopifnot(system2("Rscript", "scripts/m1_gaf_rollup.R") == 0L)

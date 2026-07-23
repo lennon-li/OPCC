@@ -70,6 +70,11 @@ testthat::test_that("GeoNames point evidence is appended only when it has DB and
     point_source = "geonames",
     DBUID = c("DB1", "DB2", NA),
     DAUID_ADIDU = c("DA1", "DA2", NA),
+    db_match_status = c(
+      "matched_2021_ontario_db",
+      "matched_2021_ontario_db",
+      "unmatched_no_2021_ontario_db"
+    ),
     latitude = c("45", "45", "45"), longitude = c("-75", "-75", "-75"),
     gn_accuracy = c("6", "6", "6"), stringsAsFactors = FALSE
   )
@@ -81,5 +86,38 @@ testthat::test_that("GeoNames point evidence is appended only when it has DB and
   testthat::expect_equal(result$postal_code, c("K1A 0A6", "K1A 0A7"))
   testthat::expect_equal(result$evidence_class, c("nar_address", "geonames_supplementary"))
   testthat::expect_equal(result$gn_accuracy[[2]], 6)
+  report <- attr(result, "opcc_point_assignment_report")
+  testthat::expect_equal(report$matched_points, 2L)
+  testthat::expect_equal(report$unmatched_points, 1L)
+})
+
+testthat::test_that("GeoNames DB status and geography identifiers are consistent", {
+  nar <- aggregate_m2_evidence(data.frame(
+    postal_code = "K1A 0A6",
+    LOC_GUID = "A1",
+    DBUID = "DB1",
+    DAUID = "DA1",
+    stringsAsFactors = FALSE
+  ), "DAUID")
+  nar$source_vintage <- "2026-06-26"
+  nar$census_vintage <- "2021"
+  rollup <- data.frame(
+    postal_code = "K1A 0A7",
+    point_source = "geonames",
+    DBUID = NA_character_,
+    DAUID_ADIDU = NA_character_,
+    db_match_status = "matched_2021_ontario_db",
+    latitude = "45",
+    longitude = "-75",
+    gn_accuracy = "6",
+    stringsAsFactors = FALSE
+  )
+  path <- tempfile(fileext = ".csv")
+  readr::write_csv(rollup, path)
+
+  testthat::expect_error(
+    append_geonames_supplementary(nar, path, "DAUID"),
+    "inconsistent"
+  )
 })
 }

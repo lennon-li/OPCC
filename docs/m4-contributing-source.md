@@ -34,7 +34,7 @@ those checks, coordinate-bearing rows must fall within OPCC's inclusive broad
 Ontario guardrail: latitude 41.6 to 56.9 and longitude -95.2 to -74.3. This
 rectangle rejects clearly non-Ontario coordinates but does not prove provincial
 membership; canonical candidate builds still require boundary and DB
-intersection checks.
+intersection checks against separately pinned province and DB geometries.
 `build_source_layer()` and `validate_source_data()` accept
 `on_invalid = "error"`, `"drop"`, or `"quarantine"`. The default preserves the
 original fail-fast behavior. Drop mode returns accepted rows only. Quarantine
@@ -66,6 +66,9 @@ API rejects identifiers and provenance containing those restricted sources.
 ## Packaged example
 
 `geonames_supplementary_adapter()` loads the checked metadata for the
-2026-07-19 GeoNames supplementary-point artifact. Its expected profile is
-17,373 points: 17,334 with a 2021 Ontario DB/DA assignment and 39 retained as
-explicitly unmatched. It is point reference evidence, not NAR address evidence.
+published 2026-07-19 GeoNames supplementary-point artifact. Its published
+profile is 17,373 points: 17,334 with a 2021 Ontario DB/DA assignment and 39
+with missing DB/DA identifiers. Future canonical candidates must revalidate
+those points against the separately pinned Ontario polygon and publish explicit
+`db_match_status` values rather than preserving the historical count by
+assumption. It is point reference evidence, not NAR address evidence.

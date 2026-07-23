@@ -6,14 +6,22 @@ This document provides instructions and URLs necessary to reproduce the M1 miles
 
 To run the pipeline, the following external, authoritative datasets must be downloaded:
 
-### A. Statistics Canada 2021 Dissemination Block (DB) Boundary Files
+### A. Statistics Canada 2021 Province/Territory Boundary File
+* **Format Required:** ArcGIS Shapefile (`.shp`)
+* **Purpose:** Provides the independent Ontario jurisdiction polygon used to
+  reject points outside the province before DB assignment.
+* **Source:** Statistics Canada, 2021 Census digital boundary files.
+* **Download URL:** [https://www12.statcan.gc.ca/census-recensement/2021/geo/sip-pis/boundary-limites/files-fichiers/lpr_000b21a_e.zip](https://www12.statcan.gc.ca/census-recensement/2021/geo/sip-pis/boundary-limites/files-fichiers/lpr_000b21a_e.zip)
+* **Local Path (Git-ignored):** Extract to `.scratch/shp/`
+
+### B. Statistics Canada 2021 Dissemination Block (DB) Boundary Files
 * **Format Required:** ArcGIS Shapefile (`.shp`)
 * **Purpose:** Provides the spatial polygons needed to assign each postal centroid coordinate to a specific Dissemination Block (DB) via a point-in-polygon spatial join (`sf::st_join`).
 * **Source:** Statistics Canada, 2021 Census Boundary files.
 * **Download URL:** [https://www12.statcan.gc.ca/census-recensement/2021/geo/sip-pis/boundary-limites/files-fichiers/ldb_000b21a_e.zip](https://www12.statcan.gc.ca/census-recensement/2021/geo/sip-pis/boundary-limites/files-fichiers/ldb_000b21a_e.zip)
 * **Local Path (Git-ignored):** Extract to `.scratch/shp/`
 
-### B. Statistics Canada Geographic Attribute File (GAF)
+### C. Statistics Canada Geographic Attribute File (GAF)
 * **Format Required:** CSV
 * **Purpose:** A master crosswalk table linking every Dissemination Block (DBUID) to its full higher-geography hierarchy (Dissemination Areas, Census Tracts, Health Regions, etc.).
 * **Source:** Statistics Canada, Catalogue 92-151-X.
@@ -30,10 +38,18 @@ With the raw `.shp` and `.csv` datasets placed in the local `.scratch/` director
 2. **DB Assignment & GAF Rollup:** Run `scripts/m1_gaf_rollup.R`.
 
 ### What `m1_gaf_rollup.R` does:
-1. Loads the massive 700MB `ldb_000b21a_e.shp` file using the `sf` library and immediately filters it down to Ontario (PRUID 35) to manage memory footprint.
-2. Converts the raw postal centroids to `sf` spatial points and aligns the Coordinate Reference System (CRS).
-3. Executes a highly performant `st_intersects` spatial join to tag each coordinate with a `DBUID`.
-4. Executes a flat `left_join` against the GAF (using the bilingual column name `DBUID_IDIDU`) to append all census and population profiles.
+1. Loads the pinned province and DB boundary files and filters both to Ontario
+   (`PRUID == 35`).
+2. Converts the raw postal centroids to `sf` spatial points and aligns each
+   input CRS.
+3. Rejects points outside the independent Ontario polygon and rejects points
+   intersecting multiple DBs.
+4. Assigns exactly one `DBUID` where possible. Points inside Ontario with no
+   2021 DB intersection remain explicit as
+   `unmatched_no_2021_ontario_db`; matched points use
+   `matched_2021_ontario_db`.
+5. Executes a flat `left_join` against the GAF and requires every matched DB
+   to have a `DAUID`.
 
 ## 3. Deliverables
 
