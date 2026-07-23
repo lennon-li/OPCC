@@ -72,12 +72,17 @@ validate_release(vintage = "2026-06-26", cache_dir = tools::R_user_dir("OPCC", "
   \item{...}{Arguments passed to the selected correspondence getter.}
 }
 \value{Data frames or release metadata, depending on the function.
-\code{pc_to_point()} returns every matching source-qualified point observation.}
+\code{pc_to_point()} returns every matching source-qualified point observation.
+Local-source validation rejects coordinate-bearing rows outside the inclusive
+broad Ontario bounds (latitude 41.6 to 56.9, longitude -95.2 to -74.3) and
+records \code{outside_ontario_bounds_rows}.}
 \details{OPCC does not substitute GeoNames point evidence for NAR address evidence.
 Local source layers are always source-separated and never modify a canonical
 OPCC release. Adapter mappings are applied before validation, and accepted
-output carries an \code{opcc_validation_report} attribute. Canada Post, PCCF,
-and PCCF+ data are rejected. Each local-data
+output carries an \code{opcc_validation_report} attribute. The broad Ontario
+rectangle is a coarse guardrail, not proof of provincial membership; canonical
+candidate builds still require boundary and DB intersection checks. Canada
+Post, PCCF, and PCCF+ data are rejected. Each local-data
 function invites users to contribute redistributable evidence through a
 reviewable bundle. Use \code{contribution_issue_url} to create a prefilled
 GitHub Source Proposal URL from a bundle's provenance. In an interactive R

@@ -352,3 +352,134 @@ testthat::test_that("M4.1 adapter and row-validation errors are actionable", {
     "finite numeric"
   )
 })
+
+testthat::test_that("M4.1 rejects globally valid coordinates outside Ontario bounds", {
+  adapter <- suppressMessages(new_source_adapter(
+    "ontario_guardrail", "open", "synthetic Ontario registry"
+  ))
+  data <- data.frame(
+    postal_code = c("K1A 0A6", "V6B 1A1", "H2Y 1C6"),
+    latitude = c(45.4215, 49.2827, 45.5019),
+    longitude = c(-75.6972, -123.1207, -73.5674)
+  )
+
+  testthat::expect_error(
+    suppressMessages(validate_source_data(data, adapter)),
+    "Ontario bounds"
+  )
+
+  accepted <- suppressMessages(validate_source_data(
+    data,
+    adapter,
+    on_invalid = "quarantine"
+  ))
+  testthat::expect_equal(accepted$postal_code, "K1A 0A6")
+  quarantine <- attr(accepted, "opcc_quarantine")
+  testthat::expect_equal(
+    quarantine$.opcc_validation_reason,
+    rep("invalid_coordinate;outside_ontario_bounds", 2)
+  )
+  report <- attr(accepted, "opcc_validation_report")
+  testthat::expect_equal(report$accepted_rows, 1L)
+  testthat::expect_equal(report$rejected_rows, 2L)
+  testthat::expect_equal(report$invalid_coordinate_rows, 2L)
+  testthat::expect_equal(report$outside_ontario_bounds_rows, 2L)
+})
+
+testthat::test_that("M4.1 Ontario guardrail remains broad and handles missing points", {
+  adapter <- suppressMessages(new_source_adapter(
+    "broad_guardrail", "open", "synthetic Ontario registry"
+  ))
+  data <- data.frame(
+    postal_code = c("K1A 0A6", "K1A 0A7", "K1A 0A8"),
+    latitude = c(42.3314, NA_real_, 91),
+    longitude = c(-83.0458, NA_real_, -75)
+  )
+
+  accepted <- suppressMessages(validate_source_data(
+    data,
+    adapter,
+    on_invalid = "quarantine"
+  ))
+  testthat::expect_equal(
+    accepted$postal_code,
+    c("K1A 0A6", "K1A 0A7")
+  )
+  report <- attr(accepted, "opcc_validation_report")
+  testthat::expect_equal(report$invalid_coordinate_rows, 1L)
+  testthat::expect_equal(report$outside_ontario_bounds_rows, 0L)
+  testthat::expect_equal(
+    attr(accepted, "opcc_quarantine")$.opcc_validation_reason,
+    "invalid_coordinate"
+  )
+})
+
+testthat::test_that("M4.1 Ontario bounding-box edges are inclusive", {
+  adapter <- suppressMessages(new_source_adapter(
+    "ontario_edges", "open", "synthetic Ontario registry"
+  ))
+  data <- data.frame(
+    postal_code = sprintf("K1A 0A%d", 1:4),
+    latitude = c(41.6, 56.9, 41.6, 56.9),
+    longitude = c(-95.2, -95.2, -74.3, -74.3)
+  )
+
+  accepted <- suppressMessages(validate_source_data(data, adapter))
+
+  testthat::expect_equal(nrow(accepted), 4L)
+  report <- attr(accepted, "opcc_validation_report")
+  testthat::expect_equal(report$outside_ontario_bounds_rows, 0L)
+})
+
+testthat::test_that("M4.1 Ontario bounding-box rejects every exceeded edge", {
+  adapter <- suppressMessages(new_source_adapter(
+    "ontario_exceeded_edges", "open", "synthetic Ontario registry"
+  ))
+  data <- data.frame(
+    postal_code = sprintf("K1A 0A%d", 1:4),
+    latitude = c(41.5999, 56.9001, 45, 45),
+    longitude = c(-75, -75, -95.2001, -74.2999)
+  )
+
+  accepted <- suppressMessages(validate_source_data(
+    data,
+    adapter,
+    on_invalid = "quarantine"
+  ))
+
+  testthat::expect_equal(nrow(accepted), 0L)
+  quarantine <- attr(accepted, "opcc_quarantine")
+  testthat::expect_equal(
+    quarantine$.opcc_validation_reason,
+    rep("invalid_coordinate;outside_ontario_bounds", 4)
+  )
+  report <- attr(accepted, "opcc_validation_report")
+  testthat::expect_equal(report$outside_ontario_bounds_rows, 4L)
+})
+
+testthat::test_that("M4.1 Ontario reasons compose with other row failures", {
+  adapter <- suppressMessages(new_source_adapter(
+    "ontario_mixed_failure", "open", "synthetic Ontario registry"
+  ))
+  data <- data.frame(
+    postal_code = "not-a-postal-code",
+    latitude = 49.2827,
+    longitude = -123.1207
+  )
+
+  accepted <- suppressMessages(validate_source_data(
+    data,
+    adapter,
+    on_invalid = "quarantine"
+  ))
+
+  testthat::expect_equal(nrow(accepted), 0L)
+  quarantine <- attr(accepted, "opcc_quarantine")
+  testthat::expect_equal(
+    quarantine$.opcc_validation_reason,
+    "invalid_postal_code;invalid_coordinate;outside_ontario_bounds"
+  )
+  report <- attr(accepted, "opcc_validation_report")
+  testthat::expect_equal(report$rejected_rows, 1L)
+  testthat::expect_equal(report$outside_ontario_bounds_rows, 1L)
+})

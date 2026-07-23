@@ -29,14 +29,21 @@ remain available for review. Core mappings include `postal_code`, `latitude`,
 `source_vintage`; adapters may retain additional source-qualified fields.
 
 Postal codes are normalized strictly. If supplied, latitude and longitude must
-be paired, finite decimal-degree values within their geographic bounds.
+be paired, finite decimal-degree values within global geographic bounds. After
+those checks, coordinate-bearing rows must fall within OPCC's inclusive broad
+Ontario guardrail: latitude 41.6 to 56.9 and longitude -95.2 to -74.3. This
+rectangle rejects clearly non-Ontario coordinates but does not prove provincial
+membership; canonical candidate builds still require boundary and DB
+intersection checks.
 `build_source_layer()` and `validate_source_data()` accept
 `on_invalid = "error"`, `"drop"`, or `"quarantine"`. The default preserves the
 original fail-fast behavior. Drop mode returns accepted rows only. Quarantine
 mode also attaches rejected rows and their reasons as `opcc_quarantine`.
+Out-of-guardrail rows include the reason `outside_ontario_bounds`.
 Accepted output carries an `opcc_validation_report` attribute with input,
 accepted, rejected, invalid-postal, missing-postal, invalid-coordinate, and
-duplicate-evidence row counts.
+duplicate-evidence row counts, plus the specific
+`outside_ontario_bounds_rows` count.
 
 ## Bundle contents
 

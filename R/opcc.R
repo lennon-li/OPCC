@@ -33,6 +33,13 @@
   file.path(cache_dir, sprintf("opcc-%s-%s%s", kind, vintage, extension))
 }
 
+.ontario_bounds <- c(
+  latitude_min = 41.6,
+  latitude_max = 56.9,
+  longitude_min = -95.2,
+  longitude_max = -74.3
+)
+
 .download_verified <- function(url, path, sha256, offline) {
   if (!file.exists(path)) {
     if (offline) stop("Release is not cached and offline = TRUE", call. = FALSE)
@@ -511,6 +518,9 @@ geonames_supplementary_adapter <- function() {
 #' @param on_invalid How to handle invalid rows: error, drop them, or retain
 #'   them in the `opcc_quarantine` attribute.
 #' @return A normalized data frame with `postal_code` and validation metadata.
+#'   Coordinate-bearing rows outside the inclusive broad Ontario bounds
+#'   (latitude 41.6 to 56.9, longitude -95.2 to -74.3) are invalid and counted
+#'   in `outside_ontario_bounds_rows`.
 #' @export
 validate_source_data <- function(
     data,
@@ -551,6 +561,7 @@ validate_source_data <- function(
   incomplete_coordinate <- rep(FALSE, nrow(out))
   nonfinite_coordinate <- rep(FALSE, nrow(out))
   out_of_bounds <- rep(FALSE, nrow(out))
+  outside_ontario_bounds <- rep(FALSE, nrow(out))
   invalid_coordinate <- rep(FALSE, nrow(out))
   if (length(coordinate_columns) == 2L) {
     raw_latitude <- as.character(out$latitude)
@@ -568,9 +579,17 @@ validate_source_data <- function(
       out$latitude < -90 | out$latitude > 90 |
         out$longitude < -180 | out$longitude > 180
     )
+    globally_bounded_coordinates <- bounded_coordinates & !out_of_bounds
+    outside_ontario_bounds <- globally_bounded_coordinates & (
+      out$latitude < .ontario_bounds[["latitude_min"]] |
+        out$latitude > .ontario_bounds[["latitude_max"]] |
+        out$longitude < .ontario_bounds[["longitude_min"]] |
+        out$longitude > .ontario_bounds[["longitude_max"]]
+    )
     invalid_coordinate <- incomplete_coordinate |
       nonfinite_coordinate |
-      out_of_bounds
+      out_of_bounds |
+      outside_ontario_bounds
   }
 
   duplicate_evidence <- duplicated(out)
@@ -583,6 +602,7 @@ validate_source_data <- function(
     missing_postal_code = missing_postal,
     invalid_postal_code = invalid_postal,
     invalid_coordinate = invalid_coordinate,
+    outside_ontario_bounds = outside_ontario_bounds,
     duplicate_evidence = duplicate_evidence
   )
   for (reason in names(reason_flags)) {
@@ -601,6 +621,7 @@ validate_source_data <- function(
     invalid_postal_rows = sum(invalid_postal),
     missing_postal_rows = sum(missing_postal),
     invalid_coordinate_rows = sum(invalid_coordinate),
+    outside_ontario_bounds_rows = sum(outside_ontario_bounds),
     duplicate_evidence_rows = sum(duplicate_evidence)
   )
   if (on_invalid == "error" && any(invalid_row)) {
@@ -614,8 +635,10 @@ validate_source_data <- function(
       error_message <- "latitude and longitude must be supplied together"
     } else if (any(nonfinite_coordinate)) {
       error_message <- "coordinates must be finite numeric values"
-    } else {
+    } else if (any(out_of_bounds)) {
       error_message <- "coordinates are outside longitude/latitude bounds"
+    } else {
+      error_message <- "coordinates are outside broad Ontario bounds"
     }
     stop(
       error_message,
