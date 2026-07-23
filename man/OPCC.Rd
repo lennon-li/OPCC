@@ -28,7 +28,7 @@ aggregate_da_correspondence(correspondence)
 geonames_supplementary_adapter()
 new_source_adapter(source_id, licence, lineage, retrieval_date = Sys.Date(), schema_map = list(postal_code = "postal_code"), endpoint = NULL, checksum = NULL)
 pc_to_geo(postal_code, level = c("DB", "DA"), all_links = TRUE, correspondence = NULL, ...)
-pc_to_point(postal_code, vintage = "2026-07-19", point_file = NULL, cache_dir = tools::R_user_dir("OPCC", "cache"), offline = FALSE)
+pc_to_point(postal_code, vintage = "2026-07-19", point_file = NULL, cache_dir = tools::R_user_dir("OPCC", "cache"), offline = FALSE, source = NULL)
 validate_source_data(data, adapter, on_invalid = c("error", "drop", "quarantine"))
 build_source_layer(data, adapter, on_invalid = c("error", "drop", "quarantine"))
 profile_source_layer(layer)
@@ -56,7 +56,9 @@ validate_release(vintage = "2026-06-26", cache_dir = tools::R_user_dir("OPCC", "
   \item{postal_code}{A character vector of Canadian postal codes.}
   \item{all_links}{Whether to retain every allocated geography link.}
   \item{correspondence}{Optional already-loaded postal-code-to-DB correspondence data.}
-  \item{point_file}{Optional local verified GeoNames point artifact.}
+  \item{point_file}{Optional local verified source-qualified point artifact.}
+  \item{source}{Optional character vector of \code{point_source} values to
+  retain. By default, observations from every source are returned.}
   \item{data}{A user-supplied postal-code evidence data frame.}
   \item{adapter}{Source metadata created by \code{new_source_adapter}.}
   \item{on_invalid}{How invalid rows are handled: error, drop, or attach them
@@ -69,7 +71,8 @@ validate_release(vintage = "2026-06-26", cache_dir = tools::R_user_dir("OPCC", "
   \item{open}{Whether to open the issue-composer URL in an interactive browser.}
   \item{...}{Arguments passed to the selected correspondence getter.}
 }
-\value{Data frames or release metadata, depending on the function.}
+\value{Data frames or release metadata, depending on the function.
+\code{pc_to_point()} returns every matching source-qualified point observation.}
 \details{OPCC does not substitute GeoNames point evidence for NAR address evidence.
 Local source layers are always source-separated and never modify a canonical
 OPCC release. Adapter mappings are applied before validation, and accepted

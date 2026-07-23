@@ -30,13 +30,18 @@ pc_to_geo("M5V 3A8", level = "DA")
 # Retain every defensible DB link and its allocation weight
 pc_to_geo("M5V 3A8", level = "DB", all_links = TRUE)
 
-# Inspect the source-qualified point evidence
+# Inspect all source-qualified point observations
 pc_to_point("K1A 0A6")
+
+# Filter explicitly when only one point source is wanted
+pc_to_point("K1A 0A6", source = "geonames")
 ```
 
-Lookup results preserve source class and vintage. Multiple links remain visible
-by default. Selecting one link is explicit, and unmatched postal codes remain
-reported rather than receiving a fabricated assignment.
+Lookup results preserve source class, method, record ID, lineage, and vintage
+when supplied by the artifact. Multiple links and point observations remain
+visible by default. Selecting a geography link or filtering a point source is
+explicit, and unmatched postal codes remain reported rather than receiving a
+fabricated assignment.
 
 ## Current status
 

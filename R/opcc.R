@@ -326,7 +326,7 @@ validate_release <- function(
   invisible(TRUE)
 }
 
-#' Look up source-labeled supplementary GeoNames points
+#' Look up source-qualified point observations
 #'
 #' @param postal_code Character vector of Canadian postal codes.
 #' @param vintage Point-release vintage.
@@ -334,16 +334,30 @@ validate_release <- function(
 #'   offline and air-gapped use.
 #' @param cache_dir Directory used for verified downloaded files.
 #' @param offline Require an already cached verified file.
-#' @return Point records, including DB/DA fields when the point intersects a
-#'   2021 Ontario dissemination block.
+#' @param source Optional character vector of `point_source` values to retain.
+#'   By default, observations from every source are returned.
+#' @return All matching source-qualified point observations, including DB/DA
+#'   fields when a point intersects a 2021 Ontario dissemination block.
 #' @export
 pc_to_point <- function(
     postal_code,
     vintage = "2026-07-19",
     point_file = NULL,
     cache_dir = tools::R_user_dir("OPCC", "cache"),
-    offline = FALSE) {
+    offline = FALSE,
+    source = NULL) {
   pcs <- unique(normalize_postal_code(postal_code, strict = TRUE))
+  if (!is.null(source)) {
+    valid_source <- is.character(source) && length(source) > 0L &&
+      !anyNA(source) && all(nzchar(trimws(source)))
+    if (!valid_source) {
+      stop(
+        "source must contain one or more non-empty point_source values",
+        call. = FALSE
+      )
+    }
+    source <- unique(trimws(source))
+  }
   if (is.null(point_file)) {
     spec <- .release_spec(.point_index(), vintage)
     point_file <- .download_verified(
@@ -356,10 +370,12 @@ pc_to_point <- function(
   x <- .read_csv_gz(point_file)
   required <- c("postal_code", "latitude", "longitude", "point_source", "point_method")
   if (!all(required %in% names(x))) stop("Point artifact is missing required columns", call. = FALSE)
-  out <- x[x$postal_code %in% pcs & x$point_source == "geonames", , drop = FALSE]
+  keep <- x$postal_code %in% pcs
+  if (!is.null(source)) keep <- keep & x$point_source %in% source
+  out <- x[keep, , drop = FALSE]
   if ("DAUID_ADIDU" %in% names(out)) names(out)[names(out) == "DAUID_ADIDU"] <- "DAUID"
   attr(out, "unmatched") <- setdiff(pcs, unique(out$postal_code))
-  attr(out, "opcc_source") <- "GeoNames supplementary point; not NAR address evidence"
+  attr(out, "opcc_source") <- "OPCC source-qualified point evidence"
   out
 }
 

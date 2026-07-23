@@ -66,6 +66,105 @@ testthat::test_that("GeoNames points retain source and geography", {
   testthat::expect_equal(attr(out, "unmatched"), "K0A 0A9")
 })
 
+testthat::test_that("point lookup retains every source-qualified observation", {
+  point_file <- withr::local_tempfile(fileext = ".csv.gz")
+  connection <- gzfile(point_file, open = "wt")
+  utils::write.csv(
+    data.frame(
+      postal_code = rep("K1A 0A6", 3),
+      latitude = c(45.42, 45.421, 45.422),
+      longitude = c(-75.69, -75.691, -75.692),
+      point_source = c("geonames", "ottawa_open_data", "ottawa_open_data"),
+      point_method = c("place_point", "address_point", "address_point"),
+      evidence_class = c(
+        "geonames_supplementary",
+        "municipal_open_data",
+        "municipal_open_data"
+      ),
+      source_vintage = c("2026-07-19", "2026-01-15", "2026-01-15"),
+      source_record_id = c("gn-1", "ott-10", "ott-11"),
+      source_lineage = c("GeoNames", "Ottawa registry", "Ottawa registry")
+    ),
+    connection,
+    row.names = FALSE
+  )
+  close(connection)
+
+  out <- pc_to_point("K1A0A6", point_file = point_file)
+
+  testthat::expect_equal(nrow(out), 3L)
+  testthat::expect_equal(
+    out$point_source,
+    c("geonames", "ottawa_open_data", "ottawa_open_data")
+  )
+  testthat::expect_equal(out$source_record_id, c("gn-1", "ott-10", "ott-11"))
+  testthat::expect_equal(
+    out$evidence_class,
+    c("geonames_supplementary", rep("municipal_open_data", 2))
+  )
+  testthat::expect_equal(
+    out$source_lineage,
+    c("GeoNames", rep("Ottawa registry", 2))
+  )
+  testthat::expect_length(attr(out, "unmatched"), 0L)
+})
+
+testthat::test_that("point lookup filters by one or more sources explicitly", {
+  point_file <- withr::local_tempfile(fileext = ".csv.gz")
+  connection <- gzfile(point_file, open = "wt")
+  utils::write.csv(
+    data.frame(
+      postal_code = c("K1A 0A6", "K1A 0A6", "K2P 1J4"),
+      latitude = c(45.42, 45.421, 45.413),
+      longitude = c(-75.69, -75.691, -75.702),
+      point_source = c("geonames", "ottawa_open_data", "ottawa_open_data"),
+      point_method = c("place_point", "address_point", "address_point"),
+      source_record_id = c("gn-1", "ott-10", "ott-20")
+    ),
+    connection,
+    row.names = FALSE
+  )
+  close(connection)
+
+  municipal <- pc_to_point(
+    c("K1A0A6", "K2P1J4"),
+    point_file = point_file,
+    source = "ottawa_open_data"
+  )
+  testthat::expect_equal(nrow(municipal), 2L)
+  testthat::expect_equal(
+    municipal$source_record_id,
+    c("ott-10", "ott-20")
+  )
+
+  selected <- pc_to_point(
+    "K1A0A6",
+    point_file = point_file,
+    source = c("geonames", "ottawa_open_data")
+  )
+  testthat::expect_equal(nrow(selected), 2L)
+
+  absent <- pc_to_point(
+    "K1A0A6",
+    point_file = point_file,
+    source = "toronto_open_data"
+  )
+  testthat::expect_equal(nrow(absent), 0L)
+  testthat::expect_equal(attr(absent, "unmatched"), "K1A 0A6")
+})
+
+testthat::test_that("point lookup validates source filters", {
+  point_file <- testthat::test_path("fixtures", "geonames-points.csv.gz")
+  testthat::expect_error(
+    pc_to_point("K0A0A1", point_file = point_file, source = character()),
+    "source"
+  )
+  testthat::expect_error(
+    pc_to_point("K0A0A1", point_file = point_file, source = NA_character_),
+    "source"
+  )
+})
+
 testthat::test_that("candidate-style allocation validation accepts source-qualified rows", {
   x <- data.frame(
     postal_code = c("K0A 0A1", "K0A 0A2"), DBUID = c("1", "2"),
