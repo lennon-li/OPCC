@@ -22,21 +22,60 @@
 \usage{
 normalize_postal_code(x, strict = FALSE)
 list_vintages(level = c("DB", "DA"))
-get_correspondence(vintage = "2026-06-26", cache_dir = tools::R_user_dir("OPCC", "cache"), offline = FALSE)
-get_da_correspondence(vintage = "2026-06-26", cache_dir = tools::R_user_dir("OPCC", "cache"), offline = FALSE)
+get_correspondence(
+  vintage = "2026-06-26",
+  cache_dir = tools::R_user_dir("OPCC", "cache"),
+  offline = FALSE
+)
+get_da_correspondence(
+  vintage = "2026-06-26",
+  cache_dir = tools::R_user_dir("OPCC", "cache"),
+  offline = FALSE
+)
 aggregate_da_correspondence(correspondence)
 geonames_supplementary_adapter()
-new_source_adapter(source_id, licence, lineage, retrieval_date = Sys.Date(), schema_map = list(postal_code = "postal_code"), endpoint = NULL, checksum = NULL)
-pc_to_geo(postal_code, level = c("DB", "DA"), all_links = TRUE, correspondence = NULL, ...)
-pc_to_point(postal_code, vintage = "2026-07-19", point_file = NULL, cache_dir = tools::R_user_dir("OPCC", "cache"), offline = FALSE, source = NULL)
+new_source_adapter(
+  source_id,
+  licence,
+  lineage,
+  retrieval_date = Sys.Date(),
+  schema_map = list(postal_code = "postal_code"),
+  endpoint = NULL,
+  checksum = NULL
+)
+pc_to_geo(
+  postal_code,
+  level = c("DB", "DA"),
+  all_links = TRUE,
+  correspondence = NULL,
+  ...
+)
+pc_to_point(
+  postal_code,
+  vintage = "2026-07-19",
+  point_file = NULL,
+  cache_dir = tools::R_user_dir("OPCC", "cache"),
+  offline = FALSE,
+  source = NULL
+)
 validate_source_data(data, adapter, on_invalid = c("error", "drop", "quarantine"))
 build_source_layer(data, adapter, on_invalid = c("error", "drop", "quarantine"))
 profile_source_layer(layer)
 contribution_bundle(layer, output_dir = NULL, fixture_rows = 100L)
 contribution_issue_url(bundle, repository = "lennon-li/OPCC")
 open_contribution_issue(bundle, repository = "lennon-li/OPCC", open = FALSE)
-release_manifest(vintage = "2026-06-26", cache_dir = tools::R_user_dir("OPCC", "cache"), offline = FALSE, level = c("DB", "DA"))
-validate_release(vintage = "2026-06-26", cache_dir = tools::R_user_dir("OPCC", "cache"), offline = FALSE, level = c("DB", "DA"))
+release_manifest(
+  vintage = "2026-06-26",
+  cache_dir = tools::R_user_dir("OPCC", "cache"),
+  offline = FALSE,
+  level = c("DB", "DA")
+)
+validate_release(
+  vintage = "2026-06-26",
+  cache_dir = tools::R_user_dir("OPCC", "cache"),
+  offline = FALSE,
+  level = c("DB", "DA")
+)
 }
 \arguments{
   \item{x}{A vector of postal codes.}

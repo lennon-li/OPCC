@@ -12,3 +12,11 @@
 ^cran-comments\.md$
 ^NEWS\.md$
 ^CITATION\.cff$
+^CODE_OF_CONDUCT\.md$
+^CONTRIBUTING\.md$
+^GOVERNANCE\.md$
+^LICENSE\.md$
+^SECURITY\.md$
+^config$
+^research$
+^scripts$
