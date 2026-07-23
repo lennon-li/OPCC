@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "product": "PCCF_DERIVED_EXPORT",
+  "product_vintage": "2023-03",
+  "census_vintage": "2021",
+  "province_uid": "35",
+  "file_format": "xlsx",
+  "sheet": "PCCF_ON_Mar2023_ExportTable",
+  "columns": {
+    "postal_code": "POSTAL_CODE",
+    "DAUID": "DAUID"
+  },
+  "missing_value_policy": "error",
+  "invalid_dauid_policy": "exclude_allowlisted_sentinels_with_count",
+  "allowed_dauid_sentinels": [
+    "0"
+  ],
+  "duplicate_row_policy": "count_then_deduplicate_exact"
+}

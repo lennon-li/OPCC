@@ -182,9 +182,10 @@ pccf_run <- function(inputs) {
     level = "DA"
   )
   reference <- sli_read_pccf_reference(inputs$pccf_csv, contract)
-  build_ref <- sli_validate_producer_ref(
+  build_ref <- sli_validate_producer_files(
     inputs$producer_ref,
-    c("scripts/pccf_validate.R", "R/validation-metrics.R")
+    c("scripts/pccf_validate.R", "R/validation-metrics.R"),
+    repo_root
   )
 
   metrics <- sli_compute_pccf_metrics(
@@ -227,6 +228,11 @@ pccf_run <- function(inputs) {
       province_uid = contract$province_uid,
       coordinate_crs = contract$coordinate_crs,
       point_semantics = contract$point_semantics,
+      contract_sha256 = digest::digest(
+        inputs$pccf_contract,
+        "sha256",
+        file = TRUE
+      ),
       sha256 = sli_digest_private_file(inputs$pccf_csv),
       raw_rows = reference$row_count,
       distinct_codes = dplyr::n_distinct(

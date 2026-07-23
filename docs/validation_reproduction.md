@@ -129,6 +129,32 @@ aggregate report, and a hash manifest. Outputs contain no postal codes,
 coordinates, DBUIDs, DAUIDs, examples, joined rows, or local paths. They remain
 private diagnostic evidence; public attestation is a separate future workflow.
 
+### DA-only PCCF-derived XLSX exports
+
+Some licensed exports contain postal codes and DAUIDs but no coordinates or
+DBUIDs. `scripts/pccf_da_validate.R` handles that narrower evidence without
+claiming M1 or M2 validation. It preserves many-to-many postal-code-to-DA
+relationships, verifies the selected M5 release and its M2 parent against the
+canonical release index, and records M1 and M2 as unvalidated.
+Invalid or unassigned DA sentinels are excluded under the explicit contract
+policy and reported only as an aggregate count.
+
+Use `config/pccf-da-validation-contract.example.json` for the March 2023
+Ontario export schema:
+
+```bash
+Rscript --vanilla scripts/pccf_da_validate.R \
+  --m5-release-id 2026-07-20 \
+  --pccf-xlsx /path/outside/opcc/PCCF_ON_Mar2023_ExportTable.xlsx \
+  --pccf-contract config/pccf-da-validation-contract.example.json \
+  --output-dir /path/outside/opcc/private-pccf-da-validation \
+  --producer-ref <full-commit-sha>
+```
+
+The output remains private. Because the reference is March 2023 while OPCC
+uses 2026 source evidence, disagreements may reflect real assignment changes
+between vintages as well as OPCC error.
+
 ## Output files
 
 | File | Purpose |

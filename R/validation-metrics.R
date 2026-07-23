@@ -239,6 +239,41 @@ sli_parse_pccf_args <- function(args) {
   output
 }
 
+sli_parse_pccf_da_args <- function(args) {
+  output <- list(
+    m5_release_id = NULL,
+    pccf_xlsx = NULL,
+    pccf_contract = NULL,
+    output_dir = NULL,
+    producer_ref = NULL
+  )
+  names_by_flag <- stats::setNames(
+    names(output),
+    paste0("--", gsub("_", "-", names(output)))
+  )
+  index <- 1L
+  while (index <= length(args)) {
+    flag <- args[index]
+    field <- unname(names_by_flag[flag])
+    if (length(field) == 0L || is.na(field)) {
+      stop("Unknown argument: ", flag)
+    }
+    if (index == length(args)) {
+      stop("Missing value for ", flag)
+    }
+    output[[field]] <- args[index + 1L]
+    index <- index + 2L
+  }
+  missing <- names(output)[vapply(output, is.null, logical(1))]
+  if (length(missing) > 0L) {
+    stop(
+      "Missing required arguments: ",
+      paste(paste0("--", gsub("_", "-", missing)), collapse = ", ")
+    )
+  }
+  output
+}
+
 sli_validate_pccf_contract <- function(contract) {
   required <- c(
     "schema_version", "product", "product_vintage", "census_vintage",
@@ -279,6 +314,146 @@ sli_validate_pccf_contract <- function(contract) {
     stop("PCCF contract column mappings must be non-empty and unique")
   }
   contract
+}
+
+sli_validate_pccf_da_contract <- function(contract) {
+  required <- c(
+    "schema_version", "product", "product_vintage", "census_vintage",
+    "province_uid", "file_format", "sheet", "columns",
+    "missing_value_policy", "invalid_dauid_policy",
+    "allowed_dauid_sentinels",
+    "duplicate_row_policy"
+  )
+  if (!is.list(contract) ||
+      !all(required %in% names(contract))) {
+    stop("PCCF DA contract is missing required fields")
+  }
+  if (!identical(as.integer(contract$schema_version), 1L) ||
+      !identical(contract$product, "PCCF_DERIVED_EXPORT") ||
+      !identical(contract$census_vintage, "2021") ||
+      !identical(contract$province_uid, "35") ||
+      !identical(contract$file_format, "xlsx") ||
+      !identical(contract$missing_value_policy, "error") ||
+      !identical(
+        contract$invalid_dauid_policy,
+        "exclude_allowlisted_sentinels_with_count"
+      ) ||
+      !identical(
+        contract$duplicate_row_policy,
+        "count_then_deduplicate_exact"
+      )) {
+    stop("PCCF DA contract must declare an Ontario 2021 XLSX export")
+  }
+  sli_validate_pccf_identity("PCCF", contract$product_vintage)
+  scalar_string <- function(value) {
+    is.character(value) &&
+      length(value) == 1L &&
+      !is.na(value) &&
+      nzchar(value)
+  }
+  if (!scalar_string(contract$sheet)) {
+    stop("PCCF DA contract requires one worksheet name")
+  }
+  required_columns <- c("postal_code", "DAUID")
+  if (!is.list(contract$columns) ||
+      !identical(names(contract$columns), required_columns)) {
+    stop("PCCF DA contract columns must map postal_code and DAUID")
+  }
+  mapped <- unlist(contract$columns, use.names = FALSE)
+  if (any(!vapply(mapped, scalar_string, logical(1))) ||
+      anyDuplicated(mapped) > 0L) {
+    stop("PCCF DA column mappings must be non-empty and unique")
+  }
+  sentinels <- unlist(
+    contract$allowed_dauid_sentinels,
+    use.names = FALSE
+  )
+  if (!is.character(sentinels) ||
+      length(sentinels) == 0L ||
+      anyNA(sentinels) ||
+      any(!nzchar(sentinels)) ||
+      any(grepl("^35[0-9]{6}$", sentinels))) {
+    stop("PCCF DA contract requires explicit non-DA sentinel values")
+  }
+  contract$allowed_dauid_sentinels <- sentinels
+  contract
+}
+
+sli_normalize_pccf_da_table <- function(x, contract) {
+  contract <- sli_validate_pccf_da_contract(contract)
+  if (!is.data.frame(x)) {
+    stop("PCCF DA input must be a data frame")
+  }
+  mapped <- unlist(contract$columns, use.names = FALSE)
+  if (!all(mapped %in% names(x))) {
+    stop("PCCF DA input is missing required mapped columns")
+  }
+  selected <- data.frame(
+    postal_code = sli_normalize_postal_code(
+      x[[contract$columns$postal_code]]
+    ),
+    DAUID = trimws(as.character(x[[contract$columns$DAUID]])),
+    stringsAsFactors = FALSE
+  )
+  .sli_validate_postal_codes(selected$postal_code)
+  missing_da <- is.na(selected$DAUID) | !nzchar(selected$DAUID)
+  if (any(missing_da)) {
+    stop("PCCF DA input contains missing DA identifiers")
+  }
+  valid_da <- grepl("^35[0-9]{6}$", selected$DAUID)
+  sentinel_da <- selected$DAUID %in%
+    contract$allowed_dauid_sentinels
+  if (any(!valid_da & !sentinel_da)) {
+    stop("PCCF DA input contains unexpected invalid DA identifiers")
+  }
+  excluded_invalid_da_rows <- sum(sentinel_da)
+  selected_valid <- selected[valid_da, , drop = FALSE]
+  if (nrow(selected_valid) == 0L) {
+    stop("PCCF DA input has no valid Ontario DA links")
+  }
+  normalized <- tryCatch(
+    sli_normalize_link_table(
+      selected_valid,
+      level = "DA",
+      role = "reference"
+    ),
+    error = function(error) {
+      stop(
+        "PCCF DA input must contain valid postal codes and Ontario DA identifiers",
+        call. = FALSE
+      )
+    }
+  )
+  links <- data.frame(
+    postal_code = normalized$postal_code,
+    DAUID = normalized$geo_id,
+    stringsAsFactors = FALSE
+  )
+  list(
+    raw_rows = nrow(selected),
+    excluded_invalid_da_rows = excluded_invalid_da_rows,
+    exact_duplicate_rows = nrow(selected_valid) -
+      nrow(unique(selected_valid)),
+    links = links
+  )
+}
+
+sli_read_pccf_da_xlsx <- function(path, contract) {
+  if (!file.exists(path)) {
+    stop("Licensed PCCF DA input is not available")
+  }
+  contract <- sli_validate_pccf_da_contract(contract)
+  raw <- tryCatch(
+    readxl::read_excel(
+      path,
+      sheet = contract$sheet,
+      col_types = "text"
+    ),
+    error = function(error) {
+      stop("Licensed PCCF DA input could not be read", call. = FALSE)
+    }
+  )
+  sli_normalize_pccf_da_table(raw, contract)
 }
 
 sli_validate_private_input <- function(path, repo_root) {
@@ -716,6 +891,174 @@ sli_write_pccf_outputs <- function(result, output_dir) {
   )
   if (!all(renamed)) {
     stop("Private validation outputs could not be finalised")
+  }
+  complete <- TRUE
+  invisible(output_manifest)
+}
+
+sli_build_pccf_da_result <- function(
+    metrics,
+    build_ref,
+    reference,
+    release,
+    release_index_sha256) {
+  result <- list(
+    schema_version = 1L,
+    mode = "licensed_private_da_only",
+    build_ref = build_ref,
+    scope = list(
+      validated_milestones = "M5",
+      unvalidated_milestones = c("M1", "M2"),
+      limitation = "reference_has_no_coordinates_or_dbuid"
+    ),
+    reference = reference,
+    release = release,
+    release_index_sha256 = release_index_sha256,
+    metrics = metrics
+  )
+  sli_validate_aggregate_output(result)
+  result
+}
+
+sli_pccf_da_report_lines <- function(result) {
+  coverage <- result$metrics$coverage
+  accuracy <- result$metrics$link_accuracy
+  c(
+    "# OPCC Private PCCF-Derived DA Validation",
+    "",
+    paste("Mode:", result$mode),
+    paste("Reference vintage:", result$reference$product_vintage),
+    paste("Reference rows:", format(result$reference$raw_rows, big.mark = ",")),
+    paste(
+      "Excluded invalid DA rows:",
+      format(
+        result$reference$excluded_invalid_da_rows,
+        big.mark = ","
+      )
+    ),
+    paste("OPCC release:", result$release$release_id),
+    "",
+    "## Scope",
+    "",
+    "- Validated milestone: M5 postal-code-to-DA correspondence",
+    "- Not validated: M1 coordinates and M2 dissemination blocks",
+    "- Reason: the reference workbook has no coordinates or DBUID field",
+    "",
+    "## Coverage",
+    "",
+    sprintf("- OPCC postal codes: %s",
+            format(coverage$opcc_codes, big.mark = ",")),
+    sprintf("- Reference postal codes: %s",
+            format(coverage$reference_codes, big.mark = ",")),
+    sprintf("- Comparable postal codes: %s",
+            format(coverage$compared_codes, big.mark = ",")),
+    sprintf("- Reference coverage: %.2f%%",
+            100 * coverage$reference_coverage),
+    "",
+    "## DA agreement",
+    "",
+    sprintf("- Pair precision: %.2f%%", 100 * accuracy$pair_precision),
+    sprintf("- Pair recall: %.2f%%", 100 * accuracy$pair_recall),
+    sprintf("- Any-link agreement: %.2f%%", 100 * accuracy$any_link_rate),
+    sprintf("- Exact-set agreement: %.2f%%", 100 * accuracy$exact_set_rate),
+    sprintf(
+      "- OPCC best link contained in reference set: %.2f%%",
+      100 * accuracy$opcc_best_in_reference_rate
+    ),
+    "",
+    "The reference and OPCC source vintages differ. Results are diagnostic",
+    "evidence and may reflect real assignment change between vintages.",
+    "No licensed row-level values or local paths appear in these outputs."
+  )
+}
+
+sli_write_pccf_da_outputs <- function(result, output_dir) {
+  sli_validate_aggregate_output(result)
+  if (dir.exists(output_dir) || file.exists(output_dir)) {
+    stop("Private DA validation output directory must not already exist")
+  }
+  created <- tryCatch(
+    suppressWarnings(dir.create(
+      output_dir,
+      recursive = FALSE,
+      mode = "0700"
+    )),
+    error = function(error) FALSE
+  )
+  if (!isTRUE(created) || !dir.exists(output_dir)) {
+    stop("Private DA validation output directory could not be created")
+  }
+  suppressWarnings(Sys.chmod(output_dir, mode = "0700"))
+
+  final_names <- c(
+    "pccf_da_validation_metrics.json",
+    "pccf_da_validation_report.md",
+    "pccf_da_validation_manifest.json"
+  )
+  final_paths <- file.path(output_dir, final_names)
+  temporary_paths <- paste0(final_paths, ".tmp")
+  complete <- FALSE
+  on.exit({
+    if (!complete) {
+      unlink(c(temporary_paths, final_paths), force = TRUE)
+    }
+  }, add = TRUE)
+
+  output_manifest <- tryCatch({
+    jsonlite::write_json(
+      result,
+      temporary_paths[1],
+      pretty = TRUE,
+      auto_unbox = TRUE,
+      na = "null"
+    )
+    writeLines(
+      sli_pccf_da_report_lines(result),
+      temporary_paths[2],
+      useBytes = TRUE
+    )
+    manifest <- list(
+      schema_version = 1L,
+      mode = result$mode,
+      build_ref = result$build_ref,
+      scope = result$scope,
+      reference = result$reference,
+      release = result$release,
+      release_index_sha256 = result$release_index_sha256,
+      outputs = list(
+        metrics_sha256 = digest::digest(
+          temporary_paths[1],
+          "sha256",
+          file = TRUE
+        ),
+        report_sha256 = digest::digest(
+          temporary_paths[2],
+          "sha256",
+          file = TRUE
+        )
+      )
+    )
+    sli_validate_aggregate_output(manifest)
+    jsonlite::write_json(
+      manifest,
+      temporary_paths[3],
+      pretty = TRUE,
+      auto_unbox = TRUE,
+      na = "null"
+    )
+    manifest
+  }, error = function(error) {
+    stop("Private DA validation outputs could not be written", call. = FALSE)
+  })
+  renamed <- vapply(
+    seq_along(final_paths),
+    function(index) {
+      file.rename(temporary_paths[index], final_paths[index])
+    },
+    logical(1)
+  )
+  if (!all(renamed)) {
+    stop("Private DA validation outputs could not be finalised")
   }
   complete <- TRUE
   invisible(output_manifest)
@@ -1208,15 +1551,24 @@ sli_verify_m1_artifact <- function(gz_path, manifest) {
 
 # Resolve and validate that a producer revision exists and contains every named
 # generator script. Returns the full 40-character SHA.
-sli_validate_producer_ref <- function(producer_ref, scripts) {
+sli_validate_producer_ref <- function(
+    producer_ref,
+    scripts,
+    repo_root = NULL) {
   if (is.null(producer_ref) || !nzchar(producer_ref)) {
     stop("--producer-ref is required.")
+  }
+
+  git_prefix <- if (is.null(repo_root)) {
+    character()
+  } else {
+    c("-C", shQuote(normalizePath(repo_root, mustWork = TRUE)))
   }
 
   # Resolve to full SHA
   full_sha <- tryCatch(
     suppressWarnings(
-      system2("git", c("rev-parse", producer_ref),
+      system2("git", c(git_prefix, "rev-parse", producer_ref),
               stdout = TRUE, stderr = TRUE)
     ),
     error = function(e) e
@@ -1233,8 +1585,17 @@ sli_validate_producer_ref <- function(producer_ref, scripts) {
   for (s in scripts) {
     res <- tryCatch(
       suppressWarnings(
-        system2("git", c("cat-file", "-e", paste0(full_sha, ":", s)),
-                stdout = TRUE, stderr = TRUE)
+        system2(
+          "git",
+          c(
+            git_prefix,
+            "cat-file",
+            "-e",
+            paste0(full_sha, ":", s)
+          ),
+          stdout = TRUE,
+          stderr = TRUE
+        )
       ),
       error = function(e) e
     )
@@ -1244,5 +1605,49 @@ sli_validate_producer_ref <- function(producer_ref, scripts) {
     }
   }
 
+  full_sha
+}
+
+# Validate that the executed tracked files are byte-identical to producer_ref.
+sli_validate_producer_files <- function(
+    producer_ref,
+    files,
+    repo_root) {
+  full_sha <- sli_validate_producer_ref(
+    producer_ref,
+    files,
+    repo_root
+  )
+  repository_path <- normalizePath(repo_root, mustWork = TRUE)
+  for (relative_path in files) {
+    if (!grepl("^[A-Za-z0-9][A-Za-z0-9._/-]*$", relative_path) ||
+        grepl("(^|/)\\.\\.(/|$)", relative_path)) {
+      stop("Producer file path is invalid")
+    }
+    working_path <- file.path(repository_path, relative_path)
+    if (!file.exists(working_path) || dir.exists(working_path)) {
+      stop("Producer file is missing from the worktree")
+    }
+    committed_path <- tempfile("opcc-producer-file-")
+    on.exit(unlink(committed_path), add = TRUE)
+    status <- suppressWarnings(system2(
+      "git",
+      c(
+        "-C",
+        repository_path,
+        "show",
+        paste0(full_sha, ":", relative_path)
+      ),
+      stdout = committed_path,
+      stderr = FALSE
+    ))
+    if (!identical(status, 0L) ||
+        !identical(
+          digest::digest(working_path, "sha256", file = TRUE),
+          digest::digest(committed_path, "sha256", file = TRUE)
+        )) {
+      stop("Executed producer files do not match --producer-ref")
+    }
+  }
   full_sha
 }

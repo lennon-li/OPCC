@@ -12,4 +12,7 @@
 - Added a private PCCF runner that checksum-binds M1, M2, and M5, rejects
   incompatible M5-to-M2 ancestry, validates an explicit Ontario PCCF contract,
   and writes aggregate-only outputs outside the repository.
+- Added a DA-only XLSX validation path for PCCF-derived exports that lack
+  coordinates and DBUIDs, with explicit M1/M2 non-validation and vintage-gap
+  reporting.
 - Added immutable release-index validation and release-control auditing.
