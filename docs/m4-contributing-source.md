@@ -14,7 +14,12 @@ adapter <- new_source_adapter(
   retrieval_date = "2026-07-19",
   schema_map = list(postal_code = "postal", latitude = "lat", longitude = "lon"),
   endpoint = "https://example.org/open-data",
-  checksum = "<sha256 of the retrieved source file>"
+  checksum = "<sha256 of the retrieved source file>",
+  location_type = "physical",
+  coordinate_method = "address_point",
+  authority_level = "municipal",
+  coverage_type = "municipal_address_registry",
+  update_frequency = "annual"
 )
 layer <- build_source_layer(my_data, adapter)
 profile_source_layer(layer)
@@ -44,6 +49,13 @@ Accepted output carries an `opcc_validation_report` attribute with input,
 accepted, rejected, invalid-postal, missing-postal, invalid-coordinate, and
 duplicate-evidence row counts, plus the specific
 `outside_ontario_bounds_rows` count.
+
+Adapter metadata distinguishes `location_type` (`physical`, `mailing`, or
+`unknown`) from `coordinate_method` (`address_point`, `entrance`, `building`,
+`parcel`, `centroid`, or `unknown`). It also records non-empty
+`authority_level`, `coverage_type`, and `update_frequency` labels. These fields
+default to `unknown` for backward compatibility and are written to contribution
+provenance.
 
 ## Bundle contents
 

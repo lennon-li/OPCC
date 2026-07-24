@@ -41,7 +41,12 @@ new_source_adapter(
   retrieval_date = Sys.Date(),
   schema_map = list(postal_code = "postal_code"),
   endpoint = NULL,
-  checksum = NULL
+  checksum = NULL,
+  location_type = "unknown",
+  coordinate_method = "unknown",
+  authority_level = "unknown",
+  coverage_type = "unknown",
+  update_frequency = "unknown"
 )
 pc_to_geo(
   postal_code,
@@ -92,6 +97,14 @@ validate_release(
   It must contain a \code{postal_code} entry and may contain additional fields.}
   \item{endpoint}{An optional source retrieval endpoint.}
   \item{checksum}{An optional SHA-256 checksum of the source artifact.}
+  \item{location_type}{Source location type: \code{physical}, \code{mailing}, or
+  \code{unknown}.}
+  \item{coordinate_method}{Coordinate derivation method: \code{address_point},
+  \code{entrance}, \code{building}, \code{parcel}, \code{centroid}, or
+  \code{unknown}.}
+  \item{authority_level}{Source authority classification.}
+  \item{coverage_type}{Source coverage classification.}
+  \item{update_frequency}{Expected source update frequency.}
   \item{postal_code}{A character vector of Canadian postal codes.}
   \item{all_links}{Whether to retain every allocated geography link.}
   \item{correspondence}{Optional already-loaded postal-code-to-DB correspondence data.}

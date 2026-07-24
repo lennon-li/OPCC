@@ -5,6 +5,11 @@
   "retrieval_date": "2026-07-19",
   "endpoint": "https://download.geonames.org/export/zip/CA_full.csv.zip",
   "artifact_sha256": "b3edbab3aee3c4fbcac004d978fa2635e83cdad0abada1f4e44f02e7cc36cbfa",
+  "location_type": "unknown",
+  "coordinate_method": "centroid",
+  "authority_level": "community_gazetteer",
+  "coverage_type": "supplementary_postal_points",
+  "update_frequency": "source_defined",
   "schema_map": {
     "postal_code": "postal_code",
     "latitude": "latitude",

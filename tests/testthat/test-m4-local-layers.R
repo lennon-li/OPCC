@@ -59,12 +59,22 @@ testthat::test_that("packaged GeoNames adapter carries source-specific provenanc
   testthat::expect_equal(adapter$source_id, "geonames_ca")
   testthat::expect_equal(adapter$checksum, "b3edbab3aee3c4fbcac004d978fa2635e83cdad0abada1f4e44f02e7cc36cbfa")
   testthat::expect_equal(adapter$schema_map$postal_code, "postal_code")
+  testthat::expect_equal(adapter$location_type, "unknown")
+  testthat::expect_equal(adapter$coordinate_method, "centroid")
+  testthat::expect_equal(adapter$authority_level, "community_gazetteer")
+  testthat::expect_equal(adapter$coverage_type, "supplementary_postal_points")
+  testthat::expect_equal(adapter$update_frequency, "source_defined")
 })
 
 testthat::test_that("profiles and bundles expose reproducible contribution evidence", {
   adapter <- suppressMessages(new_source_adapter(
     "municipal_demo", "Open Government Licence", "municipal address registry",
-    retrieval_date = "2026-07-19"
+    retrieval_date = "2026-07-19",
+    location_type = "physical",
+    coordinate_method = "address_point",
+    authority_level = "municipal",
+    coverage_type = "municipal_address_registry",
+    update_frequency = "annual"
   ))
   layer <- suppressMessages(build_source_layer(data.frame(
     postal_code = c("K1A 0A6", "K1A 0A7", "K1A 0A6"),
@@ -84,8 +94,19 @@ testthat::test_that("profiles and bundles expose reproducible contribution evide
   testthat::expect_s3_class(bundle, "opcc_contribution_bundle")
   testthat::expect_true(all(file.exists(unlist(bundle))))
   provenance <- jsonlite::read_json(bundle$provenance, simplifyVector = TRUE)
+  adapter_json <- jsonlite::read_json(bundle$adapter, simplifyVector = TRUE)
   testthat::expect_true(provenance$local_only)
   testthat::expect_false(provenance$canonical_release_modified)
+  testthat::expect_equal(provenance$location_type, "physical")
+  testthat::expect_equal(provenance$coordinate_method, "address_point")
+  testthat::expect_equal(provenance$authority_level, "municipal")
+  testthat::expect_equal(provenance$coverage_type, "municipal_address_registry")
+  testthat::expect_equal(provenance$update_frequency, "annual")
+  testthat::expect_equal(adapter_json$location_type, "physical")
+  testthat::expect_equal(adapter_json$coordinate_method, "address_point")
+  testthat::expect_equal(adapter_json$authority_level, "municipal")
+  testthat::expect_equal(adapter_json$coverage_type, "municipal_address_registry")
+  testthat::expect_equal(adapter_json$update_frequency, "annual")
   testthat::expect_equal(nrow(utils::read.csv(bundle$fixture)), 2)
   testthat::expect_error(suppressMessages(contribution_bundle(layer, output)), "already exists")
   testthat::expect_error(suppressMessages(contribution_bundle(layer)), "explicit")
@@ -278,6 +299,110 @@ testthat::test_that("M4.1 schema_map is a validated extensible contract", {
       schema_map = structure(list("POSTAL", "POSTAL"), names = c("postal_code", "address"))
     )),
     "unique source fields"
+  )
+})
+
+testthat::test_that("M4.1 adapters carry structured location and source metadata", {
+  adapter <- suppressMessages(new_source_adapter(
+    "ottawa_open_data",
+    "Open Government Licence - City of Ottawa",
+    "synthetic Ottawa-style address points",
+    location_type = "physical",
+    coordinate_method = "address_point",
+    authority_level = "municipal",
+    coverage_type = "municipal_address_registry",
+    update_frequency = "annual"
+  ))
+
+  testthat::expect_equal(adapter$location_type, "physical")
+  testthat::expect_equal(adapter$coordinate_method, "address_point")
+  testthat::expect_equal(adapter$authority_level, "municipal")
+  testthat::expect_equal(adapter$coverage_type, "municipal_address_registry")
+  testthat::expect_equal(adapter$update_frequency, "annual")
+
+  defaults <- suppressMessages(new_source_adapter(
+    "metadata_defaults", "open", "synthetic registry"
+  ))
+  testthat::expect_equal(
+    unname(unlist(defaults[c(
+      "location_type",
+      "coordinate_method",
+      "authority_level",
+      "coverage_type",
+      "update_frequency"
+    )])),
+    rep("unknown", 5)
+  )
+})
+
+testthat::test_that("M4.1 adapters validate controlled source semantics", {
+  for (location_type in c("physical", "mailing", "unknown")) {
+    adapter <- suppressMessages(new_source_adapter(
+      "valid_location", "open", "synthetic registry",
+      location_type = location_type
+    ))
+    testthat::expect_equal(adapter$location_type, location_type)
+  }
+  for (coordinate_method in c(
+    "address_point", "entrance", "building", "parcel", "centroid", "unknown"
+  )) {
+    adapter <- suppressMessages(new_source_adapter(
+      "valid_method", "open", "synthetic registry",
+      coordinate_method = coordinate_method
+    ))
+    testthat::expect_equal(adapter$coordinate_method, coordinate_method)
+  }
+  testthat::expect_error(
+    suppressMessages(new_source_adapter(
+      "bad_location", "open", "synthetic registry",
+      location_type = "delivery"
+    )),
+    "location_type"
+  )
+  testthat::expect_error(
+    suppressMessages(new_source_adapter(
+      "bad_method", "open", "synthetic registry",
+      coordinate_method = "rooftop"
+    )),
+    "coordinate_method"
+  )
+  testthat::expect_error(
+    suppressMessages(new_source_adapter(
+      "bad_authority", "open", "synthetic registry",
+      authority_level = ""
+    )),
+    "authority_level"
+  )
+  testthat::expect_error(
+    suppressMessages(new_source_adapter(
+      "bad_coverage", "open", "synthetic registry",
+      coverage_type = c("municipal", "regional")
+    )),
+    "coverage_type"
+  )
+  testthat::expect_error(
+    suppressMessages(new_source_adapter(
+      "bad_frequency", "open", "synthetic registry",
+      update_frequency = NA_character_
+    )),
+    "update_frequency"
+  )
+})
+
+testthat::test_that("M4.1 legacy adapter specs use unknown metadata defaults", {
+  adapter_spec_value <- getFromNamespace(".adapter_spec_value", "OPCC")
+
+  testthat::expect_equal(
+    adapter_spec_value(list(), "location_type"),
+    "unknown"
+  )
+  testthat::expect_equal(
+    adapter_spec_value(list(location_type = NULL), "location_type"),
+    "unknown"
+  )
+  testthat::expect_equal(
+    adapter_spec_value(list(location_type = "physical"), "location_type"),
+    "physical"
   )
 })
 

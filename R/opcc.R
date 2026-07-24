@@ -408,6 +408,30 @@ pc_to_point <- function(
   invisible(adapter)
 }
 
+.adapter_choice <- function(value, field, choices) {
+  if (!is.character(value) || length(value) != 1L ||
+      is.na(value) || !value %in% choices) {
+    stop(
+      sprintf("%s must be one of: %s", field, paste(choices, collapse = ", ")),
+      call. = FALSE
+    )
+  }
+  value
+}
+
+.adapter_label <- function(value, field) {
+  if (!is.character(value) || length(value) != 1L ||
+      is.na(value) || !nzchar(trimws(value))) {
+    stop(sprintf("%s must be a non-empty scalar string", field), call. = FALSE)
+  }
+  trimws(value)
+}
+
+.adapter_spec_value <- function(spec, field) {
+  value <- spec[[field]]
+  if (is.null(value)) "unknown" else value
+}
+
 .json_safe <- function(x) {
   if (inherits(x, "Date")) return(as.character(x))
   if (is.list(x)) return(lapply(x, .json_safe))
@@ -423,6 +447,13 @@ pc_to_point <- function(
 #' @param schema_map Named mapping from OPCC fields to source fields.
 #' @param endpoint Optional public retrieval endpoint.
 #' @param checksum Optional SHA-256 checksum of the source artifact.
+#' @param location_type Source location type: `physical`, `mailing`, or
+#'   `unknown`.
+#' @param coordinate_method Coordinate derivation method: `address_point`,
+#'   `entrance`, `building`, `parcel`, `centroid`, or `unknown`.
+#' @param authority_level Source authority classification.
+#' @param coverage_type Source coverage classification.
+#' @param update_frequency Expected source update frequency.
 #' @return An `opcc_source_adapter` object.
 #' @export
 new_source_adapter <- function(
@@ -432,7 +463,12 @@ new_source_adapter <- function(
     retrieval_date = Sys.Date(),
     schema_map = list(postal_code = "postal_code"),
     endpoint = NULL,
-    checksum = NULL) {
+    checksum = NULL,
+    location_type = "unknown",
+    coordinate_method = "unknown",
+    authority_level = "unknown",
+    coverage_type = "unknown",
+    update_frequency = "unknown") {
   .contribution_message()
   required <- c(source_id, licence, lineage)
   if (any(lengths(list(source_id, licence, lineage)) != 1L) || any(is.na(required)) ||
@@ -473,6 +509,19 @@ new_source_adapter <- function(
       !grepl("^[0-9a-fA-F]{64}$", checksum))) {
     stop("checksum must be a 64-character SHA-256 hex string", call. = FALSE)
   }
+  location_type <- .adapter_choice(
+    location_type,
+    "location_type",
+    c("physical", "mailing", "unknown")
+  )
+  coordinate_method <- .adapter_choice(
+    coordinate_method,
+    "coordinate_method",
+    c("address_point", "entrance", "building", "parcel", "centroid", "unknown")
+  )
+  authority_level <- .adapter_label(authority_level, "authority_level")
+  coverage_type <- .adapter_label(coverage_type, "coverage_type")
+  update_frequency <- .adapter_label(update_frequency, "update_frequency")
   retrieval_date <- tryCatch(
     as.Date(retrieval_date),
     error = function(error) as.Date(NA)
@@ -486,7 +535,12 @@ new_source_adapter <- function(
       retrieval_date = retrieval_date,
       schema_map = schema_map,
       endpoint = endpoint,
-      checksum = checksum
+      checksum = checksum,
+      location_type = location_type,
+      coordinate_method = coordinate_method,
+      authority_level = authority_level,
+      coverage_type = coverage_type,
+      update_frequency = update_frequency
     ),
     class = "opcc_source_adapter"
   )
@@ -507,7 +561,12 @@ geonames_supplementary_adapter <- function() {
     retrieval_date = spec$retrieval_date,
     schema_map = as.list(spec$schema_map),
     endpoint = spec$endpoint,
-    checksum = spec$artifact_sha256
+    checksum = spec$artifact_sha256,
+    location_type = .adapter_spec_value(spec, "location_type"),
+    coordinate_method = .adapter_spec_value(spec, "coordinate_method"),
+    authority_level = .adapter_spec_value(spec, "authority_level"),
+    coverage_type = .adapter_spec_value(spec, "coverage_type"),
+    update_frequency = .adapter_spec_value(spec, "update_frequency")
   )
 }
 
@@ -756,6 +815,11 @@ contribution_bundle <- function(layer, output_dir = NULL, fixture_rows = 100L) {
       endpoint = adapter$endpoint,
       schema_map = adapter$schema_map,
       checksum = adapter$checksum,
+      location_type = adapter$location_type,
+      coordinate_method = adapter$coordinate_method,
+      authority_level = adapter$authority_level,
+      coverage_type = adapter$coverage_type,
+      update_frequency = adapter$update_frequency,
       local_only = TRUE,
       canonical_release_modified = FALSE
     ),
