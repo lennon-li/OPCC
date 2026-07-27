@@ -50,9 +50,38 @@ Toronto has an authoritative open address-point dataset with more than 500,000 a
 - Recommended role: authoritative local address geometry after schema profiling.
 - Current repository status: catalogue and licence verified; postal-code field, missingness, duplicates, and stable resource URL not yet verified.
 
+## Ottawa source screen
+
+The official City of Ottawa municipal-address service was screened on
+2026-07-27:
+
+- service: `https://maps.ottawa.ca/arcgis/rest/services/Address_Information/MapServer/0`;
+- public query access: confirmed;
+- geometry: point, stored as Web Mercator and transformable by the service to
+  EPSG:4326;
+- records: 403,080;
+- non-null `POSTAL_CODE`: 403,080;
+- non-null `MUNICIPAL_ADDRESS_ID`: 403,080;
+- non-null `GLOBALID`: 403,080;
+- latest observed record timestamp: 2026-07-24;
+- location semantics: parcel centre for some records and approximate building
+  entrance for newer records;
+- licence: Open Government Licence - City of Ottawa 2.0, attribution required.
+
+This resolves discovery, access, schema, identifier presence, coordinate
+transformation, licence, row-count, and missing-postal checks. It does not
+resolve the upstream lineage of the postal-code field. Ottawa remains
+`defer-verification` until the City confirms that `POSTAL_CODE` is
+independently redistributable and is not derived from Canada Post, PCCF, or
+PCCF+ material. Do not create a source adapter or redistributable fixture
+before that confirmation.
+
 ## Findings Not Yet Verified
 
-The initial survey marked Ottawa and fourteen additional municipalities as having address sources, but did not record enough evidence to support that status. Each municipality must have all of the following before being promoted to ingestion-ready:
+The initial survey marked fourteen other municipalities as having address
+sources, but did not record enough evidence to support that status. Each
+municipality must have all of the following before being promoted to
+ingestion-ready:
 
 1. official catalogue URL;
 2. stable download or API endpoint;
@@ -83,7 +112,7 @@ Until then, their status is `discovered_unverified`, not `accepted`.
 | Statistics Canada ODA | defer-validation | Historical comparison, lineage, tests |
 | GeoNames CA full | accept-supplementary | Reference points and gap diagnostics after profiling |
 | Toronto One Address Repository | conditional-accept | Local authoritative geometry after schema profiling |
-| Ottawa municipal addresses | defer-verification | Do not ingest until exact source and schema are confirmed |
+| Ottawa municipal addresses | defer-verification | Source and schema confirmed; do not ingest until postal-code lineage and restricted-source exclusion are confirmed |
 | Other Ontario municipal sources | discovery-required | Complete source-by-source verification |
 | Ontario restricted postal data | quarantine | No ingestion or redistribution |
 | OpenStreetMap Ontario | defer-separate-layer | Optional independent ODbL product only |

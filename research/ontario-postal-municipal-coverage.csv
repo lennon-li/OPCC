@@ -1,6 +1,6 @@
 municipality_or_region,population_priority,address_source_found,postal_code_present,coordinates_present,latest_release,licence_verified,source_id,coverage_status,notes
 Toronto,1,true,unknown,true,unknown,true,toronto_addresses,conditional_accept,"Official catalogue and licence verified; dataset describes 500000+ address points, but postal field, stable resource endpoint, completeness, duplicates and release metadata require profiling"
-Ottawa,2,unknown,unknown,unknown,unknown,false,ottawa_addresses,defer_verification,"Initial survey did not preserve a verified catalogue record, dataset identifier, schema sample or reproducible endpoint"
+Ottawa,2,true,true,true,2026-07-24,true,ottawa_addresses,defer_verification,"Official public service, licence, 403080-row schema, non-null postal and municipal ID fields, transformed geometry, and mixed parcel-centre/entrance semantics confirmed 2026-07-27; postal-code provenance and restricted-source exclusion remain unresolved"
 Peel,3,unknown,unknown,unknown,unknown,false,peel_addresses,discovery_required,"No supporting catalogue URL, endpoint, schema or licence evidence recorded"
 York,4,unknown,unknown,unknown,unknown,false,york_addresses,discovery_required,"No supporting catalogue URL, endpoint, schema or licence evidence recorded"
 Durham,5,unknown,unknown,unknown,unknown,false,durham_addresses,discovery_required,"No supporting catalogue URL, endpoint, schema or licence evidence recorded"

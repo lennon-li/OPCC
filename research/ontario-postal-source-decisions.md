@@ -58,7 +58,25 @@ These decisions distinguish licence verification, source discovery, schema verif
 
 **Decision**: `defer-verification`
 
-**Evidence and reason**: The initial survey asserted an authoritative address-to-postal-code source, but did not preserve a verified dataset identifier, schema sample, stable endpoint, row count, or postal-code completeness result. Re-evaluate from the official City of Ottawa catalogue before use.
+**Evidence and reason**: A 2026-07-27 screen confirmed the official City of
+Ottawa `Address_Information/MapServer/0` layer. It is a public point service
+with 403,080 records. All 403,080 records have non-null `POSTAL_CODE`,
+`MUNICIPAL_ADDRESS_ID`, and `GLOBALID` values. The service can transform its
+Web Mercator `SHAPE` geometry to EPSG:4326. Its metadata says address points
+represent City properties and buildings and are placed either at parcel
+centres or, for newer addresses, approximate building entrances. The latest
+record-level creation and modification timestamps observed by aggregate query
+were 2026-07-24.
+
+The City of Ottawa Open Data Licence 2.0 permits copying, modification,
+publication, and distribution with attribution. However, neither the service
+metadata nor the licence identifies the upstream provenance of
+`POSTAL_CODE`. Do not ingest, fixture, or implement this source until the City
+confirms that the postal values are independently redistributable and are not
+derived from Canada Post, PCCF, or PCCF+ material. If that is confirmed, use
+`MUNICIPAL_ADDRESS_ID` as the source record identifier, preserve `GLOBALID`,
+and derive longitude and latitude from transformed `SHAPE` geometry rather
+than the undocumented `POINT_X` and `POINT_Y` fields.
 
 ## Other Ontario municipalities
 

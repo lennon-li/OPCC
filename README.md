@@ -1,5 +1,7 @@
 # OPCC
 
+[![R package check](https://github.com/lennon-li/OPCC/actions/workflows/r-package-check.yml/badge.svg)](https://github.com/lennon-li/OPCC/actions/workflows/r-package-check.yml)
+
 **Open Postal Code Correspondence** is an open, reproducible R package and data
 pipeline for linking Ontario postal codes to Statistics Canada census
 geographies.
