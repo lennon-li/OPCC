@@ -456,16 +456,27 @@ sli_read_pccf_da_xlsx <- function(path, contract) {
   sli_normalize_pccf_da_table(raw, contract)
 }
 
+.sli_canonical_path <- function(path, mustWork = TRUE) {
+  path <- normalizePath(path, winslash = "/", mustWork = mustWork)
+  path <- sub("/+$", "", path)
+  if (.Platform$OS.type == "windows") {
+    path <- tolower(path)
+  }
+  path
+}
+
+.sli_path_is_within <- function(path, root) {
+  identical(path, root) || startsWith(path, paste0(root, "/"))
+}
+
 sli_validate_private_input <- function(path, repo_root) {
   if (!is.character(path) || length(path) != 1L ||
       is.na(path) || !file.exists(path) || dir.exists(path)) {
     stop("Licensed PCCF input must be an existing file")
   }
-  input_path <- normalizePath(path, mustWork = TRUE)
-  repository_path <- normalizePath(repo_root, mustWork = TRUE)
-  repository_prefix <- paste0(repository_path, .Platform$file.sep)
-  if (identical(input_path, repository_path) ||
-      startsWith(input_path, repository_prefix)) {
+  input_path <- .sli_canonical_path(path)
+  repository_path <- .sli_canonical_path(repo_root)
+  if (.sli_path_is_within(input_path, repository_path)) {
     stop("Licensed PCCF input must be outside the repository")
   }
   invisible(TRUE)
@@ -1252,22 +1263,23 @@ sli_validate_output_directory <- function(
     stop("Licensed validation output must be a directory")
   }
   if (dir.exists(output_dir)) {
-    output_path <- normalizePath(output_dir, mustWork = TRUE)
+    output_path <- .sli_canonical_path(output_dir)
   } else {
     output_parent <- dirname(output_dir)
     if (!dir.exists(output_parent)) {
       stop("Licensed validation output parent directory must exist")
     }
     output_path <- file.path(
-      normalizePath(output_parent, mustWork = TRUE),
+      .sli_canonical_path(output_parent),
       basename(output_dir)
     )
+    output_path <- gsub("\\\\", "/", output_path)
+    if (.Platform$OS.type == "windows") {
+      output_path <- tolower(output_path)
+    }
   }
-  repository_path <- normalizePath(repo_root, mustWork = TRUE)
-  repository_prefix <- paste0(repository_path, .Platform$file.sep)
-  inside_repository <- identical(output_path, repository_path) ||
-    startsWith(output_path, repository_prefix)
-  if (inside_repository) {
+  repository_path <- .sli_canonical_path(repo_root)
+  if (.sli_path_is_within(output_path, repository_path)) {
     stop("Licensed validation output must be outside the repository")
   }
 
@@ -1628,24 +1640,31 @@ sli_validate_producer_files <- function(
     if (!file.exists(working_path) || dir.exists(working_path)) {
       stop("Producer file is missing from the worktree")
     }
-    committed_path <- tempfile("opcc-producer-file-")
-    on.exit(unlink(committed_path), add = TRUE)
-    status <- suppressWarnings(system2(
+    committed_hash <- suppressWarnings(system2(
       "git",
       c(
         "-C",
         repository_path,
-        "show",
+        "rev-parse",
         paste0(full_sha, ":", relative_path)
       ),
-      stdout = committed_path,
-      stderr = FALSE
+      stdout = TRUE,
+      stderr = TRUE
     ))
-    if (!identical(status, 0L) ||
-        !identical(
-          digest::digest(working_path, "sha256", file = TRUE),
-          digest::digest(committed_path, "sha256", file = TRUE)
-        )) {
+    working_hash <- suppressWarnings(system2(
+      "git",
+      c("-C", repository_path, "hash-object", relative_path),
+      stdout = TRUE,
+      stderr = TRUE
+    ))
+    valid_hash <- function(value) {
+      is.null(attr(value, "status")) &&
+        length(value) == 1L &&
+        grepl("^[0-9a-f]{40}$", value)
+    }
+    if (!valid_hash(committed_hash) ||
+        !valid_hash(working_hash) ||
+        !identical(committed_hash, working_hash)) {
       stop("Executed producer files do not match --producer-ref")
     }
   }
