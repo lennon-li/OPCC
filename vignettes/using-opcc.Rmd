@@ -19,7 +19,8 @@ through open, redistributable evidence.
 | You want to... | Go to |
 |---|---|
 | Look up postal codes or join census geographies to your own data | [Part 1](#part-1-use-opcc-with-your-data) -- uses pre-built artifacts downloaded automatically by the package; no source checkout needed |
-| Rebuild every published artifact from raw public inputs | [Part 2](#part-2-reproduce-all-artifacts-from-scratch) -- requires a source checkout and ~1.6 GB of public inputs; build scripts are not installed with the package |
+| Verify artifacts or reproduce the DA roll-up from the DB artifact | [Part 2](#part-2-reproduce-and-verify-artifacts) -- uses package functions only; no source checkout needed |
+| Rebuild the DB correspondence from raw Statistics Canada sources | [Rebuild M2](#rebuild-m2-from-raw-sources-maintainers-only) -- requires a source checkout, ~1.6 GB of public inputs, and `sf`; maintainer workflow |
 
 ## Part 1: Use OPCC with your data
 
@@ -264,22 +265,76 @@ bundle <- contribution_bundle(layer, output_dir = "local-contributions",
 contribution_issue_url(bundle)
 ```
 
-## Part 2: Reproduce all artifacts from scratch
+## Part 2: Reproduce and verify artifacts
 
-This section rebuilds every published OPCC artifact from public source inputs.
-It is a maintainer or auditor workflow; package users do not need it.
+Every published artifact can be downloaded, verified, and reproduced using
+package functions alone. No source checkout is needed.
 
-The pipeline has three stages:
+### Verify published artifacts
 
-```text
-M1: raw sources --> postal centroids --> DB assignment --> GAF roll-up
-M2: GAF roll-up --> postal-code-to-DB correspondence
-M5: DB correspondence --> postal-code-to-DA correspondence
+Download each artifact, check its SHA-256 against the release index, and
+validate schema and correspondence invariants (unique keys, weight sums,
+one best link per postal code):
+
+```{r, eval = FALSE}
+validate_release(vintage = "2026-07-19-geonames-amendment", level = "DB")
+validate_release(vintage = "2026-07-20", level = "DA")
 ```
 
-### Prerequisites
+Inspect the full provenance metadata (source checksums, code version, build
+timestamp, row counts):
 
-The build requires `sf`, which needs system libraries GDAL, GEOS, and PROJ.
+```{r, eval = FALSE}
+release_manifest(vintage = "2026-07-19-geonames-amendment", level = "DB")
+release_manifest(vintage = "2026-07-20", level = "DA")
+```
+
+### Reproduce the DA artifact from the DB artifact
+
+The DA correspondence (M5) is a deterministic attribute roll-up of the DB
+correspondence (M2). `aggregate_da_correspondence()` performs the same
+computation as the M5 build script: it sums DB allocation weights within
+each DA, preserves contributing-DB lineage, and selects the best DA link.
+
+```{r, eval = FALSE}
+db <- get_correspondence(vintage = "2026-07-19-geonames-amendment")
+da_reproduced <- aggregate_da_correspondence(db)
+
+# Compare with the published DA artifact
+da_published <- get_da_correspondence(vintage = "2026-07-20")
+stopifnot(identical(nrow(da_reproduced), nrow(da_published)))
+stopifnot(identical(
+  sort(unique(da_reproduced$postal_code)),
+  sort(unique(da_published$postal_code))
+))
+```
+
+### Reproduce offline
+
+After caching artifacts once, all verification and reproduction works without
+network access:
+
+```{r, eval = FALSE}
+cache <- tools::R_user_dir("OPCC", "cache")
+
+validate_release(vintage = "2026-07-19-geonames-amendment", level = "DB",
+                 cache_dir = cache, offline = TRUE)
+validate_release(vintage = "2026-07-20", level = "DA",
+                 cache_dir = cache, offline = TRUE)
+
+db <- get_correspondence(vintage = "2026-07-19-geonames-amendment",
+                         cache_dir = cache, offline = TRUE)
+da <- aggregate_da_correspondence(db)
+```
+
+### Rebuild M2 from raw sources (maintainers only)
+
+Rebuilding the DB correspondence from the original Statistics Canada NAR
+release requires a source checkout, ~1.6 GB of public inputs, and the `sf`
+package (which needs system libraries GDAL, GEOS, and PROJ). This is a
+maintainer or auditor workflow; the published artifact is immutable and
+checksum-verified.
+
 On Ubuntu: `sudo apt-get install libgdal-dev libgeos-dev libproj-dev`.
 On macOS: `brew install gdal geos proj`. On Windows: install
 [Rtools](https://cran.r-project.org/bin/windows/Rtools/) and use the
@@ -292,18 +347,15 @@ missing <- packages[!vapply(packages, requireNamespace, logical(1),
 if (length(missing)) install.packages(missing)
 ```
 
-Clone the repository and work from its root. All large inputs go to
-`.scratch/` (git-ignored) and must not be committed.
-
 ```bash
 git clone https://github.com/lennon-li/OPCC.git
 cd OPCC
 ```
 
-### Stage 1: M1 -- centroids and DB assignment
+All large inputs go to `.scratch/` (git-ignored) and must not be committed.
 
-Download and profile the Statistics Canada National Address Register (NAR) and
-the GeoNames reference layer:
+**Stage 1: M1 -- centroids and DB assignment.**
+Download and profile the NAR and GeoNames reference layer:
 
 ```bash
 Rscript scripts/m1_nar_profile.R
@@ -334,7 +386,7 @@ Assign centroids to dissemination blocks and attach GAF geography columns:
 Rscript scripts/m1_gaf_rollup.R
 ```
 
-### Stage 2: M2 -- postal-code-to-DB correspondence
+**Stage 2: M2 -- postal-code-to-DB correspondence.**
 
 ```bash
 Rscript scripts/m2_build_correspondence.R
@@ -356,34 +408,7 @@ stopifnot(all(abs(weights - 1) < 1e-8))
 stopifnot(all(tapply(candidate$best_link, candidate$postal_code, sum) == 1L))
 ```
 
-### Stage 3: M5 -- postal-code-to-DA correspondence
-
-M5 is a deterministic attribute roll-up from the versioned M2 artifact. It
-needs no new boundary download or spatial join.
-
-```bash
-Rscript scripts/m5_build_da_correspondence.R
-```
-
-Output is written to `releases/m5/2026-06-26/`. Verify:
-
-```bash
-Rscript scripts/m5_validate_release.R
-```
-
-### Verify published artifacts
-
-From any checkout, verify the immutable public artifacts against their
-commit-pinned checksums:
-
-```bash
-Rscript scripts/m3_validate_release.R
-Rscript scripts/m3_validate_release.R --remote
-Rscript scripts/m5_validate_release.R
-```
-
-### Exact byte-level rebuild
-
+**Exact byte-level rebuild.**
 To reproduce the published artifact bytes exactly, check out the producer
 revision recorded in the published manifest rather than the tip of `main`.
 See `docs/m2-reproduction.md` and `docs/m5-reproduction.md` for the pinned

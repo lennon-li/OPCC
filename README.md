@@ -72,21 +72,24 @@ offline use, and importing your own open evidence:
 vignette("using-opcc", package = "OPCC")
 ```
 
-## Reproduce artifacts from scratch (maintainers and auditors)
+## Reproduce and verify artifacts
 
-Rebuilding requires a source checkout and large public inputs (~1.6 GB).
-The build scripts are not installed with the package.
+All published artifacts can be verified and reproduced using package functions
+alone -- no source checkout needed:
 
-```bash
-git clone https://github.com/lennon-li/OPCC.git
-cd OPCC
+```r
+# Verify checksums and invariants
+validate_release(vintage = "2026-07-19-geonames-amendment", level = "DB")
+validate_release(vintage = "2026-07-20", level = "DA")
+
+# Reproduce the DA artifact from the DB artifact
+db <- get_correspondence(vintage = "2026-07-19-geonames-amendment")
+da <- aggregate_da_correspondence(db)
 ```
 
-The full pipeline (M1 centroids, M2 DB correspondence, M5 DA roll-up) with
-verification at each stage is documented in Part 2 of the vignette. See also
-`docs/m1-reproduction.md`, `docs/m2-reproduction.md`,
-`docs/m5-reproduction.md`, and `docs/reproduce-m2-artifact.qmd` for
-per-milestone detail and exact byte-level rebuild sequences.
+Rebuilding the DB correspondence from raw Statistics Canada NAR sources
+requires a source checkout, ~1.6 GB of public inputs, and `sf`. See Part 2
+of the vignette for the full maintainer pipeline.
 
 ## Current status
 
