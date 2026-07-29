@@ -16,9 +16,80 @@ first; the default geography lookup returns every allocation link.
 
 ```{r, eval = FALSE}
 library(OPCC)
-pc_to_geo("K1A0A6")
-pc_to_geo("K1A0A6", all_links = FALSE)
+pc_to_geo("M5V3A8")
+pc_to_geo("M5V3A8", all_links = FALSE)
 ```
+
+## Download and use the DB and DA artifacts directly
+
+`get_correspondence()` downloads the versioned postal-code-to-DB CSV artifact,
+verifies its SHA-256 checksum, caches it, and returns the artifact as a data
+frame. `get_da_correspondence()` does the same for the direct postal-code-to-DA
+artifact. Keep all links unless a workflow explicitly requires the deterministic
+best link.
+
+```{r, eval = FALSE}
+cache <- file.path(tempdir(), "opcc-cache")
+
+# Postal code -> dissemination block (DB) artifact.
+db <- get_correspondence(
+  vintage = "2026-07-19-geonames-amendment",
+  cache_dir = cache
+)
+db_links <- pc_to_geo("M5V 3A8", level = "DB", correspondence = db)
+db_best <- pc_to_geo("M5V 3A8", level = "DB", all_links = FALSE,
+                     correspondence = db)
+
+# Postal code -> dissemination area (DA) artifact, with contributing DB lineage.
+da <- get_da_correspondence(vintage = "2026-07-20", cache_dir = cache)
+da_links <- pc_to_geo("M5V 3A8", level = "DA", correspondence = da)
+da_best <- pc_to_geo("M5V 3A8", level = "DA", all_links = FALSE,
+                     correspondence = da)
+```
+
+The returned `db` and `da` objects are the verified artifact tables. DB rows
+carry `DBUID`, `DAUID`, source fields, allocation weight, and `best_link`; DA
+rows carry `DAUID`, allocation weight, `best_link`, and contributing-DB
+lineage. Unmatched normalized postal codes are retained in
+`attr(db_links, "unmatched")` or `attr(da_links, "unmatched")`.
+
+## Reproduce a verified artifact retrieval
+
+The following exact sequence retrieves each immutable, commit-pinned artifact,
+verifies its artifact and manifest checksums, and then repeats without network
+access from the verified cache.
+
+```{r, eval = FALSE}
+cache <- file.path(tempdir(), "opcc-repro-cache")
+
+validate_release(
+  vintage = "2026-07-19-geonames-amendment",
+  level = "DB",
+  cache_dir = cache
+)
+validate_release(vintage = "2026-07-20", level = "DA", cache_dir = cache)
+
+# Inspect the provenance that was checksum-verified above.
+db_manifest <- release_manifest(
+  vintage = "2026-07-19-geonames-amendment", level = "DB", cache_dir = cache
+)
+da_manifest <- release_manifest(vintage = "2026-07-20", level = "DA", cache_dir = cache)
+
+# The same calls now use only the verified local cache.
+validate_release(
+  vintage = "2026-07-19-geonames-amendment",
+  level = "DB", cache_dir = cache, offline = TRUE
+)
+validate_release(
+  vintage = "2026-07-20", level = "DA", cache_dir = cache, offline = TRUE
+)
+```
+
+This reproduces verified use of the published artifacts. Rebuilding the
+producer artifacts from raw source data is a separate maintainer workflow:
+follow `docs/m2-reproduction.md` for DB evidence and
+`docs/m5-reproduction.md` for the deterministic DB-to-DA roll-up. Those guides
+pin source inputs, producer revisions, output paths, and expected hashes.
 
 Use `offline = TRUE` in reproducible or air-gapped environments after caching a
 verified release. `validate_release()` checks the cached artifact's checksum,

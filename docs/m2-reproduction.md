@@ -29,6 +29,40 @@ Outputs are written under `.scratch/m2/`:
 - `m2_correspondence.csv`
 - `m2_manifest.json`
 
+## Exact rebuild and verification sequence
+
+Use the producer revision recorded in the published manifest, not the moving
+tip of `main`. The following sequence rebuilds the uncompressed M2
+correspondence from the source files named and SHA-256-pinned in that manifest.
+It must run in a disposable worktree because the required raw inputs are large
+and must remain untracked.
+
+```bash
+git clone https://github.com/lennon-li/OPCC.git opcc-m2-rebuild
+cd opcc-m2-rebuild
+git checkout 16eade1a12cdf33d1cf596a2ee1cc049056317c1
+
+# Place the NAR, 2021 DB boundary, and GAF files at the exact .scratch paths
+# listed in releases/m2/2026-06-26/m2_manifest.json, after matching each
+# input's recorded SHA-256.
+Rscript scripts/m2_build_correspondence.R
+
+# Verify the regenerated uncompressed correspondence bytes.
+Rscript -e 'stopifnot(identical(digest::digest(".scratch/m2/m2_correspondence.csv", algo = "sha256", file = TRUE), "7874b82ff9f8144c2844dd75a4f611401430a4416542d2c7a00f2e50376d412d"))'
+```
+
+The published gzip file and portable manifest are verified independently from a
+current checkout with:
+
+```bash
+Rscript scripts/m3_validate_release.R --remote
+```
+
+The first sequence reproduces the source correspondence bytes; the second
+sequence verifies the immutable public artifact and manifest that users
+download. Do not treat an unverified recompression as byte reproduction of the
+published `.csv.gz` file.
+
 ## Correspondence schema
 
 Each row is one `postal_code` and `DBUID` pair. Geography columns available in

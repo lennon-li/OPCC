@@ -25,6 +25,29 @@ The command writes `releases/m5/2026-06-26/` with:
 - `m5_manifest.json`, with M2 input checksums, method, counts, and artifact
   checksums.
 
+## Exact rebuild and verification sequence
+
+The M5 manifest records the generator revision
+`00db638e1b5f6f27e2f76828a5f9a21cc405f7c9`. Rebuild into a new directory;
+never overwrite the published release directory.
+
+```bash
+git clone https://github.com/lennon-li/OPCC.git opcc-m5-rebuild
+cd opcc-m5-rebuild
+git checkout 00db638e1b5f6f27e2f76828a5f9a21cc405f7c9
+
+Rscript scripts/m5_build_da_correspondence.R /tmp/opcc-m5-rebuild \
+  00db638e1b5f6f27e2f76828a5f9a21cc405f7c9
+
+Rscript -e 'stopifnot(identical(digest::digest("/tmp/opcc-m5-rebuild/opcc_m5_da_correspondence.csv.gz", algo = "sha256", file = TRUE), "b0d7d79942634d2ba634761ccf10b9cea4e6d4256f1ff41d54d4a6cc20765068"))'
+```
+
+Verify the committed public M5 artifact and manifest separately:
+
+```bash
+Rscript scripts/m5_validate_release.R
+```
+
 For each postal code, M5 sums M2 allocation weights for DBs belonging to the
 same DA. It retains `n_contributing_dbs`, a stable pipe-delimited
 `contributing_dbuids` trace, source and census vintages, and source evidence
@@ -38,7 +61,7 @@ through the package:
 
 ```r
 validate_release(level = "DA")
-pc_to_geo("K1A 0A6", level = "DA")
+pc_to_geo("M5V 3A8", level = "DA")
 ```
 
 DA weights must sum to one per covered postal code, every postal code must have
