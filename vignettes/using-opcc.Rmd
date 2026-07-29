@@ -1,8 +1,8 @@
 ---
-title: "Using OPCC reproducibly"
+title: "Using OPCC"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Using OPCC reproducibly}
+  %\VignetteIndexEntry{Using OPCC}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -11,99 +11,380 @@ vignette: >
 knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 ```
 
-OPCC keeps the release vintage and evidence source visible. Normalize input
-first; the default geography lookup returns every allocation link.
+OPCC links Ontario postal codes to Statistics Canada 2021 census geographies
+through open, redistributable evidence.
+
+**Two access paths:**
+
+| You want to... | Go to |
+|---|---|
+| Look up postal codes or join census geographies to your own data | [Part 1](#part-1-use-opcc-with-your-data) -- uses pre-built artifacts downloaded automatically by the package; no source checkout needed |
+| Rebuild every published artifact from raw public inputs | [Part 2](#part-2-reproduce-all-artifacts-from-scratch) -- requires a source checkout and ~1.6 GB of public inputs; build scripts are not installed with the package |
+
+## Part 1: Use OPCC with your data
+
+### Install
+
+Requires R >= 4.1.
+
+```{r, eval = FALSE}
+install.packages("remotes")
+remotes::install_github("lennon-li/OPCC")
+```
+
+### Key concepts
+
+OPCC links postal codes to two Statistics Canada census geographies:
+
+- **DB (Dissemination Block):** the smallest census unit, typically a city
+  block or rural area. Identified by `DBUID`.
+- **DA (Dissemination Area):** a group of DBs, roughly 400-700 persons.
+  Identified by `DAUID`. Every DB belongs to exactly one DA.
+
+Each postal code can map to multiple geographies. OPCC retains all defensible
+links with an `allocation_weight` (the share of observed address evidence for
+that link). The `best_link` flag marks the single strongest link per postal
+code. Unmatched postal codes are reported, never fabricated.
+
+### Normalize postal codes
+
+All OPCC functions normalize internally, but you can normalize explicitly:
 
 ```{r, eval = FALSE}
 library(OPCC)
-pc_to_geo("M5V3A8")
-pc_to_geo("M5V3A8", all_links = FALSE)
+
+normalize_postal_code(c("m5v3a8", "K1A-0A6", "k1a0a6"))
+#> [1] "M5V 3A8" "K1A 0A6" "K1A 0A6"
 ```
 
-## Download and use the DB and DA artifacts directly
+### Look up a single postal code
 
-`get_correspondence()` downloads the versioned postal-code-to-DB CSV artifact,
-verifies its SHA-256 checksum, caches it, and returns the artifact as a data
-frame. `get_da_correspondence()` does the same for the direct postal-code-to-DA
-artifact. Keep all links unless a workflow explicitly requires the deterministic
-best link.
+The first call downloads and caches the artifact (~15 MB). Subsequent calls
+use the local cache.
 
 ```{r, eval = FALSE}
-cache <- file.path(tempdir(), "opcc-cache")
+# Best dissemination area (DA) link
+pc_to_geo("M5V 3A8", level = "DA", all_links = FALSE)
 
-# Postal code -> dissemination block (DB) artifact.
+# Every defensible DA link with allocation weights
+pc_to_geo("M5V 3A8", level = "DA")
+
+# Best dissemination block (DB) link
+pc_to_geo("M5V 3A8", level = "DB", all_links = FALSE)
+
+# Every DB link
+pc_to_geo("M5V 3A8", level = "DB")
+```
+
+Unmatched postal codes are not silently dropped. They appear in the `unmatched`
+attribute of the result:
+
+```{r, eval = FALSE}
+result <- pc_to_geo(c("M5V 3A8", "ZZZ 9Z9"), level = "DA")
+attr(result, "unmatched")
+#> [1] "ZZZ 9Z9"
+```
+
+### Join OPCC geographies to your own data
+
+The most common workflow: you have a data frame with a postal-code column and
+you want census geography identifiers.
+
+```{r, eval = FALSE}
+library(OPCC)
+
+my_data <- data.frame(
+  id = 1:5,
+  postal_code = c("M5V 3A8", "K1A 0A6", "N6A 1B1", "P7A 1A1", "ZZZ 9Z9"),
+  value = c(10, 20, 30, 40, 50),
+  stringsAsFactors = FALSE
+)
+
+# --- DA join (one best DA per postal code) ---
+
+da <- get_da_correspondence(vintage = "2026-07-20")
+da_best <- da[da$best_link, c("postal_code", "DAUID", "allocation_weight")]
+
+merged_da <- merge(
+  my_data,
+  da_best,
+  by = "postal_code",
+  all.x = TRUE
+)
+# Rows with unmatched postal codes keep NA for DAUID and allocation_weight.
+
+# --- DB join (one best DB per postal code) ---
+
+db <- get_correspondence(vintage = "2026-07-19-geonames-amendment")
+db_best <- db[db$best_link, c("postal_code", "DBUID", "DAUID", "allocation_weight")]
+
+merged_db <- merge(
+  my_data,
+  db_best,
+  by = "postal_code",
+  all.x = TRUE
+)
+
+# --- Keep all many-to-many links ---
+# Skip the best_link filter to retain every candidate geography and its
+# allocation weight. Your join will produce multiple rows per postal code.
+
+merged_all <- merge(my_data, da, by = "postal_code", all.x = TRUE)
+```
+
+**Columns returned by the join:**
+
+| Column | Meaning |
+|---|---|
+| `postal_code` | Normalized `A1A 1A1` postal code |
+| `DBUID` | 2021 Dissemination Block identifier (DB artifact) |
+| `DAUID` | 2021 Dissemination Area identifier (both artifacts) |
+| `allocation_weight` | Share of observed address evidence for this link; sums to 1 per postal code |
+| `best_link` | `TRUE` for the single strongest link per postal code |
+| `n_contributing_dbs` | Number of DBs contributing to a DA link (DA artifact) |
+| `contributing_dbuids` | Pipe-delimited DBUID list behind a DA link (DA artifact) |
+| `source_vintages` | Source evidence vintage(s) behind the link |
+
+With `dplyr`:
+
+```{r, eval = FALSE}
+library(dplyr)
+
+da <- get_da_correspondence(vintage = "2026-07-20")
+
+my_data |>
+  mutate(postal_code = normalize_postal_code(postal_code)) |>
+  left_join(
+    da |> filter(best_link) |> select(postal_code, DAUID, allocation_weight),
+    by = "postal_code"
+  )
+```
+
+### Download and cache artifacts
+
+`get_correspondence()` and `get_da_correspondence()` download the versioned
+artifact, verify its SHA-256 checksum, cache it locally, and return a data
+frame. Subsequent calls use the cache.
+
+By default, artifacts are cached in a persistent user directory
+(`tools::R_user_dir("OPCC", "cache")`), so they survive across R sessions.
+You can override this with `cache_dir`.
+
+```{r, eval = FALSE}
+# List available release vintages
+list_vintages(level = "DB")
+list_vintages(level = "DA")
+
+# Download using the default persistent cache
+db <- get_correspondence(vintage = "2026-07-19-geonames-amendment")
+da <- get_da_correspondence(vintage = "2026-07-20")
+
+# Or use an explicit cache directory
+cache <- file.path(tempdir(), "opcc-cache")
 db <- get_correspondence(
   vintage = "2026-07-19-geonames-amendment",
   cache_dir = cache
 )
-db_links <- pc_to_geo("M5V 3A8", level = "DB", correspondence = db)
-db_best <- pc_to_geo("M5V 3A8", level = "DB", all_links = FALSE,
-                     correspondence = db)
 
-# Postal code -> dissemination area (DA) artifact, with contributing DB lineage.
-da <- get_da_correspondence(vintage = "2026-07-20", cache_dir = cache)
-da_links <- pc_to_geo("M5V 3A8", level = "DA", correspondence = da)
-da_best <- pc_to_geo("M5V 3A8", level = "DA", all_links = FALSE,
-                     correspondence = da)
+# Pass a pre-loaded artifact to skip re-reading
+pc_to_geo("M5V 3A8", level = "DA", correspondence = da)
+pc_to_geo("M5V 3A8", level = "DB", correspondence = db)
 ```
 
-The returned `db` and `da` objects are the verified artifact tables. DB rows
-carry `DBUID`, `DAUID`, source fields, allocation weight, and `best_link`; DA
-rows carry `DAUID`, allocation weight, `best_link`, and contributing-DB
-lineage. Unmatched normalized postal codes are retained in
-`attr(db_links, "unmatched")` or `attr(da_links, "unmatched")`.
-
-## Reproduce a verified artifact retrieval
-
-The following exact sequence retrieves each immutable, commit-pinned artifact,
-verifies its artifact and manifest checksums, and then repeats without network
-access from the verified cache.
+### Verify a release
 
 ```{r, eval = FALSE}
-cache <- file.path(tempdir(), "opcc-repro-cache")
-
-validate_release(
-  vintage = "2026-07-19-geonames-amendment",
-  level = "DB",
-  cache_dir = cache
-)
+# Download, checksum, and validate schema and invariants
+validate_release(vintage = "2026-07-19-geonames-amendment", level = "DB",
+                 cache_dir = cache)
 validate_release(vintage = "2026-07-20", level = "DA", cache_dir = cache)
 
-# Inspect the provenance that was checksum-verified above.
-db_manifest <- release_manifest(
-  vintage = "2026-07-19-geonames-amendment", level = "DB", cache_dir = cache
-)
-da_manifest <- release_manifest(vintage = "2026-07-20", level = "DA", cache_dir = cache)
-
-# The same calls now use only the verified local cache.
-validate_release(
-  vintage = "2026-07-19-geonames-amendment",
-  level = "DB", cache_dir = cache, offline = TRUE
-)
-validate_release(
-  vintage = "2026-07-20", level = "DA", cache_dir = cache, offline = TRUE
-)
+# Inspect provenance metadata
+release_manifest(vintage = "2026-07-20", level = "DA", cache_dir = cache)
 ```
 
-This reproduces verified use of the published artifacts. Rebuilding the
-producer artifacts from raw source data is a separate maintainer workflow:
-follow `docs/m2-reproduction.md` for DB evidence and
-`docs/m5-reproduction.md` for the deterministic DB-to-DA roll-up. Those guides
-pin source inputs, producer revisions, output paths, and expected hashes.
+### Offline and air-gapped use
 
-Use `offline = TRUE` in reproducible or air-gapped environments after caching a
-verified release. `validate_release()` checks the cached artifact's checksum,
-postal-code/DB uniqueness, allocation-weight sums, and best-link invariant.
+After caching a verified release once, use `offline = TRUE` to require the
+local cache and block network access:
 
 ```{r, eval = FALSE}
-validate_release(offline = TRUE)
-release_manifest(offline = TRUE)
+validate_release(vintage = "2026-07-20", level = "DA",
+                 cache_dir = cache, offline = TRUE)
+da <- get_da_correspondence(vintage = "2026-07-20",
+                            cache_dir = cache, offline = TRUE)
 ```
 
-`pc_to_point()` provides GeoNames-derived supplementary point records. These
-are explicitly source-labeled and must not be interpreted as NAR address
-evidence.
+You can also supply a local artifact file directly to `pc_to_point()`:
 
 ```{r, eval = FALSE}
-pc_to_point("K0A0A1")
+pts <- pc_to_point("K0A 0A1",
+                   point_file = "/path/to/opcc_m1_geonames_points.csv.gz")
 ```
+
+### Source-qualified point lookups
+
+`pc_to_point()` returns supplementary GeoNames point observations. These are
+source-labeled and separate from NAR address evidence:
+
+```{r, eval = FALSE}
+pc_to_point("K0A 0A1")
+pc_to_point("K0A 0A1", source = "geonames")
+```
+
+### Import your own open evidence locally
+
+Use this only for redistributable, open data. Local layers stay separate from
+canonical OPCC releases. The API rejects Canada Post, PCCF, and PCCF+ inputs.
+
+```{r, eval = FALSE}
+my_source <- utils::read.csv("/path/to/municipal-postal-data.csv",
+                             stringsAsFactors = FALSE)
+
+adapter <- new_source_adapter(
+  source_id = "municipal_registry",
+  licence = "Open Government Licence - Municipality",
+  lineage = "Municipal open address registry",
+  retrieval_date = "2026-07-20",
+  schema_map = list(
+    postal_code = "postal",
+    latitude = "lat",
+    longitude = "lon"
+  ),
+  endpoint = "https://example.org/open-data",
+  checksum = digest::digest("/path/to/municipal-postal-data.csv",
+                            algo = "sha256", file = TRUE)
+)
+
+layer <- build_source_layer(my_source, adapter, on_invalid = "quarantine")
+profile_source_layer(layer)
+
+bundle <- contribution_bundle(layer, output_dir = "local-contributions",
+                              fixture_rows = 100L)
+contribution_issue_url(bundle)
+```
+
+## Part 2: Reproduce all artifacts from scratch
+
+This section rebuilds every published OPCC artifact from public source inputs.
+It is a maintainer or auditor workflow; package users do not need it.
+
+The pipeline has three stages:
+
+```text
+M1: raw sources --> postal centroids --> DB assignment --> GAF roll-up
+M2: GAF roll-up --> postal-code-to-DB correspondence
+M5: DB correspondence --> postal-code-to-DA correspondence
+```
+
+### Prerequisites
+
+The build requires `sf`, which needs system libraries GDAL, GEOS, and PROJ.
+On Ubuntu: `sudo apt-get install libgdal-dev libgeos-dev libproj-dev`.
+On macOS: `brew install gdal geos proj`. On Windows: install
+[Rtools](https://cran.r-project.org/bin/windows/Rtools/) and use the
+`sf` binary from CRAN.
+
+```{r, eval = FALSE}
+packages <- c("digest", "dplyr", "jsonlite", "readr", "sf")
+missing <- packages[!vapply(packages, requireNamespace, logical(1),
+                            quietly = TRUE)]
+if (length(missing)) install.packages(missing)
+```
+
+Clone the repository and work from its root. All large inputs go to
+`.scratch/` (git-ignored) and must not be committed.
+
+```bash
+git clone https://github.com/lennon-li/OPCC.git
+cd OPCC
+```
+
+### Stage 1: M1 -- centroids and DB assignment
+
+Download and profile the Statistics Canada National Address Register (NAR) and
+the GeoNames reference layer:
+
+```bash
+Rscript scripts/m1_nar_profile.R
+Rscript scripts/m4_geonames_profile.R
+Rscript scripts/m1_build_centroids.R
+```
+
+Download these three Statistics Canada files and extract them to the paths
+shown:
+
+| File | URL | Extract to |
+|---|---|---|
+| Province/territory boundary | `https://www12.statcan.gc.ca/census-recensement/2021/geo/sip-pis/boundary-limites/files-fichiers/lpr_000b21a_e.zip` | `.scratch/shp/` |
+| DB boundary | `https://www12.statcan.gc.ca/census-recensement/2021/geo/sip-pis/boundary-limites/files-fichiers/ldb_000b21a_e.zip` | `.scratch/shp/` |
+| Geographic Attribute File | `https://www12.statcan.gc.ca/census-recensement/2021/geo/aip-pia/attribute-attribs/files-fichiers/2021_92-151_X.zip` | `.scratch/gaf/` |
+
+After extraction, these paths must exist:
+
+```text
+.scratch/shp/lpr_000b21a_e.shp
+.scratch/shp/ldb_000b21a_e.shp
+.scratch/gaf/2021_92-151_X.csv
+```
+
+Assign centroids to dissemination blocks and attach GAF geography columns:
+
+```bash
+Rscript scripts/m1_gaf_rollup.R
+```
+
+### Stage 2: M2 -- postal-code-to-DB correspondence
+
+```bash
+Rscript scripts/m2_build_correspondence.R
+```
+
+Output is written to `.scratch/m2/`:
+
+- `m2_correspondence.csv` -- one row per postal-code/DBUID pair
+- `m2_manifest.json` -- source checksums, code version, build time, row counts
+
+Verify the build invariants:
+
+```{r, eval = FALSE}
+candidate <- utils::read.csv(".scratch/m2/m2_correspondence.csv",
+                             stringsAsFactors = FALSE)
+stopifnot(!anyDuplicated(candidate[c("postal_code", "DBUID")]))
+weights <- tapply(candidate$allocation_weight, candidate$postal_code, sum)
+stopifnot(all(abs(weights - 1) < 1e-8))
+stopifnot(all(tapply(candidate$best_link, candidate$postal_code, sum) == 1L))
+```
+
+### Stage 3: M5 -- postal-code-to-DA correspondence
+
+M5 is a deterministic attribute roll-up from the versioned M2 artifact. It
+needs no new boundary download or spatial join.
+
+```bash
+Rscript scripts/m5_build_da_correspondence.R
+```
+
+Output is written to `releases/m5/2026-06-26/`. Verify:
+
+```bash
+Rscript scripts/m5_validate_release.R
+```
+
+### Verify published artifacts
+
+From any checkout, verify the immutable public artifacts against their
+commit-pinned checksums:
+
+```bash
+Rscript scripts/m3_validate_release.R
+Rscript scripts/m3_validate_release.R --remote
+Rscript scripts/m5_validate_release.R
+```
+
+### Exact byte-level rebuild
+
+To reproduce the published artifact bytes exactly, check out the producer
+revision recorded in the published manifest rather than the tip of `main`.
+See `docs/m2-reproduction.md` and `docs/m5-reproduction.md` for the pinned
+revisions, expected SHA-256 values, and full verification sequences.

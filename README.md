@@ -19,31 +19,74 @@ OPCC does not copy or redistribute Canada Post, PCCF, PCCF+, or other restricted
 data. It does not claim authoritative postal assignments. Its evidence unit is
 an observed postal association derived from redistributable public sources.
 
-## Install and use
+## Install
+
+Requires R >= 4.1.
 
 ```r
+install.packages("remotes")
 remotes::install_github("lennon-li/OPCC")
-
-library(OPCC)
-
-# Direct postal-code-to-DA lookup
-pc_to_geo("M5V 3A8", level = "DA")
-
-# Retain every defensible DB link and its allocation weight
-pc_to_geo("M5V 3A8", level = "DB", all_links = TRUE)
-
-# Inspect all source-qualified point observations
-pc_to_point("K1A 0A6")
-
-# Filter explicitly when only one point source is wanted
-pc_to_point("K1A 0A6", source = "geonames")
 ```
 
-Lookup results preserve source class, method, record ID, lineage, and vintage
-when supplied by the artifact. Multiple links and point observations remain
-visible by default. Selecting a geography link or filtering a point source is
-explicit, and unmatched postal codes remain reported rather than receiving a
-fabricated assignment.
+## Use pre-built artifacts (most users)
+
+The package downloads, checksum-verifies, and caches published artifacts
+automatically on first use. No source checkout or raw data is needed. The
+first lookup call downloads the artifact (~15 MB); subsequent calls use the
+local cache.
+
+```r
+library(OPCC)
+
+# Look up a postal code -> best DA link
+pc_to_geo("M5V 3A8", level = "DA", all_links = FALSE)
+
+# Look up a postal code -> every DB link with allocation weights
+pc_to_geo("M5V 3A8", level = "DB")
+
+# Download the full artifact as a data frame for joining with your own data
+da <- get_da_correspondence(vintage = "2026-07-20")
+db <- get_correspondence(vintage = "2026-07-19-geonames-amendment")
+
+# Join to your data
+my_data <- data.frame(postal_code = c("M5V 3A8", "K1A 0A6"),
+                      stringsAsFactors = FALSE)
+merge(my_data, da[da$best_link, c("postal_code", "DAUID", "allocation_weight")],
+      by = "postal_code", all.x = TRUE)
+
+# Source-qualified point observations
+pc_to_point("K1A 0A6")
+
+# Verify artifact checksums and invariants
+validate_release(vintage = "2026-07-20", level = "DA")
+
+# List available release vintages
+list_vintages(level = "DB")
+list_vintages(level = "DA")
+```
+
+See the package vignette for the full user guide, including `dplyr` joins,
+offline use, and importing your own open evidence:
+
+```r
+vignette("using-opcc", package = "OPCC")
+```
+
+## Reproduce artifacts from scratch (maintainers and auditors)
+
+Rebuilding requires a source checkout and large public inputs (~1.6 GB).
+The build scripts are not installed with the package.
+
+```bash
+git clone https://github.com/lennon-li/OPCC.git
+cd OPCC
+```
+
+The full pipeline (M1 centroids, M2 DB correspondence, M5 DA roll-up) with
+verification at each stage is documented in Part 2 of the vignette. See also
+`docs/m1-reproduction.md`, `docs/m2-reproduction.md`,
+`docs/m5-reproduction.md`, and `docs/reproduce-m2-artifact.qmd` for
+per-milestone detail and exact byte-level rebuild sequences.
 
 ## Current status
 
@@ -102,20 +145,6 @@ boundary membership, and 2021 DB assignment. Synthetic PCCF-shaped fixtures
 exercise the validation and privacy pipeline without redistributing licensed
 data.
 
-## Verify a release
-
-From a source checkout:
-
-```bash
-Rscript scripts/m3_validate_release.R
-Rscript scripts/m3_validate_release.R --remote
-```
-
-The validator checks commit-pinned artifacts and manifests against SHA-256
-hashes, then verifies schema and correspondence invariants, including unique
-keys, allocation-weight sums, and one deterministic `best_link` per covered
-postal code.
-
 ## Evidence and uncertainty
 
 OPCC distinguishes three concepts:
@@ -129,23 +158,6 @@ OPCC distinguishes three concepts:
 GeoNames accuracy is source metadata, not a probability. GeoNames points remain
 separate supplementary evidence and are never silently promoted to NAR address
 evidence. Unmatched points remain unmatched.
-
-## Rebuild
-
-Large public inputs are downloaded to `.scratch/` and are not committed. A
-candidate build can be reproduced with the documented source manifests,
-checksums, census boundaries, and GAF inputs:
-
-```bash
-Rscript scripts/m1_nar_profile.R
-Rscript scripts/m4_geonames_profile.R
-Rscript scripts/m1_build_centroids.R
-Rscript scripts/m1_gaf_rollup.R
-Rscript scripts/m2_build_correspondence.R
-```
-
-See `docs/m1-reproduction.md`, `docs/m2-reproduction.md`, and
-`docs/reproduce-m2-artifact.qmd` for detailed instructions.
 
 ## Releases and repository size
 
