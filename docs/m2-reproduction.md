@@ -4,7 +4,36 @@ M2 builds a NAR-only correspondence from observed address evidence. It does not
 reconstruct Canada Post assignments and does not use restricted Ontario postal
 data or licensed PCCF data.
 
-## Inputs
+## Package functions (recommended)
+
+The M2 build is available as a transparent package function. No source checkout
+or manual download is needed:
+
+```r
+library(OPCC)
+
+# Step 1: Download all public inputs (cached automatically)
+nar_dir <- download_nar()
+geonames_txt <- download_geonames()
+bounds <- download_census_boundaries()
+gaf_csv <- download_gaf()
+
+# Step 2: Build centroids and DB assignment (M1 prerequisites)
+centroids_csv <- build_centroids(nar_dir, geonames_txt)
+rollup_csv <- build_db_assignment(centroids_csv, bounds$province, bounds$db, gaf_csv)
+
+# Step 3: Build M2 correspondence
+m2_csv <- build_m2(nar_dir, bounds$db, gaf_csv, rollup_csv)
+
+# Step 4: Reproduce DA roll-up (M5)
+db <- utils::read.csv(m2_csv, stringsAsFactors = FALSE)
+da <- aggregate_da_correspondence(db)
+```
+
+Each function messages its progress. See `vignette("using-opcc", package =
+"OPCC")` for the full guide.
+
+## Inputs (script-based)
 
 Run the M1 preparation first so these relative paths exist:
 

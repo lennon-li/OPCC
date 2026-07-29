@@ -4,6 +4,31 @@ M5 is a deterministic attribute roll-up from versioned M2 postal-code-to-DB
 evidence to 2021 Dissemination Areas (DAs). It does not perform a spatial join,
 construct postal polygons, or change the source evidence.
 
+## Package functions (recommended)
+
+The M5 roll-up is available as a package function. No source checkout is
+needed:
+
+```r
+library(OPCC)
+
+# Reproduce from the published M2 baseline
+db <- get_correspondence(vintage = "2026-06-26")
+da <- aggregate_da_correspondence(db)
+
+# Verify against the published DA artifact
+da_published <- get_da_correspondence(vintage = "2026-07-20")
+stopifnot(identical(nrow(da), nrow(da_published)))
+```
+
+The published DA artifacts were built from the NAR-only M2 baseline
+(`2026-06-26`). The GeoNames amendment vintage
+(`2026-07-19-geonames-amendment`) adds 17,334 supplementary postal codes
+and produces a valid superset, but will not match the published artifact
+row-for-row.
+
+See `vignette("using-opcc", package = "OPCC")` for the full guide.
+
 ## Input mapping
 
 The versioned M2 artifact already contains the `DBUID` and `DAUID` pair from

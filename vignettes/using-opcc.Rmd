@@ -296,8 +296,11 @@ correspondence (M2). `aggregate_da_correspondence()` performs the same
 computation as the M5 build script: it sums DB allocation weights within
 each DA, preserves contributing-DB lineage, and selects the best DA link.
 
+The published DA artifacts were built from the NAR-only M2 baseline
+(`2026-06-26`), so use that vintage to reproduce them exactly:
+
 ```{r, eval = FALSE}
-db <- get_correspondence(vintage = "2026-07-19-geonames-amendment")
+db <- get_correspondence(vintage = "2026-06-26")
 da_reproduced <- aggregate_da_correspondence(db)
 
 # Compare with the published DA artifact
@@ -309,6 +312,11 @@ stopifnot(identical(
 ))
 ```
 
+The GeoNames amendment vintage (`2026-07-19-geonames-amendment`) adds
+17,334 supplementary postal codes. Rolling it up with
+`aggregate_da_correspondence()` produces a valid superset of the published
+DA, but it will not match the published artifact row-for-row.
+
 ### Reproduce offline
 
 After caching artifacts once, all verification and reproduction works without
@@ -317,12 +325,12 @@ network access:
 ```{r, eval = FALSE}
 cache <- tools::R_user_dir("OPCC", "cache")
 
-validate_release(vintage = "2026-07-19-geonames-amendment", level = "DB",
+validate_release(vintage = "2026-06-26", level = "DB",
                  cache_dir = cache, offline = TRUE)
 validate_release(vintage = "2026-07-20", level = "DA",
                  cache_dir = cache, offline = TRUE)
 
-db <- get_correspondence(vintage = "2026-07-19-geonames-amendment",
+db <- get_correspondence(vintage = "2026-06-26",
                          cache_dir = cache, offline = TRUE)
 da <- aggregate_da_correspondence(db)
 ```

@@ -2,6 +2,38 @@
 
 This document provides instructions and URLs necessary to reproduce the M1 milestone (the National Address Register profiling, DB spatial assignment, and Geographic Attribute File rollup) from scratch.
 
+## Package functions (recommended)
+
+The M1 pipeline is available as transparent package functions. No source
+checkout or manual download is needed:
+
+```r
+library(OPCC)
+
+# Step 1: Download all public inputs (cached automatically)
+nar_dir <- download_nar()
+geonames_txt <- download_geonames()
+bounds <- download_census_boundaries()
+gaf_csv <- download_gaf()
+
+# Step 2: Build postal code centroids from NAR + GeoNames
+centroids_csv <- build_centroids(nar_dir, geonames_txt)
+
+# Step 3: Assign centroids to DBs and join GAF
+rollup_csv <- build_db_assignment(centroids_csv, bounds$province, bounds$db, gaf_csv)
+```
+
+Each function messages its progress and writes output to a persistent build
+cache. See `vignette("using-opcc", package = "OPCC")` for the full guide.
+
+The build requires `sf`, `dplyr`, and `readr` (system libraries GDAL, GEOS,
+PROJ for `sf`).
+
+## Script-based reproduction (legacy)
+
+The original scripts remain in `scripts/` for reference and exact byte-level
+rebuilds at pinned revisions.
+
 ## 1. Required Source Data
 
 To run the pipeline, the following external, authoritative datasets must be downloaded:
