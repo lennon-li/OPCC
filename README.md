@@ -14,8 +14,8 @@ unit is an observed postal association from redistributable public sources.
 Requires R >= 4.1.
 
 ```r
-install.packages("remotes")
-remotes::install_github("lennon-li/OPCC")
+install.packages("pak")
+pak::pak("lennon-li/OPCC")
 ```
 
 ## Quick start

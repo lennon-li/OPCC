@@ -29,8 +29,8 @@ through open, redistributable evidence.
 Requires R >= 4.1.
 
 ```{r, eval = FALSE}
-install.packages("remotes")
-remotes::install_github("lennon-li/OPCC")
+install.packages("pak")
+pak::pak("lennon-li/OPCC")
 ```
 
 ### Key concepts
