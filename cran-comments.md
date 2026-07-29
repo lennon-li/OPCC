@@ -1,24 +1,27 @@
+## Test environments
+
+- macOS Tahoe 26.5.2 (arm64), R 4.6.1: fresh source-tree build and full
+  `R CMD check --as-cran`, including rendered vignette, PDF manual, and HTML
+  manual.
+- GitHub Actions run 30308582050: Ubuntu, macOS, and Windows package checks,
+  plus Ubuntu release validation, all passed.
+
 ## R CMD check results
 
-Local checks were run on 2026-07-23 with R 4.6.1 on Ubuntu 24.04.
+Checks were run on 2026-07-29 against OPCC `main` at
+`f756da475bef59c5ecec3d64f5d28a42599c8b0f`.
 
 - `R CMD build OPCC` with vignettes: OK.
-- `R CMD check OPCC_0.0.1.tar.gz --no-manual`: OK.
-- Local `R CMD check --as-cran` with remote incoming and system-clock checks
-  disabled: OK apart from the maintainer/package notes listed below.
-- Full `devtools::test()`: passed; four tests skip only because they require
-  network access in this offline environment.
-- GitHub Actions: pending cross-platform checks.
-
-The local `--as-cran` run cannot complete CRAN/Bioconductor incoming-network
-lookups on this host. A networked clean-host `--as-cran` run remains required
-before submission.
-
-The repository-only governance, research, and build-script paths are excluded
-from the CRAN source tarball with `.Rbuildignore`. The package manual usage
-signatures are wrapped to avoid line-width notes.
+- `R CMD check --as-cran OPCC_0.0.1.tar.gz`: OK; `Status: 1 NOTE` only.
+- The sole NOTE is CRAN incoming feasibility identifying this as a new
+  submission; there are no package ERRORs or WARNINGs.
+- `spelling::spell_check_package()`: no spelling errors.
+- `urlchecker::url_check()`: all checked URLs are correct.
+- The built tarball was inspected; repository-only governance, research, build,
+  and release-artifact paths are excluded through `.Rbuildignore`.
 
 ## Submission notes
 
 - OPCC uses only publicly redistributable source-qualified evidence.
 - Remote artifact downloads are checksum-verified and use commit-pinned URLs.
+- This is a new submission with no downstream dependencies.

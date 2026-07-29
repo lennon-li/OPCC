@@ -80,7 +80,7 @@ claim that OPCC is authoritative.
 
 The reference assigns one DA per postal code, while OPCC deliberately preserves
 additional defensible many-to-many links. Pair precision and exact-set
-agreement therefore penalize OPCC's additional candidate links. The benchmark
+agreement therefore penalize the package's additional candidate links. The benchmark
 compared a March 2023 reference with M5 release `2026-07-20`, built from June
 2026 source evidence; disagreements can reflect real assignment changes
 between vintages as well as OPCC error.
