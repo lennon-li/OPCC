@@ -29,6 +29,9 @@ library(OPCC)
 # Best DA link for a postal code
 pc_to_geo("M5V 3A8", level = "DA", all_links = FALSE)
 
+# Multiple postal codes at once
+pc_to_geo(c("M5V 3A8", "K1A 0A6"), level = "DA", all_links = FALSE)
+
 # Join census geographies to your own data
 da <- get_da_correspondence(vintage = "2026-07-20")
 my_data <- data.frame(postal_code = c("M5V 3A8", "K1A 0A6"),

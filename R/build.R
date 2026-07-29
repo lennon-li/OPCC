@@ -1,3 +1,13 @@
+utils::globalVariables(c(
+  "LOC_GUID", "DBUID", "n_unique_addresses", "address_weight",
+  "pc_norm", "best_lat", "best_lon", "addr_count", "addr_with_coords",
+  "sum_lat", "sum_lon", "nar_lat", "nar_lon",
+  "admin_code1", "accuracy", "gn_lat", "gn_lon", "gn_accuracy",
+  "place_name", "in_nar", "in_geonames", "point_method",
+  "nar_release_date", "nar_catalogue", "nar_licence",
+  "gn_place_name", "gn_retrieval_date", "gn_licence", "gn_attribution"
+))
+
 .check_build_deps <- function(need_sf = FALSE) {
   pkgs <- c("dplyr", "readr", "digest", "jsonlite")
   if (need_sf) pkgs <- c(pkgs, "sf")
