@@ -87,9 +87,31 @@ db <- get_correspondence(vintage = "2026-07-19-geonames-amendment")
 da <- aggregate_da_correspondence(db)
 ```
 
-Rebuilding the DB correspondence from raw Statistics Canada NAR sources
-requires a source checkout, ~1.6 GB of public inputs, and `sf`. See Part 2
-of the vignette for the full maintainer pipeline.
+Rebuild every artifact from raw Statistics Canada sources, also using
+package functions only (requires `sf`, `dplyr`, `readr`):
+
+```r
+# Step 1: Download all public inputs (cached, ~1.6 GB)
+nar_dir <- download_nar()
+geonames_txt <- download_geonames()
+bounds <- download_census_boundaries()
+gaf_csv <- download_gaf()
+
+# Step 2: Build centroids (M1)
+centroids_csv <- build_centroids(nar_dir, geonames_txt)
+
+# Step 3: Assign to DBs and join GAF (M1)
+rollup_csv <- build_db_assignment(centroids_csv, bounds$province, bounds$db, gaf_csv)
+
+# Step 4: Build DB correspondence (M2)
+m2_csv <- build_m2(nar_dir, bounds$db, gaf_csv, rollup_csv)
+
+# Step 5: Reproduce DA roll-up (M5)
+db <- utils::read.csv(m2_csv, stringsAsFactors = FALSE)
+da <- aggregate_da_correspondence(db)
+```
+
+See Part 2 of the vignette for full detail on each step.
 
 ## Current status
 

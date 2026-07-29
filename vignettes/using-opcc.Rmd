@@ -20,7 +20,7 @@ through open, redistributable evidence.
 |---|---|
 | Look up postal codes or join census geographies to your own data | [Part 1](#part-1-use-opcc-with-your-data) -- uses pre-built artifacts downloaded automatically by the package; no source checkout needed |
 | Verify artifacts or reproduce the DA roll-up from the DB artifact | [Part 2](#part-2-reproduce-and-verify-artifacts) -- uses package functions only; no source checkout needed |
-| Rebuild the DB correspondence from raw Statistics Canada sources | [Rebuild M2](#rebuild-m2-from-raw-sources-maintainers-only) -- requires a source checkout, ~1.6 GB of public inputs, and `sf`; maintainer workflow |
+| Rebuild all artifacts from raw Statistics Canada sources | [Rebuild all artifacts](#rebuild-all-artifacts-from-raw-sources) -- uses package functions for download and build; requires `sf`, `dplyr`, `readr` |
 
 ## Part 1: Use OPCC with your data
 
@@ -327,18 +327,17 @@ db <- get_correspondence(vintage = "2026-07-19-geonames-amendment",
 da <- aggregate_da_correspondence(db)
 ```
 
-### Rebuild M2 from raw sources (maintainers only)
+### Rebuild all artifacts from raw sources
 
-Rebuilding the DB correspondence from the original Statistics Canada NAR
-release requires a source checkout, ~1.6 GB of public inputs, and the `sf`
-package (which needs system libraries GDAL, GEOS, and PROJ). This is a
-maintainer or auditor workflow; the published artifact is immutable and
-checksum-verified.
+The full pipeline from raw Statistics Canada inputs to verified artifacts
+uses package functions only. No source checkout is needed. Each step is a
+separate function call so you can inspect intermediate results.
 
-On Ubuntu: `sudo apt-get install libgdal-dev libgeos-dev libproj-dev`.
-On macOS: `brew install gdal geos proj`. On Windows: install
-[Rtools](https://cran.r-project.org/bin/windows/Rtools/) and use the
-`sf` binary from CRAN.
+The build requires `sf` (system libraries GDAL, GEOS, PROJ), `dplyr`, and
+`readr`. On Ubuntu: `sudo apt-get install libgdal-dev libgeos-dev
+libproj-dev`. On macOS: `brew install gdal geos proj`. On Windows: install
+[Rtools](https://cran.r-project.org/bin/windows/Rtools/) and use the `sf`
+binary from CRAN.
 
 ```{r, eval = FALSE}
 packages <- c("digest", "dplyr", "jsonlite", "readr", "sf")
@@ -347,65 +346,59 @@ missing <- packages[!vapply(packages, requireNamespace, logical(1),
 if (length(missing)) install.packages(missing)
 ```
 
-```bash
-git clone https://github.com/lennon-li/OPCC.git
-cd OPCC
-```
-
-All large inputs go to `.scratch/` (git-ignored) and must not be committed.
-
-**Stage 1: M1 -- centroids and DB assignment.**
-Download and profile the NAR and GeoNames reference layer:
-
-```bash
-Rscript scripts/m1_nar_profile.R
-Rscript scripts/m4_geonames_profile.R
-Rscript scripts/m1_build_centroids.R
-```
-
-Download these three Statistics Canada files and extract them to the paths
-shown:
-
-| File | URL | Extract to |
-|---|---|---|
-| Province/territory boundary | `https://www12.statcan.gc.ca/census-recensement/2021/geo/sip-pis/boundary-limites/files-fichiers/lpr_000b21a_e.zip` | `.scratch/shp/` |
-| DB boundary | `https://www12.statcan.gc.ca/census-recensement/2021/geo/sip-pis/boundary-limites/files-fichiers/ldb_000b21a_e.zip` | `.scratch/shp/` |
-| Geographic Attribute File | `https://www12.statcan.gc.ca/census-recensement/2021/geo/aip-pia/attribute-attribs/files-fichiers/2021_92-151_X.zip` | `.scratch/gaf/` |
-
-After extraction, these paths must exist:
-
-```text
-.scratch/shp/lpr_000b21a_e.shp
-.scratch/shp/ldb_000b21a_e.shp
-.scratch/gaf/2021_92-151_X.csv
-```
-
-Assign centroids to dissemination blocks and attach GAF geography columns:
-
-```bash
-Rscript scripts/m1_gaf_rollup.R
-```
-
-**Stage 2: M2 -- postal-code-to-DB correspondence.**
-
-```bash
-Rscript scripts/m2_build_correspondence.R
-```
-
-Output is written to `.scratch/m2/`:
-
-- `m2_correspondence.csv` -- one row per postal-code/DBUID pair
-- `m2_manifest.json` -- source checksums, code version, build time, row counts
-
-Verify the build invariants:
+**Step 1: Download all public inputs.**
+Each download is cached; re-running skips files already present.
 
 ```{r, eval = FALSE}
-candidate <- utils::read.csv(".scratch/m2/m2_correspondence.csv",
-                             stringsAsFactors = FALSE)
-stopifnot(!anyDuplicated(candidate[c("postal_code", "DBUID")]))
-weights <- tapply(candidate$allocation_weight, candidate$postal_code, sum)
+nar_dir <- download_nar()
+geonames_txt <- download_geonames()
+bounds <- download_census_boundaries()
+gaf_csv <- download_gaf()
+```
+
+**Step 2: Build postal code centroids (M1).**
+Reads NAR address points and GeoNames, computes the mean coordinate per
+postal code. NAR centroids take priority; GeoNames fills gaps.
+
+```{r, eval = FALSE}
+centroids_csv <- build_centroids(nar_dir, geonames_txt)
+```
+
+**Step 3: Assign centroids to DBs and join GAF (M1).**
+Validates Ontario boundary membership, assigns each centroid to one 2021
+Dissemination Block via point-in-polygon, and joins the Geographic Attribute
+File for DAUID and higher geographies.
+
+```{r, eval = FALSE}
+rollup_csv <- build_db_assignment(
+  centroids_csv, bounds$province, bounds$db, gaf_csv
+)
+```
+
+**Step 4: Build the DB correspondence (M2).**
+Reads raw NAR address points, assigns them to DBs, aggregates evidence per
+postal-code/DB pair, and appends GeoNames supplementary links.
+
+```{r, eval = FALSE}
+m2_csv <- build_m2(nar_dir, bounds$db, gaf_csv, rollup_csv)
+```
+
+**Step 5: Reproduce the DA roll-up (M5).**
+This is a deterministic attribute roll-up of the M2 artifact. No spatial
+join or new input is needed.
+
+```{r, eval = FALSE}
+db <- utils::read.csv(m2_csv, stringsAsFactors = FALSE)
+da <- aggregate_da_correspondence(db)
+```
+
+**Step 6: Verify.**
+
+```{r, eval = FALSE}
+stopifnot(!anyDuplicated(db[c("postal_code", "DBUID")]))
+weights <- tapply(db$allocation_weight, db$postal_code, sum)
 stopifnot(all(abs(weights - 1) < 1e-8))
-stopifnot(all(tapply(candidate$best_link, candidate$postal_code, sum) == 1L))
+stopifnot(all(tapply(db$best_link, db$postal_code, sum) == 1L))
 ```
 
 **Exact byte-level rebuild.**
