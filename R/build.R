@@ -76,9 +76,16 @@
   inside_ontario <- lengths(sf::st_intersects(
     province_points, province_geometry
   )) > 0L
-  if (any(!inside_ontario)) {
-    stop(sprintf("%d point(s) fall outside the Ontario boundary",
-                 sum(!inside_ontario)), call. = FALSE)
+  n_outside <- sum(!inside_ontario)
+  if (n_outside > 0L) {
+    warning(sprintf(
+      "%d point(s) fall outside the Ontario boundary and will be excluded",
+      n_outside
+    ), call. = FALSE)
+    points <- points[inside_ontario, , drop = FALSE]
+    latitude <- latitude[inside_ontario]
+    longitude <- longitude[inside_ontario]
+    point_sf <- point_sf[inside_ontario, , drop = FALSE]
   }
 
   db_crs <- if (sf::st_is_longlat(ontario_db)) {
@@ -108,7 +115,8 @@
     matched, "matched_2021_ontario_db", "unmatched_no_2021_ontario_db"
   )
   attr(out, "opcc_spatial_validation") <- list(
-    input_points = nrow(points),
+    input_points = nrow(points) + n_outside,
+    outside_ontario_excluded = n_outside,
     matched_points = sum(matched),
     unmatched_points = sum(!matched)
   )
@@ -410,38 +418,30 @@ build_db_assignment <- function(centroids_csv, province_shp, db_shp,
   ]
   if (nrow(valid) == 0L) stop("No valid NAR observations", call. = FALSE)
 
-  key <- paste(valid$postal_code, valid$DBUID, sep = "\r")
-  groups <- split(seq_len(nrow(valid)), key, drop = TRUE)
-  rows <- lapply(groups, function(index) {
-    first <- valid[index[1L], , drop = FALSE]
-    result <- data.frame(
-      postal_code = as.character(first$postal_code),
-      DBUID = as.character(first$DBUID),
-      n_observations = length(index),
-      n_unique_addresses = length(unique(valid$LOC_GUID[index])),
-      n_sources = 1L,
-      stringsAsFactors = FALSE
-    )
-    for (column in geography_columns) {
-      result[[column]] <- as.character(first[[column]])
-    }
-    result
-  })
-  result <- do.call(rbind, rows)
-  rownames(result) <- NULL
-
-  order_index <- order(result$postal_code, -result$n_unique_addresses,
-                       result$DBUID)
-  result <- result[order_index, , drop = FALSE]
-  result$address_weight <- ave(
-    result$n_unique_addresses, result$postal_code,
-    FUN = function(x) x / sum(x)
+  geo_syms <- stats::setNames(
+    lapply(geography_columns, function(col) {
+      rlang::expr(dplyr::first(!!rlang::sym(col), order_by = LOC_GUID))
+    }),
+    geography_columns
   )
-  result$confidence <- result$address_weight
-  result$best_link <- as.logical(ave(
-    seq_len(nrow(result)), result$postal_code,
-    FUN = function(x) seq_along(x) == 1L
-  ))
+  result <- valid |>
+    dplyr::group_by(postal_code, DBUID) |>
+    dplyr::summarise(
+      n_observations = dplyr::n(),
+      n_unique_addresses = dplyr::n_distinct(LOC_GUID),
+      n_sources = 1L,
+      !!!geo_syms,
+      .groups = "drop"
+    ) |>
+    dplyr::arrange(postal_code, dplyr::desc(n_unique_addresses), DBUID) |>
+    dplyr::group_by(postal_code) |>
+    dplyr::mutate(
+      address_weight = n_unique_addresses / sum(n_unique_addresses),
+      confidence = address_weight,
+      best_link = dplyr::row_number() == 1L
+    ) |>
+    dplyr::ungroup() |>
+    as.data.frame(stringsAsFactors = FALSE)
 
   sums <- tapply(result$address_weight, result$postal_code, sum)
   if (any(abs(sums - 1) > 1e-8)) {
