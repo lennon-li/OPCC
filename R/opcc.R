@@ -78,6 +78,10 @@
   for (column in numeric_columns) x[[column]] <- as.numeric(x[[column]])
   for (column in integer_columns) x[[column]] <- as.integer(x[[column]])
   if ("best_link" %in% names(x)) x$best_link <- x$best_link == "TRUE"
+  character_columns <- intersect(
+    c("source_vintages", "census_vintages", "evidence_classes"), names(x)
+  )
+  for (column in character_columns) x[[column]][!nzchar(x[[column]])] <- NA_character_
   attr(x, "opcc_vintage") <- vintage
   attr(x, "opcc_source") <- "OPCC direct postal-code-to-DA correspondence"
   x
