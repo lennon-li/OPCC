@@ -23,3 +23,7 @@ reference:
       - contribution_bundle
       - contribution_issue_url
       - open_contribution_issue
+  - title: Interactive app
+    contents:
+      - run_app
+      - download_da_boundaries

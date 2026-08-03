@@ -134,6 +134,52 @@ download_census_boundaries <- function(cache_dir = NULL) {
   )
 }
 
+#' Download Statistics Canada 2021 dissemination area boundary files
+#'
+#' Downloads the Canada-wide dissemination area cartographic boundary
+#' shapefiles (~200 MB zip) and extracts the `.shp`. Skips the download if
+#' the zip is already cached. On first download a SHA-256 sidecar file is
+#' written next to the zip and every later reuse is verified against it;
+#' Statistics Canada does not publish an official checksum for this file.
+#'
+#' @param cache_dir Build cache directory.
+#' @return Invisibly, a named list with `da` pointing to the extracted
+#'   `lda_000b21a_e.shp`.
+#' @export
+download_da_boundaries <- function(cache_dir = NULL) {
+  cache <- .opcc_build_cache(cache_dir)
+  shp_dir <- file.path(cache, "shp")
+  da_zip <- file.path(shp_dir, "lda_000b21a_e.zip")
+  .download_cached(
+    paste0("https://www12.statcan.gc.ca/census-recensement/2021/geo/",
+           "sip-pis/boundary-limites/files-fichiers/lda_000b21a_e.zip"),
+    da_zip,
+    "DA boundary"
+  )
+  sha <- digest::digest(da_zip, algo = "sha256", file = TRUE)
+  sidecar <- paste0(da_zip, ".sha256")
+  if (file.exists(sidecar)) {
+    recorded <- trimws(readLines(sidecar, warn = FALSE))
+    recorded_sha <- if (length(recorded) >= 2L) recorded[[2L]] else ""
+    if (!grepl("^[0-9a-fA-F]{64}$", recorded_sha)) {
+      stop("DA boundary SHA-256 sidecar is malformed; delete it to re-record",
+           call. = FALSE)
+    }
+    if (!identical(tolower(recorded_sha), tolower(sha))) {
+      stop("Cached DA boundary zip failed its recorded SHA-256 sidecar check",
+           call. = FALSE)
+    }
+  } else {
+    writeLines(c(
+      paste0("https://www12.statcan.gc.ca/census-recensement/2021/geo/",
+             "sip-pis/boundary-limites/files-fichiers/lda_000b21a_e.zip"),
+      sha
+    ), sidecar)
+  }
+  .extract_zip(da_zip, shp_dir, "DA boundary")
+  invisible(list(da = file.path(shp_dir, "lda_000b21a_e.shp")))
+}
+
 #' Download the Statistics Canada 2021 Geographic Attribute File
 #'
 #' Downloads the GAF zip and extracts the CSV. Skips if already cached.
