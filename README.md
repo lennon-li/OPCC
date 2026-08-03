@@ -50,6 +50,20 @@ and local source import:
 vignette("using-opcc", package = "OPCC")
 ```
 
+## Interactive app
+
+Upload a CSV, pick its postal-code column, and join it to the
+postal-code-to-DA correspondence: view the joined table, draw the matched
+dissemination areas on a map, and download the joined CSV, the map as HTML,
+and an R script that reproduces both.
+
+```r
+run_app()
+```
+
+Requires `shiny`, `bslib`, `DT`, `leaflet`, `htmlwidgets`, `promises`,
+`future`, and `sf`.
+
 ## Reproduce from scratch
 
 Rebuild every artifact from raw Statistics Canada sources using package
