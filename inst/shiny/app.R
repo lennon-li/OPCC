@@ -33,6 +33,13 @@ da_simplify_tolerance <- 50
 da_fill_color <- "#2a78d6"
 da_border_color <- "#1b4f8f"
 
+html_escape <- function(x) {
+  x <- gsub("&", "&amp;", x, fixed = TRUE)
+  x <- gsub("<", "&lt;", x, fixed = TRUE)
+  x <- gsub(">", "&gt;", x, fixed = TRUE)
+  gsub("\"", "&quot;", x, fixed = TRUE)
+}
+
 codes_per_da <- function(joined) {
   rows <- !is.na(joined$DAUID)
   if (!any(rows)) {
@@ -43,7 +50,7 @@ codes_per_da <- function(joined) {
 
 codes_by_da_label <- function(codes_list, dauid) {
   codes <- sort(unique(codes_list[[dauid]] %||% character()))
-  label <- paste(head(codes, 12L), collapse = ", ")
+  label <- paste(html_escape(head(codes, 12L)), collapse = ", ")
   if (length(codes) > 12L) {
     label <- paste0(label, sprintf(", ... (%d total)", length(codes)))
   }
@@ -54,7 +61,8 @@ da_popup <- function(da_matched, codes_list) {
   vapply(seq_len(nrow(da_matched)), function(i) {
     id <- as.character(da_matched$DAUID[[i]])
     codes <- codes_by_da_label(codes_list, id)
-    sprintf("<b>%s</b><br>%d postal code(s): %s", id, codes$n, codes$label)
+    sprintf("<b>%s</b><br>%d postal code(s): %s", html_escape(id),
+            codes$n, codes$label)
   }, character(1))
 }
 
@@ -79,8 +87,9 @@ build_da_map <- function(da_matched, joined, points = NULL) {
       data = points,
       lng = ~longitude, lat = ~latitude,
       radius = 3, color = "#e4572e", fillOpacity = 0.9, weight = 1,
-      popup = ~paste0("<b>", postal_code, "</b> (", point_source,
-                      ", ", point_method, ")"),
+      popup = ~paste0("<b>", html_escape(postal_code), "</b> (",
+                      html_escape(point_source), ", ",
+                      html_escape(point_method), ")"),
       group = "Supplementary postal points (GeoNames)"
     )
     overlay_groups <- c(overlay_groups, "Supplementary postal points (GeoNames)")

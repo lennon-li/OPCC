@@ -23,6 +23,10 @@ run_app <- function(...) {
     c("shiny", "bslib", "DT", "leaflet", "htmlwidgets", "promises", "future", "sf"),
     reason = "to run the OPCC Shiny app."
   )
+  if (utils::packageVersion("shiny") < "1.8.0") {
+    stop("The OPCC Shiny app requires shiny >= 1.8.0; installed: ",
+         utils::packageVersion("shiny"), call. = FALSE)
+  }
   app_dir <- system.file("shiny", package = "OPCC")
   if (!nzchar(app_dir)) {
     stop("Could not find the OPCC Shiny app directory. Try re-installing the package.", call. = FALSE)
@@ -147,14 +151,22 @@ run_app <- function(...) {
     "da_sf <- sf::st_transform(da_sf, 4326)\n",
     "da_matched <- da_sf[da_sf$DAUID %in% unique(joined$DAUID[matched_rows]), ]\n",
     "\n",
+    "html_escape <- function(x) {\n",
+    "  x <- gsub(\"&\", \"&amp;\", x, fixed = TRUE)\n",
+    "  x <- gsub(\"<\", \"&lt;\", x, fixed = TRUE)\n",
+    "  x <- gsub(\">\", \"&gt;\", x, fixed = TRUE)\n",
+    "  gsub(\"\\\"\", \"&quot;\", x, fixed = TRUE)\n",
+    "}\n",
+    "\n",
     "if (nrow(da_matched) == 0L) {\n",
     "  message(\"No matched dissemination areas; skipping opcc_map.html.\")\n",
     "} else {\n",
     "  popup <- vapply(seq_len(nrow(da_matched)), function(i) {\n",
     "    id <- as.character(da_matched$DAUID[[i]])\n",
     "    codes_here <- sort(unique(codes_by_da[[id]]))\n",
-    "    sprintf(\"<b>%s</b><br>%d postal code(s): %s\", id, length(codes_here),\n",
-    "            paste(codes_here, collapse = \", \"))\n",
+    "    sprintf(\"<b>%s</b><br>%d postal code(s): %s\", html_escape(id),\n",
+    "            length(codes_here),\n",
+    "            paste(html_escape(codes_here), collapse = \", \"))\n",
     "  }, character(1))\n",
     "  bounds <- sf::st_bbox(da_matched)\n",
     "  map <- leaflet::leaflet() |>\n",

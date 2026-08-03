@@ -128,4 +128,5 @@ test_that(".render_opcc_reproducer_script emits parseable ASCII code", {
   expect_match(script, "opcc_postal_da.csv", fixed = TRUE)
   expect_match(script, "opcc_map.html", fixed = TRUE)
   expect_match(script, "download_da_boundaries()", fixed = TRUE)
+  expect_match(script, "html_escape", fixed = TRUE)
 })

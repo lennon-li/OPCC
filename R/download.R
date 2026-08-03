@@ -159,8 +159,13 @@ download_da_boundaries <- function(cache_dir = NULL) {
   sha <- digest::digest(da_zip, algo = "sha256", file = TRUE)
   sidecar <- paste0(da_zip, ".sha256")
   if (file.exists(sidecar)) {
-    recorded <- readLines(sidecar, warn = FALSE)
-    if (length(recorded) < 2L || !identical(tolower(recorded[[2L]]), tolower(sha))) {
+    recorded <- trimws(readLines(sidecar, warn = FALSE))
+    recorded_sha <- if (length(recorded) >= 2L) recorded[[2L]] else ""
+    if (!grepl("^[0-9a-fA-F]{64}$", recorded_sha)) {
+      stop("DA boundary SHA-256 sidecar is malformed; delete it to re-record",
+           call. = FALSE)
+    }
+    if (!identical(tolower(recorded_sha), tolower(sha))) {
       stop("Cached DA boundary zip failed its recorded SHA-256 sidecar check",
            call. = FALSE)
     }
