@@ -20,7 +20,8 @@
 #' @export
 run_app <- function(...) {
   rlang::check_installed(
-    c("shiny", "bslib", "DT", "leaflet", "htmlwidgets", "promises", "future", "sf"),
+    c("shiny", "bslib (>= 0.6.0)", "DT", "leaflet", "htmlwidgets",
+      "promises", "future", "sf"),
     reason = "to run the OPCC Shiny app."
   )
   if (utils::packageVersion("shiny") < "1.8.0") {
@@ -55,6 +56,15 @@ run_app <- function(...) {
     return(names(records)[[which.max(scores)]])
   }
   NA_character_
+}
+
+.parse_postal_text <- function(text) {
+  if (is.null(text) || !nzchar(trimws(text))) {
+    return(character())
+  }
+  parts <- unlist(strsplit(text, "[\r\n]+"))
+  parts <- trimws(parts)
+  parts[nzchar(parts)]
 }
 
 .postal_da_join <- function(records, postal_col, correspondence, all_links = FALSE) {
@@ -95,26 +105,53 @@ run_app <- function(...) {
 }
 
 .render_opcc_reproducer_script <- function(input_file, postal_col, output_dir,
-                                           vintage, all_links = FALSE) {
+                                           vintage, all_links = FALSE,
+                                           codes = NULL) {
+  use_codes <- !is.null(codes)
+  intro <- if (use_codes) {
+    paste0(
+      "# Reproduces opcc_postal_da.csv and opcc_map.html as produced by the\n",
+      "# OPCC postal-code-to-dissemination-area Shiny app (OPCC::run_app()),\n",
+      "# for postal codes typed directly into the app.\n",
+      "#\n",
+      "# Requires: OPCC, sf, leaflet, htmlwidgets.\n",
+      "#   install.packages(c(\"sf\", \"leaflet\", \"htmlwidgets\"))\n",
+      "#   install.packages(\"pak\"); pak::pak(\"lennon-li/OPCC\")\n",
+      "\n",
+      "library(OPCC)\n",
+      "\n",
+      "# Postal codes entered in the app, one per line.\n",
+      "postal_codes <- ", .deparse_chr(codes), "\n",
+      "postal_col <- ", .deparse_chr(postal_col), "\n",
+      "output_dir <- ", .deparse_chr(output_dir), "\n",
+      "vintage <- ", .deparse_chr(vintage), "\n",
+      "all_links <- ", if (all_links) "TRUE" else "FALSE", "\n",
+      "\n",
+      "records <- data.frame(postal_code = postal_codes, ",
+      "stringsAsFactors = FALSE)\n")
+  } else {
+    paste0(
+      "# Reproduces opcc_postal_da.csv and opcc_map.html as produced by the\n",
+      "# OPCC postal-code-to-dissemination-area Shiny app (OPCC::run_app()).\n",
+      "#\n",
+      "# Requires: OPCC, sf, leaflet, htmlwidgets.\n",
+      "#   install.packages(c(\"sf\", \"leaflet\", \"htmlwidgets\"))\n",
+      "#   install.packages(\"remotes\"); remotes::install_github(\"lennon-li/OPCC\")\n",
+      "\n",
+      "library(OPCC)\n",
+      "\n",
+      "# Point this at your own input file.\n",
+      "input_file <- ", .deparse_chr(input_file), "\n",
+      "postal_col <- ", .deparse_chr(postal_col), "\n",
+      "output_dir <- ", .deparse_chr(output_dir), "\n",
+      "vintage <- ", .deparse_chr(vintage), "\n",
+      "all_links <- ", if (all_links) "TRUE" else "FALSE", "\n",
+      "\n",
+      "records <- utils::read.csv(input_file, stringsAsFactors = FALSE, ",
+      "check.names = FALSE)\n")
+  }
   paste0(
-    "# Reproduces opcc_postal_da.csv and opcc_map.html as produced by the\n",
-    "# OPCC postal-code-to-dissemination-area Shiny app (OPCC::run_app()).\n",
-    "#\n",
-    "# Requires: OPCC, sf, leaflet, htmlwidgets.\n",
-    "#   install.packages(c(\"sf\", \"leaflet\", \"htmlwidgets\"))\n",
-    "#   install.packages(\"remotes\"); remotes::install_github(\"lennon-li/OPCC\")\n",
-    "\n",
-    "library(OPCC)\n",
-    "\n",
-    "# Point this at your own input file.\n",
-    "input_file <- ", .deparse_chr(input_file), "\n",
-    "postal_col <- ", .deparse_chr(postal_col), "\n",
-    "output_dir <- ", .deparse_chr(output_dir), "\n",
-    "vintage <- ", .deparse_chr(vintage), "\n",
-    "all_links <- ", if (all_links) "TRUE" else "FALSE", "\n",
-    "\n",
-    "records <- utils::read.csv(input_file, stringsAsFactors = FALSE, ",
-    "check.names = FALSE)\n",
+    intro,
     "# The correspondence reports codes normalized to \"A1A 1A1\", so the join\n",
     "# key must be normalized on this side too; joining on the column as typed\n",
     "# silently drops every code not already in that exact form. Ask for each\n",

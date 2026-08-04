@@ -102,6 +102,7 @@ test_that("app uploads a CSV and auto-detects the postal column offline", {
                check.names = FALSE),
     csv_path, row.names = FALSE)
   shiny::testServer(shiny::shinyAppDir(app_dir), {
+    session$setInputs(input_mode = "file")
     session$setInputs(
       input_file = list(datapath = csv_path, name = "records.csv"))
     expect_false(is.null(records_rv()))
@@ -112,6 +113,58 @@ test_that("app uploads a CSV and auto-detects the postal column offline", {
     expect_match(col_ui, "Postal Code", fixed = TRUE)
     expect_true(is.null(joined_rv()))
   })
+})
+
+test_that(".parse_postal_text splits one postal code per line", {
+  expect_equal(
+    OPCC:::.parse_postal_text("M5V 3A8\nK1A 0B1\nN6A3K7"),
+    c("M5V 3A8", "K1A 0B1", "N6A3K7"))
+  expect_equal(
+    OPCC:::.parse_postal_text("m5v 3a8\nK1A 0B1\n "),
+    c("m5v 3a8", "K1A 0B1"))
+  expect_equal(OPCC:::.parse_postal_text("   "), character(0))
+  expect_equal(OPCC:::.parse_postal_text("\n  \n"), character(0))
+  expect_equal(OPCC:::.parse_postal_text(NULL), character(0))
+})
+
+test_that(".postal_centroids filters and coerces a local centroid artifact", {
+  gz_path <- tempfile(fileext = ".csv.gz")
+  on.exit(unlink(gz_path), add = TRUE)
+  con <- gzfile(gz_path, "w")
+  utils::write.csv(
+    data.frame(
+      postal_code = c("M5V 3A8", "K1A 0B1"),
+      latitude = c("43.64", "45.42"),
+      longitude = c("-79.39", "-75.70"),
+      point_source = c("nar_centroid", "geonames"),
+      point_method = c("nar_address_mean_wgs84", "geonames_direct_wgs84"),
+      stringsAsFactors = FALSE),
+    con, row.names = FALSE)
+  close(con)
+  out <- OPCC:::.postal_centroids(c("m5v3a8", "H0H 0H0"),
+                                  centroid_file = gz_path)
+  expect_equal(nrow(out), 1L)
+  expect_equal(out$postal_code, "M5V 3A8")
+  expect_equal(out$latitude, 43.64)
+  expect_equal(out$longitude, -79.39)
+  expect_equal(attr(out, "unmatched"), "H0H 0H0")
+})
+
+test_that(".render_opcc_reproducer_script supports typed postal codes", {
+  script <- OPCC:::.render_opcc_reproducer_script(
+    input_file = NULL, postal_col = "postal_code", output_dir = ".",
+    vintage = "2026-07-20", all_links = TRUE,
+    codes = c("M5V 3A8", "K1A 0B1"))
+  expect_true(is.character(script) && length(script) == 1L)
+  expect_true(all(charToRaw(script) < as.raw(128)))
+  parsed <- parse(text = script)
+  expect_true(length(parsed) > 5L)
+  expect_match(script, 'c("M5V 3A8", "K1A 0B1")', fixed = TRUE)
+  expect_match(script, 'postal_col <- "postal_code"', fixed = TRUE)
+  expect_match(script, "all_links <- TRUE", fixed = TRUE)
+  expect_match(script, "opcc_postal_da.csv", fixed = TRUE)
+  expect_match(script, "opcc_map.html", fixed = TRUE)
+  expect_false(grepl("read.csv", script, fixed = TRUE))
 })
 
 test_that(".render_opcc_reproducer_script emits parseable ASCII code", {

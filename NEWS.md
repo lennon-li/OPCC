@@ -19,8 +19,14 @@
   validation summary, including agreement, coverage, provenance, and scope
   limitations.
 - Added immutable release-index validation and release-control auditing.
-- Added a Shiny app (`run_app()`) that joins an uploaded CSV to the
-  postal-code-to-DA correspondence, draws the matched dissemination areas on
-  a map, and downloads the joined CSV, the map as HTML, and a reproducer
-  script; added `download_da_boundaries()` for the cached 2021 StatCan DA
-  boundary files.
+- Added a Shiny app (`run_app()`) that joins an uploaded CSV or typed
+  semicolon-separated postal codes to the postal-code-to-DA correspondence,
+  draws the matched dissemination areas on a map, and downloads the joined
+  CSV, the map as HTML, and a reproducer script; added
+  `download_da_boundaries()` for the cached 2021 StatCan DA boundary files.
+- Reworked the Shiny app around one shared control panel for both outputs:
+  base-map tile choice, a locally cached simplified Public Health Unit
+  boundary overlay, postal-code points from the checksum-verified M1 centroid
+  artifact (cached after one ~6 MB download), and a colored join summary.
+  The Ontario DA plot layer is simplified once and reused from the local
+  cache; the ~200 MB StatCan boundary file is downloaded only on first use.

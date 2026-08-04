@@ -21,6 +21,13 @@
   )$m5
 }
 
+.centroid_index <- function() {
+  jsonlite::read_json(
+    system.file("extdata", "release-index.json", package = "OPCC"),
+    simplifyVector = FALSE
+  )$m1_centroids
+}
+
 .release_spec <- function(index, vintage) {
   spec <- index[[vintage]]
   if (is.null(spec)) {
@@ -387,6 +394,33 @@ pc_to_point <- function(
   if ("DAUID_ADIDU" %in% names(out)) names(out)[names(out) == "DAUID_ADIDU"] <- "DAUID"
   attr(out, "unmatched") <- setdiff(pcs, unique(out$postal_code))
   attr(out, "opcc_source") <- "OPCC source-qualified point evidence"
+  out
+}
+
+.postal_centroids <- function(postal_code,
+                              vintage = "2026-06-26",
+                              centroid_file = NULL,
+                              cache_dir = tools::R_user_dir("OPCC", "cache"),
+                              offline = FALSE) {
+  pcs <- unique(normalize_postal_code(postal_code, strict = TRUE))
+  if (is.null(centroid_file)) {
+    spec <- .release_spec(.centroid_index(), vintage)
+    centroid_file <- .download_verified(
+      spec$artifact,
+      .cache_path("m1-centroids", vintage, cache_dir, ".csv.gz"),
+      spec$sha256,
+      offline
+    )
+  }
+  x <- .read_csv_gz(centroid_file)
+  required <- c("postal_code", "latitude", "longitude", "point_source", "point_method")
+  if (!all(required %in% names(x))) {
+    stop("M1 centroid artifact is missing required columns", call. = FALSE)
+  }
+  out <- x[x$postal_code %in% pcs, , drop = FALSE]
+  out$latitude <- as.numeric(out$latitude)
+  out$longitude <- as.numeric(out$longitude)
+  attr(out, "unmatched") <- setdiff(pcs, unique(out$postal_code))
   out
 }
 
