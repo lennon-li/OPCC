@@ -252,7 +252,6 @@ adapter <- new_source_adapter(
     latitude = "lat",
     longitude = "lon"
   ),
-  endpoint = "https://example.org/open-data",
   checksum = digest::digest("/path/to/municipal-postal-data.csv",
                             algo = "sha256", file = TRUE)
 )
