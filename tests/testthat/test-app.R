@@ -75,6 +75,91 @@ test_that(".postal_da_join with all_links fans out only multi-DA codes", {
   expect_equal(m5v_rows$DAUID, c("35204841", "35204842"))
 })
 
+test_that(".postal_da_join preserves interleaved order and reserved columns", {
+  records <- data.frame(
+    id = 1:4,
+    pc = c("M5V 3A8", "P0T 1A0", "M5V 3A8", "P0T 1A0"),
+    .opcc_postal_key = paste0("user-key-", 1:4),
+    opcc_postal_code = paste0("user-code-", 1:4),
+    DAUID = paste0("user-da-", 1:4),
+    check.names = FALSE,
+    stringsAsFactors = FALSE
+  )
+  result <- OPCC:::.postal_da_join(
+    records, "pc", app_da_fixture(), all_links = TRUE
+  )
+  joined <- result$joined
+  expect_equal(joined$id, rep(1:4, each = 2L))
+  expect_equal(joined$DAUID, rep(records$DAUID, each = 2L))
+  expect_equal(result$dauid_col, "opcc_DAUID")
+  expect_equal(joined[[result$dauid_col]],
+               rep(c("35204841", "35204842",
+                     "35580016", "35580017"), 2L))
+  expect_equal(joined$.opcc_postal_key,
+               rep(records$.opcc_postal_key, each = 2L))
+  expect_equal(joined$opcc_postal_code,
+               rep(records$opcc_postal_code, each = 2L))
+  expect_equal(result$postal_code_col, ".opcc_join_postal_code")
+  expect_equal(joined[[result$postal_code_col]], rep(records$pc, each = 2L))
+  expect_identical(anyDuplicated(names(joined)), 0L)
+})
+
+test_that("DA task state queues only the latest request and rejects stale work", {
+  state <- list(current_id = NULL, running_id = NULL, pending = NULL)
+  first <- list(id = 1L, dauids = "old")
+  second <- list(id = 2L, dauids = "new")
+  state <- OPCC:::.da_task_transition(state, "join", first)
+  expect_equal(state$invoke, first)
+  state$invoke <- NULL
+  state <- OPCC:::.da_task_transition(state, "join", second)
+  expect_equal(state$running_id, 1L)
+  expect_equal(state$pending, second)
+  state <- OPCC:::.da_task_transition(state, "finished")
+  expect_false(state$accept)
+  expect_equal(state$invoke, second)
+  state$invoke <- NULL
+  state <- OPCC:::.da_task_transition(state, "finished")
+  expect_true(state$accept)
+})
+
+test_that("DA task invalidation rejects running work and drops queued work", {
+  state <- list(current_id = NULL, running_id = NULL, pending = NULL)
+  first <- list(id = 1L, dauids = "old")
+  second <- list(id = 2L, dauids = "queued")
+  state <- OPCC:::.da_task_transition(state, "join", first)
+  state$invoke <- NULL
+  state <- OPCC:::.da_task_transition(state, "join", second)
+
+  state <- OPCC:::.da_task_transition(state, "invalidate")
+  expect_null(state$current_id)
+  expect_null(state$pending)
+  expect_equal(state$running_id, first$id)
+
+  state <- OPCC:::.da_task_transition(state, "finished")
+  expect_false(state$accept)
+  expect_null(state$invoke)
+})
+
+test_that("app wires upload invalidation after input and valid joins after validation", {
+  app_source <- readLines(system.file("shiny", "app.R", package = "OPCC"))
+  upload_start <- grep("observeEvent\\(input\\$input_file", app_source)[[1]]
+  join_start <- grep("observeEvent\\(input\\$run_join", app_source)[[1]]
+  upload_block <- app_source[upload_start:(join_start - 1L)]
+  join_block <- app_source[join_start:length(app_source)]
+
+  expect_true(any(grepl(
+    '.da_task_transition(task_state, "invalidate")',
+    upload_block, fixed = TRUE
+  )))
+  validation_line <- grep(
+    'inherits(result, "error")', join_block, fixed = TRUE
+  )[[1]]
+  valid_join_line <- grep(
+    '.da_task_transition(', join_block, fixed = TRUE
+  )[[1]]
+  expect_gt(valid_join_line, validation_line)
+})
+
 test_that(".postal_da_join does not multiply duplicate input rows", {
   records <- data.frame(id = 1:4, pc = rep("m5v3a8", 4),
                         stringsAsFactors = FALSE)
@@ -182,4 +267,6 @@ test_that(".render_opcc_reproducer_script emits parseable ASCII code", {
   expect_match(script, "opcc_map.html", fixed = TRUE)
   expect_match(script, "download_da_boundaries()", fixed = TRUE)
   expect_match(script, "html_escape", fixed = TRUE)
+  expect_false(grepl('records[[".opcc_postal_key"]]', script, fixed = TRUE))
+  expect_match(script, "source_rows <- rep", fixed = TRUE)
 })

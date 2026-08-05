@@ -47,15 +47,26 @@
   longitude_max = -74.3
 )
 
-.download_verified <- function(url, path, sha256, offline) {
-  if (!file.exists(path)) {
-    if (offline) stop("Release is not cached and offline = TRUE", call. = FALSE)
-    dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
-    utils::download.file(url, path, mode = "wb", quiet = TRUE)
+.download_verified <- function(url, path, sha256, offline,
+                               downloader = utils::download.file) {
+  verified <- function(file) {
+    identical(tolower(digest::digest(file, algo = "sha256", file = TRUE)),
+              tolower(sha256))
   }
-  got <- digest::digest(path, algo = "sha256", file = TRUE)
-  if (!identical(tolower(got), tolower(sha256))) {
+  if (file.exists(path) && verified(path)) return(path)
+  if (offline) {
+    if (file.exists(path)) stop("Checksum verification failed", call. = FALSE)
+    stop("Release is not cached and offline = TRUE", call. = FALSE)
+  }
+  dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
+  temporary <- tempfile(paste0(basename(path), "."), tmpdir = dirname(path))
+  on.exit(unlink(temporary), add = TRUE)
+  downloader(url, temporary, mode = "wb", quiet = TRUE)
+  if (!file.exists(temporary) || !verified(temporary)) {
     stop("Checksum verification failed", call. = FALSE)
+  }
+  if (!file.rename(temporary, path)) {
+    stop("Could not promote verified download into the cache", call. = FALSE)
   }
   path
 }
@@ -397,12 +408,10 @@ pc_to_point <- function(
   out
 }
 
-.postal_centroids <- function(postal_code,
-                              vintage = "2026-06-26",
-                              centroid_file = NULL,
-                              cache_dir = tools::R_user_dir("OPCC", "cache"),
-                              offline = FALSE) {
-  pcs <- unique(normalize_postal_code(postal_code, strict = TRUE))
+.load_postal_centroids <- function(vintage = "2026-06-26",
+                                   centroid_file = NULL,
+                                   cache_dir = tools::R_user_dir("OPCC", "cache"),
+                                   offline = FALSE) {
   if (is.null(centroid_file)) {
     spec <- .release_spec(.centroid_index(), vintage)
     centroid_file <- .download_verified(
@@ -417,9 +426,23 @@ pc_to_point <- function(
   if (!all(required %in% names(x))) {
     stop("M1 centroid artifact is missing required columns", call. = FALSE)
   }
+  x$latitude <- as.numeric(x$latitude)
+  x$longitude <- as.numeric(x$longitude)
+  x
+}
+
+.postal_centroids <- function(postal_code,
+                              vintage = "2026-06-26",
+                              centroid_file = NULL,
+                              cache_dir = tools::R_user_dir("OPCC", "cache"),
+                              offline = FALSE) {
+  x <- .load_postal_centroids(vintage, centroid_file, cache_dir, offline)
+  .filter_postal_centroids(x, postal_code)
+}
+
+.filter_postal_centroids <- function(x, postal_code) {
+  pcs <- unique(normalize_postal_code(postal_code, strict = TRUE))
   out <- x[x$postal_code %in% pcs, , drop = FALSE]
-  out$latitude <- as.numeric(out$latitude)
-  out$longitude <- as.numeric(out$longitude)
   attr(out, "unmatched") <- setdiff(pcs, unique(out$postal_code))
   out
 }

@@ -49,11 +49,22 @@ html_escape <- function(x) {
 }
 
 codes_per_da <- function(joined) {
-  rows <- !is.na(joined$DAUID)
+  da_col <- attr(joined, "opcc_dauid_col") %||% "DAUID"
+  rows <- !is.na(joined[[da_col]])
   if (!any(rows)) {
     return(list())
   }
-  split(joined$opcc_postal_code[rows], joined$DAUID[rows])
+  code_col <- attr(joined, "opcc_postal_code_col") %||% "opcc_postal_code"
+  split(joined[[code_col]][rows], joined[[da_col]][rows])
+}
+
+das_per_code <- function(joined) {
+  da_col <- attr(joined, "opcc_dauid_col") %||% "DAUID"
+  rows <- !is.na(joined[[da_col]])
+  if (!any(rows)) return(list())
+  code_col <- attr(joined, "opcc_postal_code_col") %||% "opcc_postal_code"
+  lapply(split(joined[[da_col]][rows], joined[[code_col]][rows]),
+         function(x) sort(unique(x)))
 }
 
 codes_by_da_label <- function(codes_list, dauid) {
@@ -74,11 +85,10 @@ da_popup <- function(da_matched, codes_list) {
   }, character(1))
 }
 
-point_popup <- function(points, joined) {
+point_popup <- function(points, da_lookup) {
   vapply(seq_len(nrow(points)), function(i) {
     code <- points$postal_code[[i]]
-    das <- sort(unique(joined$DAUID[joined$opcc_postal_code == code &
-                                    !is.na(joined$DAUID)]))
+    das <- da_lookup[[code]] %||% character()
     da_note <- if (length(das) == 0L) {
       "No matched dissemination area"
     } else {
@@ -116,6 +126,7 @@ base_map_groups <- c(
 
 build_da_map <- function(da_matched, joined, points = NULL, phu = NULL) {
   codes_list <- codes_per_da(joined)
+  da_lookup <- das_per_code(joined)
   bounds <- sf::st_bbox(da_matched)
   map <- leaflet::leaflet()
   for (i in seq_along(base_map_groups)) {
@@ -154,7 +165,7 @@ build_da_map <- function(da_matched, joined, points = NULL, phu = NULL) {
       data = points,
       lng = ~longitude, lat = ~latitude,
       radius = 4, color = point_color, fillOpacity = 0.9, weight = 1,
-      popup = point_popup(points, joined),
+      popup = point_popup(points, da_lookup),
       group = "Postal code points"
     )
     legend_colors <- c(legend_colors, point_color)
@@ -350,9 +361,19 @@ server <- function(input, output, session) {
   postal_points_rv <- reactiveVal(NULL)
   da_matched_rv <- reactiveVal(NULL)
   phu_rv <- reactiveVal(load_local_phu())
+  correspondence_rv <- reactiveVal(NULL)
+  centroids_rv <- reactiveVal(NULL)
+  request_counter <- 0L
+  task_state <- list(current_id = NULL, running_id = NULL, pending = NULL)
+
+  invoke_da_request <- function(request) {
+    ensure_async_plan()
+    da_task$invoke(request)
+  }
 
   observeEvent(input$input_file, {
     req(input$input_file)
+    task_state <<- OPCC:::.da_task_transition(task_state, "invalidate")
     records <- tryCatch(
       suppressWarnings(utils::read.csv(input$input_file$datapath,
         stringsAsFactors = FALSE, check.names = FALSE)),
@@ -415,15 +436,17 @@ server <- function(input, output, session) {
       postal_col <- "postal_code"
     }
     all_links <- identical(input$all_links, "all")
-    correspondence <- tryCatch(
-      shiny::withProgress(message = "Fetching DA correspondence", value = 0.3, {
-        OPCC::get_da_correspondence(vintage = latest_da_vintage)
-      }),
-      error = function(e) e
-    )
+    correspondence <- correspondence_rv()
+    if (is.null(correspondence)) {
+      correspondence <- tryCatch(
+        shiny::withProgress(message = "Fetching DA correspondence", value = 0.3, {
+          OPCC::get_da_correspondence(vintage = latest_da_vintage)
+        }),
+        error = function(e) e
+      )
+      if (!inherits(correspondence, "error")) correspondence_rv(correspondence)
+    }
     if (inherits(correspondence, "error")) {
-      joined_rv(NULL)
-      join_meta_rv(NULL)
       show_status_popup("error", "Join failed",
         tags$p(conditionMessage(correspondence)))
       return()
@@ -434,8 +457,6 @@ server <- function(input, output, session) {
       error = function(e) e
     )
     if (inherits(result, "error")) {
-      joined_rv(NULL)
-      join_meta_rv(NULL)
       show_status_popup("error", "Join failed",
         tags$p(conditionMessage(result)))
       return()
@@ -448,24 +469,35 @@ server <- function(input, output, session) {
       vintage = latest_da_vintage,
       all_links = all_links,
       unmatched = result$unmatched,
-      invalid_count = result$invalid_count
+      invalid_count = result$invalid_count,
+      postal_code_col = result$postal_code_col,
+      dauid_col = result$dauid_col
     ))
     da_matched_rv(NULL)
-    input_codes <- unique(result$joined$opcc_postal_code)
-    points <- tryCatch(
-      shiny::withProgress(message = "Fetching postal centroids", value = 0.7, {
-        OPCC:::.postal_centroids(input_codes)
-      }),
-      error = function(e) NULL
-    )
+    input_codes <- unique(result$joined[[result$postal_code_col]])
+    centroids <- centroids_rv()
+    if (is.null(centroids)) {
+      centroids <- tryCatch(
+        shiny::withProgress(message = "Fetching postal centroids", value = 0.7, {
+          OPCC:::.load_postal_centroids()
+        }),
+        error = function(e) NULL
+      )
+      if (!is.null(centroids)) centroids_rv(centroids)
+    }
+    points <- if (is.null(centroids)) NULL else
+      OPCC:::.filter_postal_centroids(centroids, input_codes)
     if (!is.null(points) && nrow(points) > 0L) {
       postal_points_rv(points)
     } else {
       postal_points_rv(NULL)
     }
-    dauids <- unique(result$joined$DAUID[!is.na(result$joined$DAUID)])
+    dauid_values <- result$joined[[result$dauid_col]]
+    dauids <- unique(dauid_values[!is.na(dauid_values)])
     n_points <- if (is.null(points)) 0L else nrow(points)
     if (length(dauids) > 0L) {
+      request_counter <<- request_counter + 1L
+      request_id <- request_counter
       show_status_popup("success", "Join complete",
         tags$p(join_status_text(join_meta_rv(), nrow(result$joined))),
         tags$p(sprintf(
@@ -474,11 +506,15 @@ server <- function(input, output, session) {
           format(n_points, big.mark = ","))),
         tags$p(sprintf("Correspondence vintage: %s (latest).", latest_da_vintage)),
         tags$p(class = "text-muted small", "Drawing the map now."))
-      if (!identical(da_task$status(), "running")) {
-        ensure_async_plan()
-        da_task$invoke(dauids)
+      task_state <<- OPCC:::.da_task_transition(
+        task_state, "join", list(id = request_id, dauids = dauids))
+      if (!is.null(task_state$invoke)) {
+        request <- task_state$invoke
+        task_state$invoke <<- NULL
+        invoke_da_request(request)
       }
     } else {
+      task_state <<- OPCC:::.da_task_transition(task_state, "invalidate")
       show_status_popup("warning", "Join complete - nothing to draw",
         tags$p(join_status_text(join_meta_rv(), nrow(result$joined))),
         tags$p(sprintf("Correspondence vintage: %s (latest)", latest_da_vintage)),
@@ -546,7 +582,7 @@ server <- function(input, output, session) {
     }
   )
 
-  da_task <- shiny::ExtendedTask$new(function(dauids) {
+  da_task <- shiny::ExtendedTask$new(function(request) {
     promises::future_promise({
       loadNamespace("sf")
       tolerance <- da_simplify_tolerance
@@ -567,7 +603,7 @@ server <- function(input, output, session) {
       } else {
         da_sf <- readRDS(rds)
       }
-      da_sf[da_sf$DAUID %in% dauids, ]
+      list(id = request$id, da = da_sf[da_sf$DAUID %in% request$dauids, ])
     })
   })
 
@@ -576,8 +612,19 @@ server <- function(input, output, session) {
     if (!s %in% c("success", "error")) {
       return()
     }
+    finished_id <- task_state$running_id
+    task_state <<- OPCC:::.da_task_transition(task_state, "finished")
+    accept <- isTRUE(task_state$accept)
+    next_request <- task_state$invoke
+    task_state$invoke <<- NULL
     if (s == "success") {
-      da <- da_task$result()
+      task_result <- da_task$result()
+      accept <- accept && identical(task_result$id, finished_id)
+      da <- task_result$da
+      if (!accept) {
+        if (!is.null(next_request)) invoke_da_request(next_request)
+        return()
+      }
       da_matched_rv(da)
       tryCatch(
         updateTabsetPanel("output_tab", selected = "Map", session = session),
@@ -605,10 +652,13 @@ server <- function(input, output, session) {
                 "centroid file are each downloaded once, checksum-verified,",
                 "and reused from the local cache.")))
     } else {
-      da_matched_rv(NULL)
-      show_status_popup("error", "Boundary load failed",
-        tags$p(conditionMessage(da_task$error())))
+      if (accept) {
+        da_matched_rv(NULL)
+        show_status_popup("error", "Boundary load failed",
+          tags$p(conditionMessage(da_task$error())))
+      }
     }
+    if (!is.null(next_request)) invoke_da_request(next_request)
   })
 
   output$da_map <- leaflet::renderLeaflet({

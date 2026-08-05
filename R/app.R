@@ -83,21 +83,78 @@ run_app <- function(...) {
   if (!all_links) {
     links <- links[links$best_link, , drop = FALSE]
   }
-  key_column <- ".opcc_postal_key"
-  records[[key_column]] <- keys
-  joined <- merge(
-    records, links,
-    by.x = key_column, by.y = "postal_code",
-    all.x = TRUE, sort = FALSE
-  )
-  names(joined)[names(joined) == key_column] <- "opcc_postal_code"
+  # Expand links by source row instead of using merge(), which does not retain
+  # interleaved left-hand order. Correspondence order is the stable tie-breaker
+  # for multiple links belonging to one source record.
+  link_rows <- split(seq_len(nrow(links)), links$postal_code)
+  matched <- lapply(keys, function(key) {
+    rows <- if (is.na(key)) NULL else link_rows[[key]]
+    if (is.null(rows) || length(rows) == 0L) NA_integer_ else rows
+  })
+  source_rows <- rep(seq_len(nrow(records)), lengths(matched))
+  link_index <- unlist(matched, use.names = FALSE)
+  joined <- records[source_rows, , drop = FALSE]
+  rownames(joined) <- NULL
+  output_name <- "opcc_postal_code"
+  if (output_name %in% names(joined)) {
+    output_name <- ".opcc_join_postal_code"
+    while (output_name %in% names(joined)) {
+      output_name <- paste0(output_name, "_")
+    }
+  }
+  joined[[output_name]] <- keys[source_rows]
+  link_values <- links[link_index, setdiff(names(links), "postal_code"), drop = FALSE]
+  link_source_names <- names(link_values)
+  link_names <- link_source_names
+  for (i in seq_along(link_names)) {
+    while (link_names[[i]] %in% c(names(joined), link_names[seq_len(i - 1L)])) {
+      link_names[[i]] <- paste0("opcc_", link_names[[i]])
+    }
+  }
+  names(link_values) <- link_names
+  rownames(link_values) <- NULL
+  joined <- cbind(joined, link_values)
+  attr(joined, "opcc_postal_code_col") <- output_name
+  da_name <- link_names[match("DAUID", link_source_names)]
+  attr(joined, "opcc_dauid_col") <- da_name
   list(
     joined = joined,
+    postal_code_col = output_name,
+    dauid_col = da_name,
     unmatched = setdiff(codes, unique(links$postal_code)),
     invalid_count = sum(invalid),
     n_input = nrow(records),
     n_codes = length(codes)
   )
+}
+
+.da_task_transition <- function(state, event, request = NULL) {
+  if (identical(event, "invalidate")) {
+    state$current_id <- NULL
+    state$pending <- NULL
+    return(state)
+  }
+  if (identical(event, "join")) {
+    state$current_id <- request$id
+    state$pending <- request
+    if (is.null(state$running_id)) {
+      state$running_id <- request$id
+      state$pending <- NULL
+      state$invoke <- request
+    }
+    return(state)
+  }
+  if (!identical(event, "finished")) {
+    stop("Unknown DA task event", call. = FALSE)
+  }
+  state$accept <- identical(state$running_id, state$current_id)
+  state$running_id <- NULL
+  if (!is.null(state$pending)) {
+    state$running_id <- state$pending$id
+    state$invoke <- state$pending
+    state$pending <- NULL
+  }
+  state
 }
 
 .deparse_chr <- function(x) {
@@ -156,23 +213,46 @@ run_app <- function(...) {
     "# key must be normalized on this side too; joining on the column as typed\n",
     "# silently drops every code not already in that exact form. Ask for each\n",
     "# distinct code once, or duplicates on both sides multiply the rows.\n",
-    "records[[\".opcc_postal_key\"]] <- normalize_postal_code(records[[postal_col]])\n",
-    "codes <- unique(records[[\".opcc_postal_key\"]][",
-    "!is.na(records[[\".opcc_postal_key\"]])])\n",
+    "keys <- normalize_postal_code(records[[postal_col]])\n",
+    "codes <- unique(keys[!is.na(keys)])\n",
     "\n",
     "correspondence <- get_da_correspondence(vintage = vintage)\n",
     "links <- correspondence[correspondence$postal_code %in% codes, , drop = FALSE]\n",
     "if (!all_links) links <- links[links$best_link, , drop = FALSE]\n",
-    "joined <- merge(\n",
-    "  records, links,\n",
-    "  by.x = \".opcc_postal_key\", by.y = \"postal_code\",\n",
-    "  all.x = TRUE, sort = FALSE\n",
-    ")\n",
-    "names(joined)[names(joined) == \".opcc_postal_key\"] <- \"opcc_postal_code\"\n",
+    "# Retain input-row order; multiple links follow correspondence row order.\n",
+    "link_rows <- split(seq_len(nrow(links)), links$postal_code)\n",
+    "matched <- lapply(keys, function(key) {\n",
+    "  rows <- if (is.na(key)) NULL else link_rows[[key]]\n",
+    "  if (is.null(rows) || length(rows) == 0L) NA_integer_ else rows\n",
+    "})\n",
+    "source_rows <- rep(seq_len(nrow(records)), lengths(matched))\n",
+    "link_index <- unlist(matched, use.names = FALSE)\n",
+    "joined <- records[source_rows, , drop = FALSE]\n",
+    "rownames(joined) <- NULL\n",
+    "opcc_code_col <- \"opcc_postal_code\"\n",
+    "if (opcc_code_col %in% names(joined)) {\n",
+    "  opcc_code_col <- \".opcc_join_postal_code\"\n",
+    "  while (opcc_code_col %in% names(joined)) {\n",
+    "    opcc_code_col <- paste0(opcc_code_col, \"_\")\n",
+    "  }\n",
+    "}\n",
+    "joined[[opcc_code_col]] <- keys[source_rows]\n",
+    "link_values <- links[link_index, setdiff(names(links), \"postal_code\"), drop = FALSE]\n",
+    "link_source_names <- names(link_values)\n",
+    "link_names <- link_source_names\n",
+    "for (i in seq_along(link_names)) {\n",
+    "  while (link_names[[i]] %in% c(names(joined), link_names[seq_len(i - 1L)])) {\n",
+    "    link_names[[i]] <- paste0(\"opcc_\", link_names[[i]])\n",
+    "  }\n",
+    "}\n",
+    "names(link_values) <- link_names\n",
+    "rownames(link_values) <- NULL\n",
+    "joined <- cbind(joined, link_values)\n",
+    "da_col <- link_names[match(\"DAUID\", link_source_names)]\n",
     "\n",
-    "matched_rows <- !is.na(joined$DAUID)\n",
-    "codes_by_da <- split(joined$opcc_postal_code[matched_rows], ",
-    "joined$DAUID[matched_rows])\n",
+    "matched_rows <- !is.na(joined[[da_col]])\n",
+    "codes_by_da <- split(joined[[opcc_code_col]][matched_rows], ",
+    "joined[[da_col]][matched_rows])\n",
     "\n",
     "dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)\n",
     "utils::write.csv(joined, file.path(output_dir, \"opcc_postal_da.csv\"), ",
@@ -186,7 +266,7 @@ run_app <- function(...) {
     "da_sf <- sf::st_transform(da_sf, 3347)\n",
     "da_sf <- sf::st_simplify(da_sf, preserveTopology = FALSE, dTolerance = 50)\n",
     "da_sf <- sf::st_transform(da_sf, 4326)\n",
-    "da_matched <- da_sf[da_sf$DAUID %in% unique(joined$DAUID[matched_rows]), ]\n",
+    "da_matched <- da_sf[da_sf$DAUID %in% unique(joined[[da_col]][matched_rows]), ]\n",
     "\n",
     "html_escape <- function(x) {\n",
     "  x <- gsub(\"&\", \"&amp;\", x, fixed = TRUE)\n",
