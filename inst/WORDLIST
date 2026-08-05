@@ -22,6 +22,7 @@ OPCC
 PCCF
 pre
 prefilled
+preselected
 PROJ
 redistributable
 reproducibly
@@ -30,5 +31,6 @@ rollup
 Rtools
 schemas
 SHA
+StatCan
 validator
 XLSX
