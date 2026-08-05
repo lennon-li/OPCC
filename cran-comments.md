@@ -9,9 +9,9 @@
 
 ## R CMD check results
 
-Checks were rerun on 2026-07-29 against the current source snapshot based on
-OPCC `main` at `48d928e09f7c40315fd892e234ff484cfde2d4af`, including the
-vignette removal of the invalid placeholder endpoint.
+Checks were rerun on 2026-08-05 against OPCC `main` at
+`51e026a7a5ce96abd720c62a17b2ab862c93b4ec`, including the current Shiny app
+and its M1-centroid release-index entry.
 
 - `R CMD build OPCC` with vignettes: OK.
 - `R CMD check --as-cran OPCC_0.0.1.tar.gz`: OK; `Status: 1 NOTE` only.
