@@ -1,5 +1,7 @@
 # OPCC 0.0.1
 
+- Added an `opcc_postal_points.zip` download to the Shiny app that exports
+  the user's postal codes as a zipped ESRI point shapefile.
 - Initial public release with checksum-verified postal-code-to-DB and
   postal-code-to-DA correspondence lookups.
 - Added source-separated local evidence layers and contribution bundles.

@@ -302,3 +302,87 @@ run_app <- function(...) {
     "}\n"
   )
 }
+
+.postal_points_sf <- function(points, joined) {
+  if (!requireNamespace("sf", quietly = TRUE)) {
+    stop("The 'sf' package is required to build a postal-code point shapefile.",
+         call. = FALSE)
+  }
+  postal_code_col <- attr(joined, "opcc_postal_code_col")
+  if (is.null(postal_code_col)) postal_code_col <- "opcc_postal_code"
+  dauid_col <- attr(joined, "opcc_dauid_col")
+  if (is.null(dauid_col)) dauid_col <- "DAUID"
+  if (!postal_code_col %in% names(joined)) {
+    postal_code_col <- "opcc_postal_code"
+  }
+  if (!dauid_col %in% names(joined)) {
+    dauid_col <- "DAUID"
+  }
+
+  da_col <- joined[[dauid_col]]
+  code_col <- joined[[postal_code_col]]
+  matched_rows <- !is.na(da_col)
+  codes_matched <- code_col[matched_rows]
+  da_matched <- da_col[matched_rows]
+
+  all_codes <- unique(points$postal_code)
+  da_lookup <- split(da_matched, codes_matched)
+
+  n_da <- integer(length(all_codes))
+  dauid <- character(length(all_codes))
+  matched <- character(length(all_codes))
+  for (i in seq_along(all_codes)) {
+    code <- all_codes[[i]]
+    values <- if (code %in% names(da_lookup)) {
+      unique(da_lookup[[code]][!is.na(da_lookup[[code]])])
+    } else {
+      character(0)
+    }
+    if (length(values) > 0L) {
+      matched[[i]] <- "Y"
+      n_da[[i]] <- as.integer(length(values))
+      dauid[[i]] <- paste(sort(values), collapse = ",")
+    } else {
+      matched[[i]] <- "N"
+      n_da[[i]] <- 0L
+      dauid[[i]] <- ""
+    }
+  }
+
+  first_idx <- match(all_codes, points$postal_code)
+  df <- data.frame(
+    pcode = all_codes,
+    src = points$point_source[first_idx],
+    method = points$point_method[first_idx],
+    matched = matched,
+    n_da = n_da,
+    dauid = dauid,
+    latitude = points$latitude[first_idx],
+    longitude = points$longitude[first_idx],
+    stringsAsFactors = FALSE
+  )
+
+  df$dauid <- vapply(df$dauid, function(x) {
+    if (nchar(x) > 254L) {
+      paste0(substr(x, 1L, 251L), "...")
+    } else {
+      x
+    }
+  }, character(1), USE.NAMES = FALSE)
+
+  sf::st_as_sf(df, coords = c("longitude", "latitude"), crs = 4326)
+}
+
+.write_postal_points_shapefile <- function(x, zipfile) {
+  tmpdir <- tempfile("opcc_postal_points_")
+  on.exit(unlink(tmpdir, recursive = TRUE), add = TRUE)
+  dir.create(tmpdir, recursive = TRUE, showWarnings = FALSE)
+  shp_path <- file.path(tmpdir, "opcc_postal_points.shp")
+  sf::st_write(x, shp_path, quiet = TRUE)
+  sidecars <- list.files(tmpdir, pattern = "^opcc_postal_points\\.", full.names = TRUE)
+  status <- utils::zip(zipfile, files = sidecars, flags = "-j9Xq")
+  if (!identical(as.integer(status), 0L) || !file.exists(zipfile)) {
+    stop("Could not write the postal point shapefile archive.", call. = FALSE)
+  }
+  invisible(zipfile)
+}

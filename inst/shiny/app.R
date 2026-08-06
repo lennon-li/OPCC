@@ -530,10 +530,14 @@ server <- function(input, output, session) {
 
   output$downloads_ui <- renderUI({
     joined_ready <- !is.null(joined_rv()) && nrow(joined_rv()) > 0L
+    points_ready <- joined_ready && !is.null(postal_points_rv()) &&
+      nrow(postal_points_rv()) > 0L
     map_ready <- joined_ready && !is.null(da_matched_rv()) &&
       nrow(da_matched_rv()) > 0L
     download_or_disabled(list(
       list(id = "dl_csv", label = "opcc_postal_da.csv", ready = joined_ready),
+      list(id = "dl_points_shp", label = "opcc_postal_points.zip",
+           ready = points_ready),
       list(id = "dl_map", label = "opcc_map.html", ready = map_ready),
       list(id = "dl_script", label = "reproduce.R", ready = joined_ready)
     ))
@@ -545,6 +549,22 @@ server <- function(input, output, session) {
       joined <- joined_rv()
       req(joined)
       utils::write.csv(joined, file, row.names = FALSE)
+    }
+  )
+
+  output$dl_points_shp <- downloadHandler(
+    filename = function() "opcc_postal_points.zip",
+    content = function(file) {
+      points <- postal_points_rv()
+      joined <- joined_rv()
+      req(points, joined)
+      if (!requireNamespace("sf", quietly = TRUE)) {
+        show_status_popup("error", "Shapefile export unavailable",
+          tags$p("The sf package is required to export a shapefile."))
+        return()
+      }
+      sf_points <- OPCC:::.postal_points_sf(points, joined)
+      OPCC:::.write_postal_points_shapefile(sf_points, file)
     }
   )
 

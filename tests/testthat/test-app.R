@@ -270,3 +270,118 @@ test_that(".render_opcc_reproducer_script emits parseable ASCII code", {
   expect_false(grepl('records[[".opcc_postal_key"]]', script, fixed = TRUE))
   expect_match(script, "source_rows <- rep", fixed = TRUE)
 })
+
+test_that(".postal_points_sf returns one feature per postal code with DA rollup", {
+  testthat::skip_if_not_installed("sf")
+  points <- data.frame(
+    postal_code = c("M5V 3A8", "M4V 1A1", "H0H 0H0"),
+    latitude = c(43.64, 43.68, 70.00),
+    longitude = c(-79.39, -79.33, -90.00),
+    point_source = c("nar_centroid", "nar_centroid", "geonames"),
+    point_method = c("nar_address_mean_wgs84", "nar_address_mean_wgs84",
+                     "geonames_direct_wgs84"),
+    stringsAsFactors = FALSE
+  )
+  joined <- data.frame(
+    opcc_postal_code = c("M5V 3A8", "M5V 3A8", "M4V 1A1"),
+    DAUID = c("35204841", "35204842", "35202806"),
+    stringsAsFactors = FALSE
+  )
+  attr(joined, "opcc_postal_code_col") <- "opcc_postal_code"
+  attr(joined, "opcc_dauid_col") <- "DAUID"
+  out <- OPCC:::.postal_points_sf(points, joined)
+  expect_equal(nrow(out), 3L)
+  expect_equal(out$pcode, c("M5V 3A8", "M4V 1A1", "H0H 0H0"))
+  expect_equal(out$n_da, c(2L, 1L, 0L))
+  expect_equal(out$matched, c("Y", "Y", "N"))
+  expect_equal(out$dauid[out$pcode == "M5V 3A8"], "35204841,35204842")
+  expect_equal(out$dauid[out$pcode == "H0H 0H0"], "")
+})
+
+test_that(".postal_points_sf returns an sf object in EPSG:4326 with the expected columns", {
+  testthat::skip_if_not_installed("sf")
+  points <- data.frame(
+    postal_code = "M5V 3A8",
+    latitude = 43.64,
+    longitude = -79.39,
+    point_source = "nar_centroid",
+    point_method = "nar_address_mean_wgs84",
+    stringsAsFactors = FALSE
+  )
+  joined <- data.frame(
+    opcc_postal_code = "M5V 3A8",
+    DAUID = "35204841",
+    stringsAsFactors = FALSE
+  )
+  attr(joined, "opcc_postal_code_col") <- "opcc_postal_code"
+  attr(joined, "opcc_dauid_col") <- "DAUID"
+  out <- OPCC:::.postal_points_sf(points, joined)
+  expect_true(inherits(out, "sf"))
+  expect_equal(sf::st_crs(out)$epsg, 4326)
+  expect_equal(names(out), c("pcode", "src", "method", "matched", "n_da",
+                              "dauid", "geometry"))
+})
+
+test_that(".postal_points_sf truncates a very long dauid string for the DBF limit", {
+  testthat::skip_if_not_installed("sf")
+  dauids <- paste0("3520", sprintf("%04d", seq_len(40)))
+  dauids_joined <- paste(sort(dauids), collapse = ",")
+  expect_true(nchar(dauids_joined) > 254L)
+  points <- data.frame(
+    postal_code = "M5V 3A8",
+    latitude = 43.64,
+    longitude = -79.39,
+    point_source = "nar_centroid",
+    point_method = "nar_address_mean_wgs84",
+    stringsAsFactors = FALSE
+  )
+  joined <- data.frame(
+    opcc_postal_code = rep("M5V 3A8", length(dauids)),
+    DAUID = dauids,
+    stringsAsFactors = FALSE
+  )
+  attr(joined, "opcc_postal_code_col") <- "opcc_postal_code"
+  attr(joined, "opcc_dauid_col") <- "DAUID"
+  out <- OPCC:::.postal_points_sf(points, joined)
+  expect_equal(nrow(out), 1L)
+  expect_equal(out$n_da, length(dauids))
+  expect_equal(nchar(out$dauid), 254L)
+  expect_true(grepl("\\.\\.\\.$", out$dauid))
+})
+
+test_that(".write_postal_points_shapefile writes a readable zipped shapefile", {
+  testthat::skip_if_not_installed("sf")
+  points <- data.frame(
+    postal_code = c("M5V 3A8", "M4V 1A1"),
+    latitude = c(43.64, 43.68),
+    longitude = c(-79.39, -79.33),
+    point_source = c("nar_centroid", "nar_centroid"),
+    point_method = c("nar_address_mean_wgs84", "nar_address_mean_wgs84"),
+    stringsAsFactors = FALSE
+  )
+  joined <- data.frame(
+    opcc_postal_code = c("M5V 3A8", "M4V 1A1"),
+    DAUID = c("35204841", "35202806"),
+    stringsAsFactors = FALSE
+  )
+  attr(joined, "opcc_postal_code_col") <- "opcc_postal_code"
+  attr(joined, "opcc_dauid_col") <- "DAUID"
+  sf_points <- OPCC:::.postal_points_sf(points, joined)
+  zip <- tempfile(fileext = ".zip")
+  on.exit(unlink(zip), add = TRUE)
+  OPCC:::.write_postal_points_shapefile(sf_points, zip)
+  entries <- utils::unzip(zip, list = TRUE)$Name
+  expect_true("opcc_postal_points.shp" %in% entries)
+  expect_true("opcc_postal_points.shx" %in% entries)
+  expect_true("opcc_postal_points.dbf" %in% entries)
+  expect_true("opcc_postal_points.prj" %in% entries)
+  expect_false(any(grepl("/", entries, fixed = TRUE)))
+  tmpdir <- tempfile("opcc_unzip_")
+  on.exit(unlink(tmpdir, recursive = TRUE), add = TRUE)
+  dir.create(tmpdir, recursive = TRUE, showWarnings = FALSE)
+  utils::unzip(zip, exdir = tmpdir)
+  read_back <- sf::st_read(file.path(tmpdir, "opcc_postal_points.shp"),
+                           quiet = TRUE)
+  expect_equal(nrow(read_back), 2L)
+  expect_equal(sort(read_back$pcode), c("M4V 1A1", "M5V 3A8"))
+})
