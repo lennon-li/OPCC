@@ -385,3 +385,39 @@ test_that(".write_postal_points_shapefile writes a readable zipped shapefile", {
   expect_equal(nrow(read_back), 2L)
   expect_equal(sort(read_back$pcode), c("M4V 1A1", "M5V 3A8"))
 })
+
+test_that(".render_opcc_reproducer_script emits the shapefile step for typed codes", {
+  script <- OPCC:::.render_opcc_reproducer_script(
+    input_file = NULL, postal_col = "postal_code", output_dir = ".",
+    vintage = "2026-07-20", all_links = FALSE,
+    codes = c("M5V 3A8", "K1A 0B1"))
+  expect_match(script, "opcc_postal_points.zip", fixed = TRUE)
+  expect_match(script, "OPCC:::.postal_points_sf(postal_points, joined)",
+               fixed = TRUE)
+  expect_match(script, "OPCC:::.write_postal_points_shapefile(", fixed = TRUE)
+  expect_match(script, "OPCC:::.load_postal_centroids()", fixed = TRUE)
+})
+
+test_that(".render_opcc_reproducer_script emits the shapefile step for uploads", {
+  script <- OPCC:::.render_opcc_reproducer_script(
+    "my records.csv", "Postal Code", ".", "2026-07-20", all_links = FALSE)
+  expect_match(script, "opcc_postal_points.zip", fixed = TRUE)
+  expect_match(script, "OPCC:::.postal_points_sf(postal_points, joined)",
+               fixed = TRUE)
+  expect_match(script, "OPCC:::.write_postal_points_shapefile(", fixed = TRUE)
+  expect_match(script, "OPCC:::.load_postal_centroids()", fixed = TRUE)
+})
+
+test_that(".render_opcc_reproducer_script shapefile output parses and stays ASCII", {
+  typed <- OPCC:::.render_opcc_reproducer_script(
+    input_file = NULL, postal_col = "postal_code", output_dir = ".",
+    vintage = "2026-07-20", codes = c("M5V 3A8", "K1A 0B1"))
+  uploaded <- OPCC:::.render_opcc_reproducer_script(
+    "my records.csv", "Postal Code", ".", "2026-07-20")
+  for (script in list(typed, uploaded)) {
+    expect_true(all(charToRaw(script) < as.raw(128)))
+    parsed <- parse(text = script)
+    expect_true(length(parsed) > 5L)
+    expect_match(script, "opcc_postal_points.zip", fixed = TRUE)
+  }
+})
