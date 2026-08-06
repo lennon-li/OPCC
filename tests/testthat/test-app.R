@@ -104,60 +104,31 @@ test_that(".postal_da_join preserves interleaved order and reserved columns", {
   expect_identical(anyDuplicated(names(joined)), 0L)
 })
 
-test_that("DA task state queues only the latest request and rejects stale work", {
-  state <- list(current_id = NULL, running_id = NULL, pending = NULL)
-  first <- list(id = 1L, dauids = "old")
-  second <- list(id = 2L, dauids = "new")
-  state <- OPCC:::.da_task_transition(state, "join", first)
-  expect_equal(state$invoke, first)
-  state$invoke <- NULL
-  state <- OPCC:::.da_task_transition(state, "join", second)
-  expect_equal(state$running_id, 1L)
-  expect_equal(state$pending, second)
-  state <- OPCC:::.da_task_transition(state, "finished")
-  expect_false(state$accept)
-  expect_equal(state$invoke, second)
-  state$invoke <- NULL
-  state <- OPCC:::.da_task_transition(state, "finished")
-  expect_true(state$accept)
-})
-
-test_that("DA task invalidation rejects running work and drops queued work", {
-  state <- list(current_id = NULL, running_id = NULL, pending = NULL)
-  first <- list(id = 1L, dauids = "old")
-  second <- list(id = 2L, dauids = "queued")
-  state <- OPCC:::.da_task_transition(state, "join", first)
-  state$invoke <- NULL
-  state <- OPCC:::.da_task_transition(state, "join", second)
-
-  state <- OPCC:::.da_task_transition(state, "invalidate")
-  expect_null(state$current_id)
-  expect_null(state$pending)
-  expect_equal(state$running_id, first$id)
-
-  state <- OPCC:::.da_task_transition(state, "finished")
-  expect_false(state$accept)
-  expect_null(state$invoke)
-})
-
-test_that("app wires upload invalidation after input and valid joins after validation", {
+test_that("app loads DA boundaries synchronously, after join validation", {
   app_source <- readLines(system.file("shiny", "app.R", package = "OPCC"))
-  upload_start <- grep("observeEvent\\(input\\$input_file", app_source)[[1]]
-  join_start <- grep("observeEvent\\(input\\$run_join", app_source)[[1]]
-  upload_block <- app_source[upload_start:(join_start - 1L)]
-  join_block <- app_source[join_start:length(app_source)]
 
-  expect_true(any(grepl(
-    '.da_task_transition(task_state, "invalidate")',
-    upload_block, fixed = TRUE
-  )))
+  # The boundary load previously ran in a future/multisession worker, which
+  # could deadlock and freeze Shiny's event loop. It must stay synchronous.
+  # Check code only; the file explains the history in comments.
+  app_code <- app_source[!grepl("^\\s*#", app_source)]
+  expect_false(any(grepl("ExtendedTask", app_code, fixed = TRUE)))
+  expect_false(any(grepl("future_promise", app_code, fixed = TRUE)))
+  expect_false(any(grepl("multisession", app_code, fixed = TRUE)))
+
+  join_start <- grep("observeEvent\\(input\\$run_join", app_source)[[1]]
+  join_block <- app_source[join_start:length(app_source)]
   validation_line <- grep(
     'inherits(result, "error")', join_block, fixed = TRUE
   )[[1]]
-  valid_join_line <- grep(
-    '.da_task_transition(', join_block, fixed = TRUE
+  boundary_line <- grep(
+    "load_da_simplified(da_simplify_tolerance)", join_block, fixed = TRUE
   )[[1]]
-  expect_gt(valid_join_line, validation_line)
+  expect_gt(boundary_line, validation_line)
+
+  # The boundary load must sit inside a progress indicator, so a long load
+  # never looks like a frozen app.
+  progress_line <- grep("withProgress", join_block, fixed = TRUE)
+  expect_true(any(progress_line < boundary_line))
 })
 
 test_that(".postal_da_join does not multiply duplicate input rows", {
@@ -176,7 +147,7 @@ test_that(".postal_da_join rejects an unknown column", {
 })
 
 test_that("app uploads a CSV and auto-detects the postal column offline", {
-  for (pkg in c("shiny", "bslib", "DT", "leaflet", "promises", "future")) {
+  for (pkg in c("shiny", "bslib", "DT", "leaflet")) {
     skip_if_not_installed(pkg)
   }
   app_dir <- system.file("shiny", package = "OPCC")

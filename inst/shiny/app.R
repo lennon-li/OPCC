@@ -2,15 +2,7 @@ library(shiny)
 library(bslib)
 library(DT)
 library(leaflet)
-library(promises)
-library(future)
 
-if (utils::packageVersion("shiny") < "1.8.0") {
-  stop(
-    "The OPCC Shiny app requires shiny >= 1.8.0 (for ExtendedTask); ",
-    "installed: ", utils::packageVersion("shiny")
-  )
-}
 if (utils::packageVersion("bslib") < "0.6.0") {
   stop(
     "The OPCC Shiny app requires bslib >= 0.6.0; ",
@@ -18,22 +10,32 @@ if (utils::packageVersion("bslib") < "0.6.0") {
   )
 }
 
-.previous_future_plan <- future::plan()
-.async_plan_initialized <- FALSE
-ensure_async_plan <- function() {
-  if (!isTRUE(.async_plan_initialized)) {
-    future::plan(future::multisession, workers = 2L)
-    .async_plan_initialized <<- TRUE
-  }
-  invisible(NULL)
-}
-shiny::onStop(function() {
-  if (isTRUE(.async_plan_initialized)) {
-    future::plan(.previous_future_plan)
-  }
-})
-
 `%||%` <- function(a, b) if (is.null(a)) b else a
+
+# The dissemination area boundaries are loaded synchronously, inside the same
+# withProgress() as the rest of the join. An earlier version ran this in a
+# future/multisession worker; under load the session deadlocked writing the
+# task payload to the worker socket, which froze Shiny's single event loop and
+# left the UI completely unresponsive - no progress, no popup, no redraw.
+load_da_simplified <- function(tolerance) {
+  rds <- file.path(
+    tools::R_user_dir("OPCC", "cache"), "shiny-app",
+    sprintf("opcc-da-on-2021-simplified-%sm.rds", tolerance)
+  )
+  if (file.exists(rds)) {
+    return(readRDS(rds))
+  }
+  paths <- OPCC::download_da_boundaries()
+  da_sf <- sf::st_read(paths$da, quiet = TRUE)
+  da_sf <- da_sf[da_sf$PRUID == "35", ]
+  da_sf <- sf::st_transform(da_sf, 3347)
+  da_sf <- sf::st_simplify(da_sf, preserveTopology = FALSE,
+                           dTolerance = tolerance)
+  da_sf <- sf::st_transform(da_sf, 4326)
+  dir.create(dirname(rds), recursive = TRUE, showWarnings = FALSE)
+  saveRDS(da_sf, rds)
+  da_sf
+}
 
 da_simplify_tolerance <- 50
 da_fill_color <- "#2a78d6"
@@ -216,7 +218,7 @@ show_status_popup <- function(kind, title_text, ...) {
       title_text),
     tagList(list(...)),
     easyClose = TRUE,
-    footer = NULL
+    footer = modalButton("OK")
   ))
 }
 
@@ -270,6 +272,33 @@ app_css <- "
 }
 .opcc-section-title:first-child {
   margin-top: 0;
+}
+.opcc-map-wrap {
+  position: relative;
+  height: 100%;
+}
+.opcc-map-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 500;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7rem;
+  background: rgba(246, 248, 251, 0.92);
+  text-align: center;
+  padding: 1rem;
+}
+.opcc-map-overlay .opcc-overlay-title {
+  color: #1b4f8f;
+  font-weight: 700;
+  font-size: 1.02rem;
+}
+.opcc-map-overlay .opcc-overlay-note {
+  color: #52606d;
+  font-size: 0.86rem;
+  max-width: 34rem;
 }
 .opcc-modal-band {
   color: #ffffff;
@@ -347,7 +376,11 @@ ui <- bslib::page_fillable(
       ),
       bslib::nav_panel(
         "Map",
-        leaflet::leafletOutput("da_map", height = "calc(100vh - 160px)")
+        tags$div(
+          class = "opcc-map-wrap",
+          leaflet::leafletOutput("da_map", height = "calc(100vh - 160px)"),
+          uiOutput("map_status")
+        )
       )
     )
   )
@@ -363,17 +396,9 @@ server <- function(input, output, session) {
   phu_rv <- reactiveVal(load_local_phu())
   correspondence_rv <- reactiveVal(NULL)
   centroids_rv <- reactiveVal(NULL)
-  request_counter <- 0L
-  task_state <- list(current_id = NULL, running_id = NULL, pending = NULL)
-
-  invoke_da_request <- function(request) {
-    ensure_async_plan()
-    da_task$invoke(request)
-  }
 
   observeEvent(input$input_file, {
     req(input$input_file)
-    task_state <<- OPCC:::.da_task_transition(task_state, "invalidate")
     records <- tryCatch(
       suppressWarnings(utils::read.csv(input$input_file$datapath,
         stringsAsFactors = FALSE, check.names = FALSE)),
@@ -496,25 +521,45 @@ server <- function(input, output, session) {
     dauids <- unique(dauid_values[!is.na(dauid_values)])
     n_points <- if (is.null(points)) 0L else nrow(points)
     if (length(dauids) > 0L) {
-      request_counter <<- request_counter + 1L
-      request_id <- request_counter
-      show_status_popup("success", "Join complete",
+      # Join and map are one action. The boundary load runs here, inside the
+      # same progress bar, so the user sees continuous feedback and the
+      # session never hands work to a background process.
+      da_sf <- tryCatch(
+        shiny::withProgress(
+          message = "Loading dissemination area boundaries",
+          detail = "First run downloads and simplifies the boundary file.",
+          value = 0.85,
+          load_da_simplified(da_simplify_tolerance)
+        ),
+        error = function(e) e
+      )
+      if (inherits(da_sf, "error")) {
+        da_matched_rv(NULL)
+        show_status_popup("error", "Boundary load failed",
+          tags$p(conditionMessage(da_sf)))
+        return()
+      }
+      da_matched <- da_sf[da_sf$DAUID %in% dauids, ]
+      da_matched_rv(da_matched)
+      tryCatch(
+        updateTabsetPanel("output_tab", selected = "Map", session = session),
+        error = function(e) invisible(NULL)
+      )
+      unmatched_note <- if (length(result$unmatched) > 0L) {
+        sprintf(" %s postal code(s) had no DA and are not drawn as polygons.",
+                length(result$unmatched))
+      } else {
+        ""
+      }
+      show_status_popup("success", "Join complete - map ready",
         tags$p(join_status_text(join_meta_rv(), nrow(result$joined))),
         tags$p(sprintf(
-          "%s dissemination area(s) matched; %s postal code point(s) available.",
-          format(length(dauids), big.mark = ","),
-          format(n_points, big.mark = ","))),
-        tags$p(sprintf("Correspondence vintage: %s (latest).", latest_da_vintage)),
-        tags$p(class = "text-muted small", "Drawing the map now."))
-      task_state <<- OPCC:::.da_task_transition(
-        task_state, "join", list(id = request_id, dauids = dauids))
-      if (!is.null(task_state$invoke)) {
-        request <- task_state$invoke
-        task_state$invoke <<- NULL
-        invoke_da_request(request)
-      }
+          "%s dissemination area(s) drawn; %s postal code point(s) on the map.%s",
+          format(nrow(da_matched), big.mark = ","),
+          format(n_points, big.mark = ","),
+          unmatched_note)),
+        tags$p(sprintf("Correspondence vintage: %s (latest).", latest_da_vintage)))
     } else {
-      task_state <<- OPCC:::.da_task_transition(task_state, "invalidate")
       show_status_popup("warning", "Join complete - nothing to draw",
         tags$p(join_status_text(join_meta_rv(), nrow(result$joined))),
         tags$p(sprintf("Correspondence vintage: %s (latest)", latest_da_vintage)),
@@ -541,6 +586,18 @@ server <- function(input, output, session) {
       list(id = "dl_map", label = "opcc_map.html", ready = map_ready),
       list(id = "dl_script", label = "reproduce.R", ready = joined_ready)
     ))
+  })
+
+  output$map_status <- renderUI({
+    if (is.null(da_matched_rv())) {
+      return(tags$div(
+        class = "opcc-map-overlay",
+        tags$div(class = "opcc-overlay-title", "No map yet"),
+        tags$div(class = "opcc-overlay-note",
+          "Enter postal codes and press Join to draw the map.")
+      ))
+    }
+    NULL
   })
 
   output$dl_csv <- downloadHandler(
@@ -601,85 +658,6 @@ server <- function(input, output, session) {
       htmlwidgets::saveWidget(map, file, selfcontained = TRUE)
     }
   )
-
-  da_task <- shiny::ExtendedTask$new(function(request) {
-    promises::future_promise({
-      loadNamespace("sf")
-      tolerance <- da_simplify_tolerance
-      rds <- file.path(
-        tools::R_user_dir("OPCC", "cache"), "shiny-app",
-        sprintf("opcc-da-on-2021-simplified-%sm.rds", tolerance)
-      )
-      if (!file.exists(rds)) {
-        paths <- OPCC::download_da_boundaries()
-        da_sf <- sf::st_read(paths$da, quiet = TRUE)
-        da_sf <- da_sf[da_sf$PRUID == "35", ]
-        da_sf <- sf::st_transform(da_sf, 3347)
-        da_sf <- sf::st_simplify(da_sf, preserveTopology = FALSE,
-                                 dTolerance = tolerance)
-        da_sf <- sf::st_transform(da_sf, 4326)
-        dir.create(dirname(rds), recursive = TRUE, showWarnings = FALSE)
-        saveRDS(da_sf, rds)
-      } else {
-        da_sf <- readRDS(rds)
-      }
-      list(id = request$id, da = da_sf[da_sf$DAUID %in% request$dauids, ])
-    })
-  })
-
-  observeEvent(da_task$status(), {
-    s <- da_task$status()
-    if (!s %in% c("success", "error")) {
-      return()
-    }
-    finished_id <- task_state$running_id
-    task_state <<- OPCC:::.da_task_transition(task_state, "finished")
-    accept <- isTRUE(task_state$accept)
-    next_request <- task_state$invoke
-    task_state$invoke <<- NULL
-    if (s == "success") {
-      task_result <- da_task$result()
-      accept <- accept && identical(task_result$id, finished_id)
-      da <- task_result$da
-      if (!accept) {
-        if (!is.null(next_request)) invoke_da_request(next_request)
-        return()
-      }
-      da_matched_rv(da)
-      tryCatch(
-        updateTabsetPanel("output_tab", selected = "Map", session = session),
-        error = function(e) invisible(NULL)
-      )
-      meta <- join_meta_rv()
-      points <- postal_points_rv()
-      n_points <- if (is.null(points)) 0L else nrow(points)
-      unmatched_note <- if (!is.null(meta) && length(meta$unmatched) > 0L) {
-        sprintf(" %s postal code(s) had no DA and are not drawn as polygons.",
-                length(meta$unmatched))
-      } else {
-        ""
-      }
-      show_status_popup("success", "Join complete - map ready",
-        tags$p(join_status_text(meta, nrow(joined_rv()))),
-        tags$p(sprintf(
-          "%s dissemination area(s) drawn; %s postal code point(s) on the map.%s",
-          format(nrow(da), big.mark = ","),
-          format(n_points, big.mark = ","),
-          unmatched_note)),
-        tags$p(sprintf("Correspondence vintage: %s (latest).", meta$vintage)),
-        tags$p(class = "text-muted small",
-          paste("The StatCan 2021 DA boundary file and the OPCC postal",
-                "centroid file are each downloaded once, checksum-verified,",
-                "and reused from the local cache.")))
-    } else {
-      if (accept) {
-        da_matched_rv(NULL)
-        show_status_popup("error", "Boundary load failed",
-          tags$p(conditionMessage(da_task$error())))
-      }
-    }
-    if (!is.null(next_request)) invoke_da_request(next_request)
-  })
 
   output$da_map <- leaflet::renderLeaflet({
     da <- da_matched_rv()

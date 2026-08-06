@@ -21,7 +21,7 @@
 run_app <- function(...) {
   rlang::check_installed(
     c("shiny", "bslib (>= 0.6.0)", "DT", "leaflet", "htmlwidgets",
-      "promises", "future", "sf"),
+      "sf"),
     reason = "to run the OPCC Shiny app."
   )
   if (utils::packageVersion("shiny") < "1.8.0") {
@@ -126,35 +126,6 @@ run_app <- function(...) {
     n_input = nrow(records),
     n_codes = length(codes)
   )
-}
-
-.da_task_transition <- function(state, event, request = NULL) {
-  if (identical(event, "invalidate")) {
-    state$current_id <- NULL
-    state$pending <- NULL
-    return(state)
-  }
-  if (identical(event, "join")) {
-    state$current_id <- request$id
-    state$pending <- request
-    if (is.null(state$running_id)) {
-      state$running_id <- request$id
-      state$pending <- NULL
-      state$invoke <- request
-    }
-    return(state)
-  }
-  if (!identical(event, "finished")) {
-    stop("Unknown DA task event", call. = FALSE)
-  }
-  state$accept <- identical(state$running_id, state$current_id)
-  state$running_id <- NULL
-  if (!is.null(state$pending)) {
-    state$running_id <- state$pending$id
-    state$invoke <- state$pending
-    state$pending <- NULL
-  }
-  state
 }
 
 .deparse_chr <- function(x) {
