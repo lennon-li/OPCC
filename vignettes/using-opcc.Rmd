@@ -29,8 +29,7 @@ through open, redistributable evidence.
 Requires R >= 4.1.
 
 ```{r, eval = FALSE}
-install.packages("pak")
-pak::pak("lennon-li/OPCC")
+install.packages("OPCC")
 ```
 
 ### Key concepts

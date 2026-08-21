@@ -1648,7 +1648,12 @@ sli_validate_producer_files <- function(
     files,
     repo_root
   )
-  repository_path <- normalizePath(repo_root, mustWork = TRUE)
+  repository_path <- normalizePath(repo_root, winslash = "/", mustWork = TRUE)
+  # system2() collapses args into a single command line, so a repo path
+  # containing a space (routine on Windows and macOS) would split into two
+  # arguments and git -C would fail. Quote for the shell only: the unquoted
+  # form is still what file.path()/file.exists() below need.
+  repository_arg <- shQuote(repository_path)
   for (relative_path in files) {
     if (!grepl("^[A-Za-z0-9][A-Za-z0-9._/-]*$", relative_path) ||
         grepl("(^|/)\\.\\.(/|$)", relative_path)) {
@@ -1662,7 +1667,7 @@ sli_validate_producer_files <- function(
       "git",
       c(
         "-C",
-        repository_path,
+        repository_arg,
         "rev-parse",
         paste0(full_sha, ":", relative_path)
       ),
@@ -1671,7 +1676,7 @@ sli_validate_producer_files <- function(
     ))
     working_hash <- suppressWarnings(system2(
       "git",
-      c("-C", repository_path, "hash-object", relative_path),
+      c("-C", repository_arg, "hash-object", relative_path),
       stdout = TRUE,
       stderr = TRUE
     ))

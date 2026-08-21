@@ -33,7 +33,13 @@ jobs:
           extra-packages: any::rcmdcheck
           needs: check
       - name: Check package
-        run: Rscript -e 'rcmdcheck::rcmdcheck(args = "--no-manual", error_on = "warning")'
+        env:
+          # skip_on_cran() skips unless NOT_CRAN is "true"; without this the
+          # cross-platform run silently skips the very tests it exists to run.
+          NOT_CRAN: "true"
+        run: >
+          Rscript -e 'rcmdcheck::rcmdcheck(args = c("--no-manual", "--as-cran"),
+          error_on = "warning")'
 
   release-validation:
     name: Release validation (Ubuntu)
