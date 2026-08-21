@@ -23,3 +23,20 @@ A data frame of postal-code-to-DB links.
 \description{
 Download, cache, and verify a correspondence release
 }
+\examples{
+list_vintages("DB")
+
+# Pass an explicit cache directory; never write to the default user cache
+# from an example or a test.
+cache <- tempfile("opcc-cache")
+
+\donttest{
+# Downloads and checksum-verifies a release artifact, so it needs network
+# access and is not run automatically.
+if (interactive()) {
+  m2 <- get_correspondence("2026-06-26", cache_dir = cache)
+  utils::head(m2[c("postal_code", "DBUID", "DAUID", "allocation_weight")])
+}
+}
+
+}

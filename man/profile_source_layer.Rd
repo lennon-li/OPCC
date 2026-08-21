@@ -15,3 +15,21 @@ A list of coverage and coordinate-quality metrics.
 \description{
 Profile a local source layer
 }
+\examples{
+adapter <- new_source_adapter(
+  source_id = "example_open_addresses",
+  licence = "Open Government Licence - Ontario",
+  lineage = "Municipal open address points, retrieved from a city portal",
+  retrieval_date = as.Date("2026-01-15"),
+  schema_map = list(postal_code = "pc", latitude = "lat", longitude = "lon")
+)
+raw <- data.frame(
+  pc = c("M5V 3A8", "K1A 0A6"),
+  lat = c(43.6426, 45.4215),
+  lon = c(-79.3871, -75.6972),
+  stringsAsFactors = FALSE
+)
+layer <- build_source_layer(raw, adapter)
+profile_source_layer(layer)
+
+}

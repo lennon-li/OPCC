@@ -34,3 +34,22 @@ Validates that centroids fall within the Ontario boundary, assigns
 each to exactly one 2021 Dissemination Block via point-in-polygon,
 and joins the Geographic Attribute File for higher geographies.
 }
+\examples{
+# Consumes the census boundary and GAF downloads, so it is not run
+# automatically.
+\donttest{
+if (interactive()) {
+  cache <- tempfile("opcc-build")
+  boundaries <- download_census_boundaries(cache_dir = cache)
+  gaf_csv <- download_gaf(cache_dir = cache)
+  centroids_csv <- build_centroids(
+    download_nar(cache_dir = cache),
+    download_geonames(cache_dir = cache),
+    output_dir = file.path(cache, "centroids")
+  )
+  build_db_assignment(centroids_csv, boundaries$province, boundaries$db,
+                      gaf_csv, output_dir = file.path(cache, "rollup"))
+}
+}
+
+}

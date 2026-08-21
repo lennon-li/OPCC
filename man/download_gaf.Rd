@@ -15,3 +15,13 @@ Invisibly, the path to the extracted GAF CSV.
 \description{
 Downloads the GAF zip and extracts the CSV. Skips if already cached.
 }
+\examples{
+# Downloads the Statistics Canada Geographic Attribute File zip, so it is
+# not run automatically.
+\donttest{
+if (interactive()) {
+  gaf_csv <- download_gaf(cache_dir = tempfile("opcc-build"))
+}
+}
+
+}

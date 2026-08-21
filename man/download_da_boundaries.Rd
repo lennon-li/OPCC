@@ -20,3 +20,14 @@ the zip is already cached. On first download a SHA-256 sidecar file is
 written next to the zip and every later reuse is verified against it;
 Statistics Canada does not publish an official checksum for this file.
 }
+\examples{
+# Downloads a ~200 MB Statistics Canada boundary zip, so it is not run
+# automatically.
+\donttest{
+if (interactive()) {
+  boundaries <- download_da_boundaries(cache_dir = tempfile("opcc-build"))
+  boundaries$da
+}
+}
+
+}

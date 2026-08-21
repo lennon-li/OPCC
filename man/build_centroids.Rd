@@ -22,3 +22,17 @@ Reads the extracted NAR Address and Location part files, computes the
 mean coordinate per postal code, and merges with GeoNames Ontario
 centroids. NAR centroids take priority; GeoNames fills gaps.
 }
+\examples{
+# Consumes the multi-gigabyte NAR and GeoNames downloads, so it is not run
+# automatically.
+\donttest{
+if (interactive()) {
+  cache <- tempfile("opcc-build")
+  nar_dir <- download_nar(cache_dir = cache)
+  geonames_txt <- download_geonames(cache_dir = cache)
+  build_centroids(nar_dir, geonames_txt,
+                  output_dir = file.path(cache, "centroids"))
+}
+}
+
+}

@@ -15,3 +15,19 @@ A data frame with one row per \code{postal_code} and \code{DAUID}.
 \description{
 Aggregate postal-code-to-DB evidence to DA links
 }
+\examples{
+# A small in-line postal-code-to-DB evidence table.  Allocation weights
+# must sum to one within each postal code.
+db_links <- data.frame(
+  postal_code = c("M5V 3A8", "M5V 3A8", "M5V 3A8"),
+  DBUID = c("35200001000", "35200001001", "35200002000"),
+  DAUID = c("35200001", "35200001", "35200002"),
+  allocation_weight = c(0.5, 0.25, 0.25),
+  source_vintage = "2026-06-26",
+  census_vintage = "2021",
+  evidence_class = "NAR",
+  stringsAsFactors = FALSE
+)
+aggregate_da_correspondence(db_links)
+
+}

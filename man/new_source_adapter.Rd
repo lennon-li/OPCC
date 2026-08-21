@@ -52,3 +52,17 @@ An \code{opcc_source_adapter} object.
 \description{
 Define a source adapter for a local evidence layer
 }
+\examples{
+adapter <- new_source_adapter(
+  source_id = "example_open_addresses",
+  licence = "Open Government Licence - Ontario",
+  lineage = "Municipal open address points, retrieved from a city portal",
+  retrieval_date = as.Date("2026-01-15"),
+  schema_map = list(postal_code = "pc", latitude = "lat", longitude = "lon"),
+  location_type = "physical",
+  coordinate_method = "address_point"
+)
+adapter$source_id
+adapter$schema_map
+
+}

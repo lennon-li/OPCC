@@ -12,3 +12,10 @@ An \code{opcc_source_adapter} for the packaged GeoNames point artifact.
 \description{
 Load the versioned GeoNames supplementary-point adapter
 }
+\examples{
+adapter <- geonames_supplementary_adapter()
+adapter$source_id
+adapter$coordinate_method
+adapter$licence
+
+}

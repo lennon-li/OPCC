@@ -19,3 +19,23 @@ The returned URL opens GitHub's issue composer with bundle provenance
 prefilled. GitHub does not support file attachments through this URL, so the
 contributor must attach the generated bundle manually before submitting.
 }
+\examples{
+adapter <- new_source_adapter(
+  source_id = "example_open_addresses",
+  licence = "Open Government Licence - Ontario",
+  lineage = "Municipal open address points, retrieved from a city portal",
+  retrieval_date = as.Date("2026-01-15")
+)
+layer <- build_source_layer(
+  data.frame(postal_code = c("M5V 3A8", "K1A 0A6")),
+  adapter
+)
+output_dir <- tempfile("opcc-bundle")
+bundle <- contribution_bundle(layer, output_dir = output_dir)
+
+issue_url <- contribution_issue_url(bundle)
+substr(issue_url, 1, 55)
+
+unlink(output_dir, recursive = TRUE)
+
+}

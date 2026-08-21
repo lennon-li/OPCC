@@ -111,6 +111,21 @@
 #'
 #' @param correspondence A postal-code-to-DB correspondence data frame.
 #' @return A data frame with one row per `postal_code` and `DAUID`.
+#' @examples
+#' # A small in-line postal-code-to-DB evidence table.  Allocation weights
+#' # must sum to one within each postal code.
+#' db_links <- data.frame(
+#'   postal_code = c("M5V 3A8", "M5V 3A8", "M5V 3A8"),
+#'   DBUID = c("35200001000", "35200001001", "35200002000"),
+#'   DAUID = c("35200001", "35200001", "35200002"),
+#'   allocation_weight = c(0.5, 0.25, 0.25),
+#'   source_vintage = "2026-06-26",
+#'   census_vintage = "2021",
+#'   evidence_class = "NAR",
+#'   stringsAsFactors = FALSE
+#' )
+#' aggregate_da_correspondence(db_links)
+#'
 #' @export
 aggregate_da_correspondence <- function(correspondence) {
   required <- c("postal_code", "DBUID", "DAUID")
@@ -190,6 +205,13 @@ aggregate_da_correspondence <- function(correspondence) {
 #' @param strict If `TRUE`, reject any non-missing invalid value instead of
 #'   returning `NA` for it.
 #' @return A character vector in `A1A 1A1` form.
+#' @examples
+#' normalize_postal_code(c("m5v3a8", "M5V 3A8", "M5V-3A8"))
+#'
+#' # Invalid values become NA unless strict = TRUE, which raises an error.
+#' normalize_postal_code(c("M5V 3A8", "not a postal code"))
+#' try(normalize_postal_code("not a postal code", strict = TRUE))
+#'
 #' @export
 normalize_postal_code <- function(x, strict = FALSE) {
   if (!is.character(x)) x <- as.character(x)
@@ -207,6 +229,10 @@ normalize_postal_code <- function(x, strict = FALSE) {
 #'
 #' @param level Geography level, `"DB"` or `"DA"`.
 #' @return A character vector of release vintages.
+#' @examples
+#' list_vintages("DB")
+#' list_vintages("DA")
+#'
 #' @export
 list_vintages <- function(level = c("DB", "DA")) {
   level <- match.arg(level)
@@ -219,6 +245,22 @@ list_vintages <- function(level = c("DB", "DA")) {
 #' @param cache_dir Directory used for verified downloaded files.
 #' @param offline Require an already cached verified file.
 #' @return A data frame of postal-code-to-DB links.
+#' @examples
+#' list_vintages("DB")
+#'
+#' # Pass an explicit cache directory; never write to the default user cache
+#' # from an example or a test.
+#' cache <- tempfile("opcc-cache")
+#'
+#' \donttest{
+#' # Downloads and checksum-verifies a release artifact, so it needs network
+#' # access and is not run automatically.
+#' if (interactive()) {
+#'   m2 <- get_correspondence("2026-06-26", cache_dir = cache)
+#'   utils::head(m2[c("postal_code", "DBUID", "DAUID", "allocation_weight")])
+#' }
+#' }
+#'
 #' @export
 get_correspondence <- function(
     vintage = "2026-06-26",
@@ -240,6 +282,22 @@ get_correspondence <- function(
 #' @param cache_dir Directory used for verified downloaded files.
 #' @param offline Require an already cached verified file.
 #' @return A data frame of postal-code-to-DA links with contributing DB lineage.
+#' @examples
+#' list_vintages("DA")
+#'
+#' # Pass an explicit cache directory; never write to the default user cache
+#' # from an example or a test.
+#' cache <- tempfile("opcc-cache")
+#'
+#' \donttest{
+#' # Downloads and checksum-verifies a release artifact, so it needs network
+#' # access and is not run automatically.
+#' if (interactive()) {
+#'   m5 <- get_da_correspondence("2026-06-26", cache_dir = cache)
+#'   utils::head(m5[c("postal_code", "DAUID", "allocation_weight")])
+#' }
+#' }
+#'
 #' @export
 get_da_correspondence <- function(
     vintage = "2026-06-26",
@@ -267,6 +325,31 @@ get_da_correspondence <- function(
 #' @param ... Passed to [get_correspondence()] when `correspondence` is NULL.
 #' @return A data frame; unmatched normalized postal codes are stored in its
 #'   `unmatched` attribute.
+#' @examples
+#' # Supplying `correspondence` keeps the lookup fully offline.
+#' da_links <- data.frame(
+#'   postal_code = c("M5V 3A8", "M5V 3A8"),
+#'   DAUID = c("35200001", "35200002"),
+#'   allocation_weight = c(0.75, 0.25),
+#'   n_contributing_dbs = c(2L, 1L),
+#'   contributing_dbuids = c("35200001000|35200001001", "35200002000"),
+#'   source_vintages = "2026-06-26",
+#'   census_vintages = "2021",
+#'   evidence_classes = "NAR",
+#'   best_link = c(TRUE, FALSE),
+#'   stringsAsFactors = FALSE
+#' )
+#' pc_to_geo("M5V 3A8", level = "DA", correspondence = da_links)
+#'
+#' # A single best link, when one is specifically needed.
+#' pc_to_geo("m5v3a8", level = "DA", correspondence = da_links,
+#'           all_links = FALSE)
+#'
+#' # Unmatched postal codes stay explicit rather than being dropped silently.
+#' found <- pc_to_geo(c("M5V 3A8", "K1A 0A6"), level = "DA",
+#'                    correspondence = da_links)
+#' attr(found, "unmatched")
+#'
 #' @export
 pc_to_geo <- function(
     postal_code,
@@ -295,6 +378,19 @@ pc_to_geo <- function(
 #' @param cache_dir Directory used for verified downloaded files.
 #' @param offline Require an already cached verified file.
 #' @return A parsed JSON list.
+#' @examples
+#' list_vintages("DB")
+#' cache <- tempfile("opcc-cache")
+#'
+#' \donttest{
+#' # Downloads and checksum-verifies the release manifest, so it needs
+#' # network access and is not run automatically.
+#' if (interactive()) {
+#'   manifest <- release_manifest("2026-06-26", cache_dir = cache)
+#'   names(manifest)
+#' }
+#' }
+#'
 #' @export
 release_manifest <- function(
     vintage = "2026-06-26",
@@ -319,6 +415,18 @@ release_manifest <- function(
 #' @param cache_dir Directory used for verified downloaded files.
 #' @param offline Require an already cached verified file.
 #' @return Invisibly `TRUE`, or an error describing a failed invariant.
+#' @examples
+#' list_vintages("DB")
+#' cache <- tempfile("opcc-cache")
+#'
+#' \donttest{
+#' # Downloads the release and its manifest, so it needs network access and
+#' # is not run automatically.
+#' if (interactive()) {
+#'   validate_release("2026-06-26", cache_dir = cache)
+#' }
+#' }
+#'
 #' @export
 validate_release <- function(
     vintage = "2026-06-26",
@@ -367,6 +475,29 @@ validate_release <- function(
 #'   By default, observations from every source are returned.
 #' @return All matching source-qualified point observations, including DB/DA
 #'   fields when a point intersects a 2021 Ontario dissemination block.
+#' @examples
+#' # `point_file` accepts any local gzip CSV with the required columns, which
+#' # makes point lookups fully offline and air-gapped.
+#' points <- data.frame(
+#'   postal_code = c("M5V 3A8", "M5V 3A8"),
+#'   latitude = c(43.6426, 43.6430),
+#'   longitude = c(-79.3871, -79.3875),
+#'   point_source = c("nar", "geonames"),
+#'   point_method = c("address_point", "centroid"),
+#'   stringsAsFactors = FALSE
+#' )
+#' point_file <- tempfile("opcc-points", fileext = ".csv.gz")
+#' connection <- gzfile(point_file, "w")
+#' utils::write.csv(points, connection, row.names = FALSE)
+#' close(connection)
+#'
+#' pc_to_point("M5V 3A8", point_file = point_file)
+#'
+#' # Restrict the evidence to one source.
+#' pc_to_point("M5V 3A8", point_file = point_file, source = "nar")
+#'
+#' unlink(point_file)
+#'
 #' @export
 pc_to_point <- function(
     postal_code,
@@ -516,6 +647,19 @@ pc_to_point <- function(
 #' @param coverage_type Source coverage classification.
 #' @param update_frequency Expected source update frequency.
 #' @return An `opcc_source_adapter` object.
+#' @examples
+#' adapter <- new_source_adapter(
+#'   source_id = "example_open_addresses",
+#'   licence = "Open Government Licence - Ontario",
+#'   lineage = "Municipal open address points, retrieved from a city portal",
+#'   retrieval_date = as.Date("2026-01-15"),
+#'   schema_map = list(postal_code = "pc", latitude = "lat", longitude = "lon"),
+#'   location_type = "physical",
+#'   coordinate_method = "address_point"
+#' )
+#' adapter$source_id
+#' adapter$schema_map
+#'
 #' @export
 new_source_adapter <- function(
     source_id,
@@ -610,6 +754,12 @@ new_source_adapter <- function(
 #' Load the versioned GeoNames supplementary-point adapter
 #'
 #' @return An `opcc_source_adapter` for the packaged GeoNames point artifact.
+#' @examples
+#' adapter <- geonames_supplementary_adapter()
+#' adapter$source_id
+#' adapter$coordinate_method
+#' adapter$licence
+#'
 #' @export
 geonames_supplementary_adapter <- function() {
   path <- system.file("extdata", "adapters", "geonames-2026-07-19.json", package = "OPCC")
@@ -641,6 +791,25 @@ geonames_supplementary_adapter <- function() {
 #'   Coordinate-bearing rows outside the inclusive broad Ontario bounds
 #'   (latitude 41.6 to 56.9, longitude -95.2 to -74.3) are invalid and counted
 #'   in `outside_ontario_bounds_rows`.
+#' @examples
+#' adapter <- new_source_adapter(
+#'   source_id = "example_open_addresses",
+#'   licence = "Open Government Licence - Ontario",
+#'   lineage = "Municipal open address points, retrieved from a city portal",
+#'   retrieval_date = as.Date("2026-01-15"),
+#'   schema_map = list(postal_code = "pc", latitude = "lat", longitude = "lon")
+#' )
+#' raw <- data.frame(
+#'   pc = c("m5v3a8", "K1A 0A6", "not a postal code"),
+#'   lat = c(43.6426, 45.4215, NA),
+#'   lon = c(-79.3871, -75.6972, NA),
+#'   stringsAsFactors = FALSE
+#' )
+#' clean <- validate_source_data(raw, adapter, on_invalid = "quarantine")
+#' clean$postal_code
+#' attr(clean, "opcc_validation_report")[c("accepted_rows", "rejected_rows")]
+#' attr(clean, "opcc_quarantine")$.opcc_validation_reason
+#'
 #' @export
 validate_source_data <- function(
     data,
@@ -788,6 +957,24 @@ validate_source_data <- function(
 #' @param on_invalid How to handle invalid rows: error, drop them, or retain
 #'   them in the `opcc_quarantine` attribute.
 #' @return An `opcc_source_layer` data frame, never merged into a release.
+#' @examples
+#' adapter <- new_source_adapter(
+#'   source_id = "example_open_addresses",
+#'   licence = "Open Government Licence - Ontario",
+#'   lineage = "Municipal open address points, retrieved from a city portal",
+#'   retrieval_date = as.Date("2026-01-15"),
+#'   schema_map = list(postal_code = "pc", latitude = "lat", longitude = "lon")
+#' )
+#' raw <- data.frame(
+#'   pc = c("m5v3a8", "K1A 0A6", "not a postal code"),
+#'   lat = c(43.6426, 45.4215, NA),
+#'   lon = c(-79.3871, -75.6972, NA),
+#'   stringsAsFactors = FALSE
+#' )
+#' layer <- build_source_layer(raw, adapter, on_invalid = "drop")
+#' layer[c("postal_code", "source_id", "source_retrieval_date")]
+#' class(layer)
+#'
 #' @export
 build_source_layer <- function(
     data,
@@ -816,6 +1003,23 @@ build_source_layer <- function(
 #'
 #' @param layer A layer created by [build_source_layer()].
 #' @return A list of coverage and coordinate-quality metrics.
+#' @examples
+#' adapter <- new_source_adapter(
+#'   source_id = "example_open_addresses",
+#'   licence = "Open Government Licence - Ontario",
+#'   lineage = "Municipal open address points, retrieved from a city portal",
+#'   retrieval_date = as.Date("2026-01-15"),
+#'   schema_map = list(postal_code = "pc", latitude = "lat", longitude = "lon")
+#' )
+#' raw <- data.frame(
+#'   pc = c("M5V 3A8", "K1A 0A6"),
+#'   lat = c(43.6426, 45.4215),
+#'   lon = c(-79.3871, -75.6972),
+#'   stringsAsFactors = FALSE
+#' )
+#' layer <- build_source_layer(raw, adapter)
+#' profile_source_layer(layer)
+#'
 #' @export
 profile_source_layer <- function(layer) {
   .contribution_message()
@@ -839,6 +1043,26 @@ profile_source_layer <- function(layer) {
 #' @param output_dir Explicit directory in which to create a new bundle directory.
 #' @param fixture_rows Maximum normalized sample rows to include.
 #' @return A named list of generated bundle paths.
+#' @examples
+#' adapter <- new_source_adapter(
+#'   source_id = "example_open_addresses",
+#'   licence = "Open Government Licence - Ontario",
+#'   lineage = "Municipal open address points, retrieved from a city portal",
+#'   retrieval_date = as.Date("2026-01-15")
+#' )
+#' layer <- build_source_layer(
+#'   data.frame(postal_code = c("M5V 3A8", "K1A 0A6")),
+#'   adapter
+#' )
+#'
+#' # `output_dir` is required and must be explicit; a session temporary
+#' # directory keeps the example self-contained.
+#' output_dir <- tempfile("opcc-bundle")
+#' bundle <- contribution_bundle(layer, output_dir = output_dir)
+#' basename(unlist(bundle))
+#'
+#' unlink(output_dir, recursive = TRUE)
+#'
 #' @export
 contribution_bundle <- function(layer, output_dir = NULL, fixture_rows = 100L) {
   .contribution_message()
@@ -909,6 +1133,25 @@ contribution_bundle <- function(layer, output_dir = NULL, fixture_rows = 100L) {
 #' @param bundle A bundle returned by [contribution_bundle()].
 #' @param repository GitHub repository in `owner/repository` form.
 #' @return A GitHub issue-composer URL.
+#' @examples
+#' adapter <- new_source_adapter(
+#'   source_id = "example_open_addresses",
+#'   licence = "Open Government Licence - Ontario",
+#'   lineage = "Municipal open address points, retrieved from a city portal",
+#'   retrieval_date = as.Date("2026-01-15")
+#' )
+#' layer <- build_source_layer(
+#'   data.frame(postal_code = c("M5V 3A8", "K1A 0A6")),
+#'   adapter
+#' )
+#' output_dir <- tempfile("opcc-bundle")
+#' bundle <- contribution_bundle(layer, output_dir = output_dir)
+#'
+#' issue_url <- contribution_issue_url(bundle)
+#' substr(issue_url, 1, 55)
+#'
+#' unlink(output_dir, recursive = TRUE)
+#'
 #' @export
 contribution_issue_url <- function(bundle, repository = "lennon-li/OPCC") {
   if (!inherits(bundle, "opcc_contribution_bundle") || !file.exists(bundle$provenance)) {
@@ -951,6 +1194,27 @@ contribution_issue_url <- function(bundle, repository = "lennon-li/OPCC") {
 #' @param open Whether to open the returned URL in a browser. Defaults to
 #'   `FALSE` so submission remains an explicit user action.
 #' @return Invisibly, the GitHub issue-composer URL.
+#' @examples
+#' adapter <- new_source_adapter(
+#'   source_id = "example_open_addresses",
+#'   licence = "Open Government Licence - Ontario",
+#'   lineage = "Municipal open address points, retrieved from a city portal",
+#'   retrieval_date = as.Date("2026-01-15")
+#' )
+#' layer <- build_source_layer(
+#'   data.frame(postal_code = c("M5V 3A8", "K1A 0A6")),
+#'   adapter
+#' )
+#' output_dir <- tempfile("opcc-bundle")
+#' bundle <- contribution_bundle(layer, output_dir = output_dir)
+#'
+#' # open = FALSE keeps submission an explicit user action, so nothing is
+#' # sent and no browser is opened here.
+#' issue_url <- suppressMessages(open_contribution_issue(bundle))
+#' substr(issue_url, 1, 55)
+#'
+#' unlink(output_dir, recursive = TRUE)
+#'
 #' @export
 open_contribution_issue <- function(bundle, repository = "lennon-li/OPCC", open = FALSE) {
   url <- contribution_issue_url(bundle, repository)

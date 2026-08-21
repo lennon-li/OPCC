@@ -26,3 +26,16 @@ Invisibly \code{TRUE}, or an error describing a failed invariant.
 \description{
 Validate a verified correspondence release
 }
+\examples{
+list_vintages("DB")
+cache <- tempfile("opcc-cache")
+
+\donttest{
+# Downloads the release and its manifest, so it needs network access and
+# is not run automatically.
+if (interactive()) {
+  validate_release("2026-06-26", cache_dir = cache)
+}
+}
+
+}

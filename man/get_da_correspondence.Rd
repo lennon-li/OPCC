@@ -23,3 +23,20 @@ A data frame of postal-code-to-DA links with contributing DB lineage.
 \description{
 Download, cache, and verify a direct DA correspondence release
 }
+\examples{
+list_vintages("DA")
+
+# Pass an explicit cache directory; never write to the default user cache
+# from an example or a test.
+cache <- tempfile("opcc-cache")
+
+\donttest{
+# Downloads and checksum-verifies a release artifact, so it needs network
+# access and is not run automatically.
+if (interactive()) {
+  m5 <- get_da_correspondence("2026-06-26", cache_dir = cache)
+  utils::head(m5[c("postal_code", "DAUID", "allocation_weight")])
+}
+}
+
+}

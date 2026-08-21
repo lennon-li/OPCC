@@ -16,3 +16,13 @@ Invisibly, the path to the extracted \code{CA_full.txt}.
 Downloads the GeoNames CA_full.csv.zip and extracts the tab-delimited
 text file. Skips the download if already cached.
 }
+\examples{
+# Downloads the GeoNames CA_full.csv.zip, so it needs network access and
+# is not run automatically.
+\donttest{
+if (interactive()) {
+  geonames_txt <- download_geonames(cache_dir = tempfile("opcc-build"))
+}
+}
+
+}

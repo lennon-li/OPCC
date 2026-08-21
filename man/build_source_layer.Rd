@@ -24,3 +24,22 @@ An \code{opcc_source_layer} data frame, never merged into a release.
 \description{
 Build a source-separated local evidence layer
 }
+\examples{
+adapter <- new_source_adapter(
+  source_id = "example_open_addresses",
+  licence = "Open Government Licence - Ontario",
+  lineage = "Municipal open address points, retrieved from a city portal",
+  retrieval_date = as.Date("2026-01-15"),
+  schema_map = list(postal_code = "pc", latitude = "lat", longitude = "lon")
+)
+raw <- data.frame(
+  pc = c("m5v3a8", "K1A 0A6", "not a postal code"),
+  lat = c(43.6426, 45.4215, NA),
+  lon = c(-79.3871, -75.6972, NA),
+  stringsAsFactors = FALSE
+)
+layer <- build_source_layer(raw, adapter, on_invalid = "drop")
+layer[c("postal_code", "source_id", "source_retrieval_date")]
+class(layer)
+
+}

@@ -31,3 +31,29 @@ A data frame; unmatched normalized postal codes are stored in its
 All DB links are returned by default.  Set \code{all_links = FALSE} only when a
 single best link is specifically needed.
 }
+\examples{
+# Supplying `correspondence` keeps the lookup fully offline.
+da_links <- data.frame(
+  postal_code = c("M5V 3A8", "M5V 3A8"),
+  DAUID = c("35200001", "35200002"),
+  allocation_weight = c(0.75, 0.25),
+  n_contributing_dbs = c(2L, 1L),
+  contributing_dbuids = c("35200001000|35200001001", "35200002000"),
+  source_vintages = "2026-06-26",
+  census_vintages = "2021",
+  evidence_classes = "NAR",
+  best_link = c(TRUE, FALSE),
+  stringsAsFactors = FALSE
+)
+pc_to_geo("M5V 3A8", level = "DA", correspondence = da_links)
+
+# A single best link, when one is specifically needed.
+pc_to_geo("m5v3a8", level = "DA", correspondence = da_links,
+          all_links = FALSE)
+
+# Unmatched postal codes stay explicit rather than being dropped silently.
+found <- pc_to_geo(c("M5V 3A8", "K1A 0A6"), level = "DA",
+                   correspondence = da_links)
+attr(found, "unmatched")
+
+}

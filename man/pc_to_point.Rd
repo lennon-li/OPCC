@@ -35,3 +35,27 @@ fields when a point intersects a 2021 Ontario dissemination block.
 \description{
 Look up source-qualified point observations
 }
+\examples{
+# `point_file` accepts any local gzip CSV with the required columns, which
+# makes point lookups fully offline and air-gapped.
+points <- data.frame(
+  postal_code = c("M5V 3A8", "M5V 3A8"),
+  latitude = c(43.6426, 43.6430),
+  longitude = c(-79.3871, -79.3875),
+  point_source = c("nar", "geonames"),
+  point_method = c("address_point", "centroid"),
+  stringsAsFactors = FALSE
+)
+point_file <- tempfile("opcc-points", fileext = ".csv.gz")
+connection <- gzfile(point_file, "w")
+utils::write.csv(points, connection, row.names = FALSE)
+close(connection)
+
+pc_to_point("M5V 3A8", point_file = point_file)
+
+# Restrict the evidence to one source.
+pc_to_point("M5V 3A8", point_file = point_file, source = "nar")
+
+unlink(point_file)
+
+}

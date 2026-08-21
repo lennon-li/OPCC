@@ -26,3 +26,17 @@ A parsed JSON list.
 \description{
 Read and verify a release manifest
 }
+\examples{
+list_vintages("DB")
+cache <- tempfile("opcc-cache")
+
+\donttest{
+# Downloads and checksum-verifies the release manifest, so it needs
+# network access and is not run automatically.
+if (interactive()) {
+  manifest <- release_manifest("2026-06-26", cache_dir = cache)
+  names(manifest)
+}
+}
+
+}

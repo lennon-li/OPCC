@@ -43,6 +43,15 @@
 #'   user-level directory under `tools::R_user_dir("OPCC", "cache")`.
 #' @return Invisibly, the path to the NAR scratch directory containing
 #'   the extracted Ontario CSV files.
+#' @examples
+#' # Downloads the ~1.6 GB Statistics Canada NAR release, so it is not run
+#' # automatically.  Pass an explicit cache directory to keep files local.
+#' \donttest{
+#' if (interactive()) {
+#'   nar_dir <- download_nar(cache_dir = tempfile("opcc-build"))
+#' }
+#' }
+#'
 #' @export
 download_nar <- function(cache_dir = NULL) {
   cache <- .opcc_build_cache(cache_dir)
@@ -77,6 +86,15 @@ download_nar <- function(cache_dir = NULL) {
 #'
 #' @param cache_dir Build cache directory.
 #' @return Invisibly, the path to the extracted `CA_full.txt`.
+#' @examples
+#' # Downloads the GeoNames CA_full.csv.zip, so it needs network access and
+#' # is not run automatically.
+#' \donttest{
+#' if (interactive()) {
+#'   geonames_txt <- download_geonames(cache_dir = tempfile("opcc-build"))
+#' }
+#' }
+#'
 #' @export
 download_geonames <- function(cache_dir = NULL) {
   cache <- .opcc_build_cache(cache_dir)
@@ -105,6 +123,16 @@ download_geonames <- function(cache_dir = NULL) {
 #' @param cache_dir Build cache directory.
 #' @return Invisibly, a named list with `province` and `db` paths to the
 #'   extracted `.shp` files.
+#' @examples
+#' # Downloads two Statistics Canada boundary zips (hundreds of megabytes),
+#' # so it is not run automatically.
+#' \donttest{
+#' if (interactive()) {
+#'   boundaries <- download_census_boundaries(cache_dir = tempfile("opcc"))
+#'   boundaries$province
+#' }
+#' }
+#'
 #' @export
 download_census_boundaries <- function(cache_dir = NULL) {
   cache <- .opcc_build_cache(cache_dir)
@@ -145,6 +173,16 @@ download_census_boundaries <- function(cache_dir = NULL) {
 #' @param cache_dir Build cache directory.
 #' @return Invisibly, a named list with `da` pointing to the extracted
 #'   `lda_000b21a_e.shp`.
+#' @examples
+#' # Downloads a ~200 MB Statistics Canada boundary zip, so it is not run
+#' # automatically.
+#' \donttest{
+#' if (interactive()) {
+#'   boundaries <- download_da_boundaries(cache_dir = tempfile("opcc-build"))
+#'   boundaries$da
+#' }
+#' }
+#'
 #' @export
 download_da_boundaries <- function(cache_dir = NULL) {
   cache <- .opcc_build_cache(cache_dir)
@@ -186,6 +224,15 @@ download_da_boundaries <- function(cache_dir = NULL) {
 #'
 #' @param cache_dir Build cache directory.
 #' @return Invisibly, the path to the extracted GAF CSV.
+#' @examples
+#' # Downloads the Statistics Canada Geographic Attribute File zip, so it is
+#' # not run automatically.
+#' \donttest{
+#' if (interactive()) {
+#'   gaf_csv <- download_gaf(cache_dir = tempfile("opcc-build"))
+#' }
+#' }
+#'
 #' @export
 download_gaf <- function(cache_dir = NULL) {
   cache <- .opcc_build_cache(cache_dir)

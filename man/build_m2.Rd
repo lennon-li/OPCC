@@ -28,3 +28,20 @@ Blocks via point-in-polygon, joins the GAF, aggregates evidence per
 postal-code/DB pair, and appends GeoNames supplementary links from
 the rollup produced by \code{\link[=build_db_assignment]{build_db_assignment()}}.
 }
+\examples{
+# Consumes the NAR, boundary, and GAF downloads plus the DB-assignment
+# rollup, so it is not run automatically.
+\donttest{
+if (interactive()) {
+  cache <- tempfile("opcc-build")
+  nar_dir <- download_nar(cache_dir = cache)
+  boundaries <- download_census_boundaries(cache_dir = cache)
+  gaf_csv <- download_gaf(cache_dir = cache)
+  rollup_csv <- file.path(cache, "rollup",
+                          "ontario_postal_gaf_rollup.csv")
+  build_m2(nar_dir, boundaries$db, gaf_csv, rollup_csv,
+           output_dir = file.path(cache, "m2"))
+}
+}
+
+}

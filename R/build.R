@@ -178,6 +178,19 @@ utils::globalVariables(c(
 #' @param output_dir Directory for output files. Defaults to
 #'   `postal_centroids` inside the build cache.
 #' @return Invisibly, the path to `ontario_postal_centroids.csv`.
+#' @examples
+#' # Consumes the multi-gigabyte NAR and GeoNames downloads, so it is not run
+#' # automatically.
+#' \donttest{
+#' if (interactive()) {
+#'   cache <- tempfile("opcc-build")
+#'   nar_dir <- download_nar(cache_dir = cache)
+#'   geonames_txt <- download_geonames(cache_dir = cache)
+#'   build_centroids(nar_dir, geonames_txt,
+#'                   output_dir = file.path(cache, "centroids"))
+#' }
+#' }
+#'
 #' @export
 build_centroids <- function(nar_dir, geonames_txt, output_dir = NULL) {
   .check_build_deps(need_sf = FALSE)
@@ -361,6 +374,24 @@ build_centroids <- function(nar_dir, geonames_txt, output_dir = NULL) {
 #' @param output_dir Directory for output files. Defaults to
 #'   `postal_centroids` inside the build cache.
 #' @return Invisibly, the path to `ontario_postal_gaf_rollup.csv`.
+#' @examples
+#' # Consumes the census boundary and GAF downloads, so it is not run
+#' # automatically.
+#' \donttest{
+#' if (interactive()) {
+#'   cache <- tempfile("opcc-build")
+#'   boundaries <- download_census_boundaries(cache_dir = cache)
+#'   gaf_csv <- download_gaf(cache_dir = cache)
+#'   centroids_csv <- build_centroids(
+#'     download_nar(cache_dir = cache),
+#'     download_geonames(cache_dir = cache),
+#'     output_dir = file.path(cache, "centroids")
+#'   )
+#'   build_db_assignment(centroids_csv, boundaries$province, boundaries$db,
+#'                       gaf_csv, output_dir = file.path(cache, "rollup"))
+#' }
+#' }
+#'
 #' @export
 build_db_assignment <- function(centroids_csv, province_shp, db_shp,
                                 gaf_csv, output_dir = NULL) {
@@ -557,6 +588,22 @@ build_db_assignment <- function(centroids_csv, province_shp, db_shp,
 #' @param output_dir Directory for output files. Defaults to `m2`
 #'   inside the build cache.
 #' @return Invisibly, the path to `m2_correspondence.csv`.
+#' @examples
+#' # Consumes the NAR, boundary, and GAF downloads plus the DB-assignment
+#' # rollup, so it is not run automatically.
+#' \donttest{
+#' if (interactive()) {
+#'   cache <- tempfile("opcc-build")
+#'   nar_dir <- download_nar(cache_dir = cache)
+#'   boundaries <- download_census_boundaries(cache_dir = cache)
+#'   gaf_csv <- download_gaf(cache_dir = cache)
+#'   rollup_csv <- file.path(cache, "rollup",
+#'                           "ontario_postal_gaf_rollup.csv")
+#'   build_m2(nar_dir, boundaries$db, gaf_csv, rollup_csv,
+#'            output_dir = file.path(cache, "m2"))
+#' }
+#' }
+#'
 #' @export
 build_m2 <- function(nar_dir, db_shp, gaf_csv, rollup_csv,
                      output_dir = NULL) {

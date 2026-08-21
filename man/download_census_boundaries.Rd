@@ -17,3 +17,14 @@ extracted \code{.shp} files.
 Downloads the province/territory and Dissemination Block boundary
 shapefiles. Skips downloads if already cached.
 }
+\examples{
+# Downloads two Statistics Canada boundary zips (hundreds of megabytes),
+# so it is not run automatically.
+\donttest{
+if (interactive()) {
+  boundaries <- download_census_boundaries(cache_dir = tempfile("opcc"))
+  boundaries$province
+}
+}
+
+}

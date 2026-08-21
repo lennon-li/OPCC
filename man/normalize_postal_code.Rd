@@ -18,3 +18,11 @@ A character vector in \verb{A1A 1A1} form.
 \description{
 Normalize Canadian postal codes
 }
+\examples{
+normalize_postal_code(c("m5v3a8", "M5V 3A8", "M5V-3A8"))
+
+# Invalid values become NA unless strict = TRUE, which raises an error.
+normalize_postal_code(c("M5V 3A8", "not a postal code"))
+try(normalize_postal_code("not a postal code", strict = TRUE))
+
+}

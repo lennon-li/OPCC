@@ -19,3 +19,13 @@ Downloads the NAR release zip (~1.6 GB) and extracts the Ontario
 Address and Location part files. Skips the download if the zip is
 already cached.
 }
+\examples{
+# Downloads the ~1.6 GB Statistics Canada NAR release, so it is not run
+# automatically.  Pass an explicit cache directory to keep files local.
+\donttest{
+if (interactive()) {
+  nar_dir <- download_nar(cache_dir = tempfile("opcc-build"))
+}
+}
+
+}

@@ -19,3 +19,24 @@ A named list of generated bundle paths.
 \description{
 Create a reviewable local-source contribution bundle
 }
+\examples{
+adapter <- new_source_adapter(
+  source_id = "example_open_addresses",
+  licence = "Open Government Licence - Ontario",
+  lineage = "Municipal open address points, retrieved from a city portal",
+  retrieval_date = as.Date("2026-01-15")
+)
+layer <- build_source_layer(
+  data.frame(postal_code = c("M5V 3A8", "K1A 0A6")),
+  adapter
+)
+
+# `output_dir` is required and must be explicit; a session temporary
+# directory keeps the example self-contained.
+output_dir <- tempfile("opcc-bundle")
+bundle <- contribution_bundle(layer, output_dir = output_dir)
+basename(unlist(bundle))
+
+unlink(output_dir, recursive = TRUE)
+
+}

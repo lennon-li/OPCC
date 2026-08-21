@@ -15,3 +15,8 @@ A character vector of release vintages.
 \description{
 List supported correspondence release vintages
 }
+\examples{
+list_vintages("DB")
+list_vintages("DA")
+
+}
