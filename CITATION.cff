@@ -1,11 +1,12 @@
 cff-version: 1.2.0
 message: "If you use OPCC, please cite it using this metadata."
-title: "OPCC: Open Ontario Postal Code Correspondence"
+title: "OPCC: Open Postal Code Correspondence"
 type: software
 license: MIT
 repository-code: "https://github.com/lennon-li/OPCC"
 url: "https://github.com/lennon-li/OPCC"
 version: "0.0.1"
-date-released: "2026-07-20"
 authors:
-  - name: "OPCC Maintainers"
+  - family-names: "Li"
+    given-names: "Lennon"
+    email: "yeli@biostats.ai"

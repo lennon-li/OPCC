@@ -1,4 +1,5 @@
 test_that("PCCF reader preserves rows and validates its schema", {
+  testthat::skip_if_not_installed("readr")
   path <- withr::local_tempfile(fileext = ".csv")
   write.csv(data.frame(
     PC = c("K1A0B1", "K1A 0B1", "M5V 3A8"),
@@ -19,6 +20,7 @@ test_that("PCCF reader preserves rows and validates its schema", {
 })
 
 test_that("PCCF reader rejects unsafe or inconsistent rows", {
+  testthat::skip_if_not_installed("readr")
   missing <- withr::local_tempfile(fileext = ".csv")
   write.csv(data.frame(
     PC = "K1A 0B1",
@@ -73,6 +75,7 @@ test_that("PCCF identity metadata is explicit and path-free", {
 })
 
 test_that("M2 and M5 artifacts are verified before use", {
+  testthat::skip_if_not_installed("readr")
   source <- withr::local_tempfile(fileext = ".csv")
   writeLines(
     c(

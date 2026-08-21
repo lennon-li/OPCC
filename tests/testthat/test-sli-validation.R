@@ -18,6 +18,7 @@ test_that("haversine distance is correct", {
 })
 
 test_that("centroid reader validates required columns", {
+  testthat::skip_if_not_installed("readr")
   tmp <- withr::local_tempfile(fileext = ".csv")
   write.csv(data.frame(
     postal_code = c("K1A 0B1", "M5V 3A8"),
@@ -35,6 +36,7 @@ test_that("centroid reader validates required columns", {
 })
 
 test_that("SLI reader accepts flexible names and preserves reference points", {
+  testthat::skip_if_not_installed("readr")
   tmp <- withr::local_tempfile(fileext = ".csv")
   write.csv(data.frame(
     pc = c("K1A 0B1", "K1A 0B1", "M5V 3A8"),

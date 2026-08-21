@@ -1,7 +1,10 @@
 Package: OPCC
 Title: Open Postal Code Correspondence
 Version: 0.0.1
-Authors@R: c(person("Lennon", "Li", email = "yeli@biostats.ai", role = c("aut", "cre")))
+Authors@R: c(
+    person("Lennon", "Li", email = "yeli@biostats.ai", role = c("aut", "cre")),
+    person("OPCC Maintainers", role = "cph")
+  )
 Description: Provides source-qualified, reproducible many-to-many
     correspondence between Ontario postal codes and Statistics Canada 2021
     census geographies. Lookup results retain allocation weights, evidence

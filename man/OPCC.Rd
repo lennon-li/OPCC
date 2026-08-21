@@ -1,6 +1,7 @@
 \name{OPCC}
+\alias{OPCC}
 \alias{OPCC-package}
-\title{Open Ontario Postal Code Correspondence}
+\title{Open Postal Code Correspondence}
 \description{
 Checksum-verified, source-qualified correspondence releases and postal-code
 lookup helpers for linking Ontario postal codes to census dissemination blocks

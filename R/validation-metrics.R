@@ -41,7 +41,20 @@ sli_haversine_km <- function(lat1, lon1, lat2, lon2) {
   6371 * c
 }
 
+.check_validation_deps <- function(pkgs) {
+  missing <- pkgs[!vapply(pkgs, requireNamespace, logical(1), quietly = TRUE)]
+  if (length(missing) > 0L) {
+    stop(
+      "Licensed validation requires: ", paste(missing, collapse = ", "),
+      "\nInstall with: install.packages(c(",
+      paste0('"', missing, '"', collapse = ", "), "))",
+      call. = FALSE
+    )
+  }
+}
+
 sli_read_centroids <- function(path) {
+  .check_validation_deps("readr")
   if (!file.exists(path)) stop("Centroid file not found: ", path)
   df <- readr::read_csv(path, show_col_types = FALSE)
   req <- c("postal_code", "latitude", "longitude", "point_source")
@@ -63,6 +76,7 @@ sli_read_centroids <- function(path) {
 }
 
 sli_read_sli <- function(path) {
+  .check_validation_deps("readr")
   if (!file.exists(path)) stop("SLI file not found: ", path)
   df <- readr::read_csv(path, show_col_types = FALSE)
   nms <- tolower(names(df))
@@ -103,6 +117,7 @@ sli_read_pccf_reference <- function(path, contract = NULL) {
   if (!file.exists(path)) {
     stop("Licensed PCCF input is not available")
   }
+  .check_validation_deps("readr")
   raw <- tryCatch(
     readr::read_csv(
       path,
@@ -442,6 +457,7 @@ sli_read_pccf_da_xlsx <- function(path, contract) {
   if (!file.exists(path)) {
     stop("Licensed PCCF DA input is not available")
   }
+  .check_validation_deps("readxl")
   contract <- sli_validate_pccf_da_contract(contract)
   raw <- tryCatch(
     readxl::read_excel(
@@ -625,6 +641,7 @@ sli_verify_link_artifact <- function(
     manifest,
     level = c("DB", "DA")) {
   level <- match.arg(level)
+  .check_validation_deps("readr")
   if (!file.exists(gz_path)) {
     stop(level, " artifact not found: ", gz_path)
   }
@@ -1517,6 +1534,7 @@ sli_compute_link_metrics <- function(
 #   csv_sha256, gz_sha256, total_rows, and schema$columns.
 # Returns the decompressed centroid data frame invisibly.
 sli_verify_m1_artifact <- function(gz_path, manifest) {
+  .check_validation_deps("readr")
   if (!file.exists(gz_path)) {
     stop("M1 artifact not found: ", gz_path)
   }
