@@ -178,16 +178,24 @@ parse_args <- function() {
     synthetic         = FALSE,
     seed              = 42L
   )
+  # A value-taking flag in final position leaves args[i + 1] as NA, which passes
+  # the is.null() checks below and reaches the pipeline as a missing value.
+  take_value <- function(i) {
+    if (i == length(args)) {
+      stop("Missing value for ", args[i])
+    }
+    args[i + 1]
+  }
   i <- 1
   while (i <= length(args)) {
     a <- args[i]
-    if (a == "--centroid-csv") { out$centroid_csv <- args[i + 1]; i <- i + 2
-    } else if (a == "--centroid-manifest") { out$centroid_manifest <- args[i + 1]; i <- i + 2
-    } else if (a == "--producer-ref") { out$producer_ref <- args[i + 1]; i <- i + 2
-    } else if (a == "--sli-csv") { out$sli_csv <- args[i + 1]; i <- i + 2
-    } else if (a == "--sli-label") { out$sli_label <- args[i + 1]; i <- i + 2
-    } else if (a == "--output-dir") { out$output_dir <- args[i + 1]; i <- i + 2
-    } else if (a == "--seed") { out$seed <- as.integer(args[i + 1]); i <- i + 2
+    if (a == "--centroid-csv") { out$centroid_csv <- take_value(i); i <- i + 2
+    } else if (a == "--centroid-manifest") { out$centroid_manifest <- take_value(i); i <- i + 2
+    } else if (a == "--producer-ref") { out$producer_ref <- take_value(i); i <- i + 2
+    } else if (a == "--sli-csv") { out$sli_csv <- take_value(i); i <- i + 2
+    } else if (a == "--sli-label") { out$sli_label <- take_value(i); i <- i + 2
+    } else if (a == "--output-dir") { out$output_dir <- take_value(i); i <- i + 2
+    } else if (a == "--seed") { out$seed <- as.integer(take_value(i)); i <- i + 2
     } else if (a == "--synthetic") { out$synthetic <- TRUE; i <- i + 1
     } else { stop("Unknown argument: ", a) }
   }

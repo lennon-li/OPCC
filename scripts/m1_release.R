@@ -40,6 +40,9 @@ parse_args <- function() {
   while (i <= length(args)) {
     a <- args[i]
     if (a == "--producer-ref") {
+      if (i == length(args)) {
+        stop("Missing value for ", a)
+      }
       out$producer_ref <- args[i + 1]
       i <- i + 2
     } else {
@@ -74,8 +77,6 @@ RELEASE_DIR <- file.path(getwd(), "releases", "m1",
 RELEASE_CSV_GZ <- file.path(RELEASE_DIR, "opcc_m1_centroids.csv.gz")
 RELEASE_MAN <- file.path(RELEASE_DIR, "m1_manifest.json")
 
-if (!dir.exists(RELEASE_DIR)) dir.create(RELEASE_DIR, recursive = TRUE)
-
 cat("=== m1_release.R ===\n")
 cat("Vintage:", vintage, "\n")
 cat("Producer ref:", inputs$producer_ref, "\n")
@@ -85,6 +86,10 @@ full_producer_sha <- sli_validate_producer_ref(
   c("scripts/m1_build_centroids.R", "scripts/m1_release.R")
 )
 cat("Producer revision validated:", full_producer_sha, "\n")
+
+# Created only after validation succeeds: a bad --producer-ref must not leave a
+# stray release directory behind in the repository.
+if (!dir.exists(RELEASE_DIR)) dir.create(RELEASE_DIR, recursive = TRUE)
 
 combined <- readr::read_csv(SCRATCH_CSV, show_col_types = FALSE)
 cat("Rows read:", format(nrow(combined), big.mark = ","), "\n")

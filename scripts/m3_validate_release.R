@@ -22,7 +22,16 @@ download_and_check <- function(url, expected, suffix) {
 }
 
 local_dir <- file.path("releases", "m2", "2026-06-26")
-use_remote <- identical(commandArgs(trailingOnly = TRUE), "--remote")
+# Reject anything that is not exactly --remote. The previous identical() test
+# silently fell through to local mode on a typo, so a mistyped --remote reported
+# a successful *local* verification for a remote check that never ran.
+cli_args <- commandArgs(trailingOnly = TRUE)
+unknown_args <- setdiff(cli_args, "--remote")
+if (length(unknown_args) > 0L) {
+  stop("Unknown argument(s): ", paste(unknown_args, collapse = ", "),
+       "\nUsage: Rscript scripts/m3_validate_release.R [--remote]", call. = FALSE)
+}
+use_remote <- "--remote" %in% cli_args
 if (!use_remote && dir.exists(local_dir)) {
   manifest_path <- file.path(local_dir, "m2_manifest.json")
   artifact_path <- file.path(local_dir, "opcc_m2_correspondence.csv.gz")
