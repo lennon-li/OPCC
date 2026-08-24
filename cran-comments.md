@@ -16,15 +16,15 @@ Checks were run on 2026-08-24 against OPCC 0.0.1.
 - `R CMD check --as-cran OPCC_0.0.1.tar.gz`: `Status: 1 NOTE`.
 - The sole NOTE is CRAN incoming feasibility identifying this as a new
   submission; there are no package ERRORs or WARNINGs.
-- Package test suite under check: 454 passing, 13 skipped, 0 failures. The
+- Package test suite under check: 482 passing, 13 skipped, 0 failures. The
   skips are tests that need a source checkout, a build script that is not
   installed with the runtime package, a cached artifact, or that are
   deliberately `skip_on_cran()`.
 - `R CMD check --as-cran` with `_R_CHECK_DEPENDS_ONLY_=true`:
-  `Status: 1 NOTE`, the same new-submission NOTE; 375 passing, 30 skipped,
+  `Status: 1 NOTE`, the same new-submission NOTE; 403 passing, 30 skipped,
   0 failures.
-- With all suggested packages installed, the full suite runs 519 passing,
-  0 skipped, 0 failures.
+- With all suggested packages installed, the full local suite runs 519 passing,
+  3 explicitly offline skips, and 0 failures.
 - `urlchecker::url_check()`: all checked URLs are correct.
 - `spelling::spell_check_package()`: no spelling errors. Package-specific
   technical terms are recorded in `inst/WORDLIST`.
@@ -43,14 +43,17 @@ Checks were run on 2026-08-24 against OPCC 0.0.1.
   during `R CMD check --as-cran`.
 - This is a new submission with no downstream dependencies.
 
-## Cross-platform results
+## Prior cross-platform results
 
-GitHub Actions run 32742616810 checked this package surface on
+GitHub Actions run 32743219134 checked commit 1a64a73 on
 ubuntu-latest, macos-latest, and windows-latest with
 `rcmdcheck::rcmdcheck(args = c("--no-manual", "--as-cran"))`, plus an Ubuntu
-release-validation job. All four jobs passed.
+release-validation job. All four jobs passed. The subsequent local changes
+remove a Windows reparse-point cleanup warning and address the readiness items
+described above; CI has not yet run against those uncommitted changes.
 
-## Not yet re-run on this package surface
+## Not yet re-run on the current package surface
 
+- GitHub Actions checks on Ubuntu, macOS, and Windows.
 - macOS `R CMD check --as-cran` outside GitHub Actions, including the PDF
   manual, which the CI jobs skip via `--no-manual`.

@@ -243,6 +243,7 @@ test_that("licensed output rejects a symlink parent into the repository", {
   linked_parent <- file.path(outside, "linked-docs")
   linked <- file.symlink(tracked_output, linked_parent)
   testthat::skip_if_not(linked, "symbolic links are unavailable")
+  on.exit(unlink(linked_parent), add = TRUE)
 
   expect_error(
     sli_validate_output_directory(

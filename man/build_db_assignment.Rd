@@ -23,8 +23,7 @@ build_db_assignment(
 
 \item{gaf_csv}{Path returned by \code{\link[=download_gaf]{download_gaf()}}.}
 
-\item{output_dir}{Directory for output files. Defaults to
-\code{postal_centroids} inside the build cache.}
+\item{output_dir}{Required directory for output files.}
 }
 \value{
 Invisibly, the path to \code{ontario_postal_gaf_rollup.csv}.

@@ -1,17 +1,15 @@
-helper_path <- if (file.exists("scripts/lib/canonical_point_assignment.R")) {
-  "scripts/lib/canonical_point_assignment.R"
-} else {
-  file.path("..", "..", "scripts", "lib", "canonical_point_assignment.R")
-}
-
-if (!file.exists(helper_path)) {
+if (!file.exists(opcc_source_checkout_path(
+  "scripts", "lib", "canonical_point_assignment.R"
+))) {
   testthat::test_that("canonical point-assignment helper is available", {
     testthat::skip(
       "Canonical point-assignment tests require a source checkout"
     )
   })
 } else {
-  source(helper_path)
+  source(opcc_source_checkout_path(
+    "scripts", "lib", "canonical_point_assignment.R"
+  ))
 
   testthat::test_that("canonical assignment preserves matched and unmatched points", {
     testthat::skip_if_not_installed("sf")

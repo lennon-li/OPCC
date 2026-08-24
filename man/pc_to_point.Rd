@@ -21,7 +21,8 @@ pc_to_point(
 \item{point_file}{Optional local gzip CSV file. Supplying this enables fully
 offline and air-gapped use.}
 
-\item{cache_dir}{Directory used for verified downloaded files.}
+\item{cache_dir}{Directory for the small, verified, actively managed
+runtime cache.}
 
 \item{offline}{Require an already cached verified file.}
 

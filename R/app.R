@@ -330,7 +330,8 @@ run_app <- function(...) {
 #'   used when those attributes are absent.
 #' @param zipfile Path of the `.zip` archive to write.
 #' @param vintage Centroid artifact vintage.
-#' @param cache_dir Cache directory for downloaded artifacts.
+#' @param cache_dir Directory for the small, verified, actively managed
+#'   runtime cache.
 #' @param offline If `TRUE`, use only already-cached artifacts.
 #'
 #' @return The `zipfile` path, invisibly, or `NULL` when no points were

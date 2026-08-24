@@ -11,8 +11,7 @@ build_centroids(nar_dir, geonames_txt, output_dir = NULL)
 
 \item{geonames_txt}{Path returned by \code{\link[=download_geonames]{download_geonames()}}.}
 
-\item{output_dir}{Directory for output files. Defaults to
-\code{postal_centroids} inside the build cache.}
+\item{output_dir}{Required directory for output files.}
 }
 \value{
 Invisibly, the path to \code{ontario_postal_centroids.csv}.

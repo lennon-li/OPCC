@@ -1,20 +1,3 @@
-app_da_fixture <- function() {
-  data.frame(
-    postal_code = c("M4V 1A1", "M5V 3A8", "M5V 3A8", "P0T 1A0", "P0T 1A0"),
-    DAUID = c("35202806", "35204841", "35204842", "35580016", "35580017"),
-    allocation_weight = c(1, 0.7, 0.3, 0.6, 0.4),
-    n_contributing_dbs = c(1L, 1L, 2L, 3L, 1L),
-    contributing_dbuids = c("35202806007", "35204841009", "35204841010|35204841011",
-                            "35580016001|35580016002|35580016003", "35580017001"),
-    source_vintages = c("2026-06-26", "2026-06-26", "2026-06-26",
-                        "2026-06-26", "2026-06-26"),
-    census_vintages = c("2021", "2021", "2021", "2021", "2021"),
-    evidence_classes = NA_character_,
-    best_link = c(TRUE, TRUE, FALSE, TRUE, FALSE),
-    stringsAsFactors = FALSE
-  )
-}
-
 test_that(".detect_postal_column prefers name patterns, then content", {
   by_name <- data.frame(id = 1:2, `Postal Code` = c("M5V 3A8", "M4V 1A1"),
                         check.names = FALSE)

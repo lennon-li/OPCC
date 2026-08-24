@@ -1,5 +1,7 @@
 ^\.scratch$
+^\.agents$
 ^\.claude$
+^\.codex$
 ^\.github$
 ^handoff$
 ^docs$

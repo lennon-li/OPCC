@@ -18,6 +18,83 @@ testthat::test_that("offline cache miss is explicit", {
   )
 })
 
+testthat::test_that("cache pruning retains the current artifact at its boundary", {
+  cache <- tempfile("opcc-cache-")
+  dir.create(cache)
+  on.exit(unlink(cache, recursive = TRUE), add = TRUE)
+  current <- file.path(cache, "opcc-m2-current.csv.gz")
+  stale <- file.path(cache, "opcc-m2-stale.csv.gz")
+  writeBin(raw(8L), current)
+  writeBin(raw(8L), stale)
+  Sys.setFileTime(stale, Sys.time() - 60)
+
+  OPCC:::.prune_opcc_cache(cache, preserve = current, max_bytes = 8L)
+
+  testthat::expect_true(file.exists(current))
+  testthat::expect_false(file.exists(stale))
+})
+
+testthat::test_that("cache pruning preserves unrelated files", {
+  cache <- tempfile("opcc-cache-")
+  dir.create(cache)
+  on.exit(unlink(cache, recursive = TRUE), add = TRUE)
+  owned <- file.path(cache, "opcc-m2-old.csv.gz")
+  unrelated <- file.path(cache, "another-package-cache.bin")
+  writeBin(raw(8L), owned)
+  writeBin(raw(8L), unrelated)
+
+  OPCC:::.prune_opcc_cache(cache, max_bytes = 0L)
+
+  testthat::expect_false(file.exists(owned))
+  testthat::expect_true(file.exists(unrelated))
+})
+
+testthat::test_that("verified cache hits trigger retention", {
+  cache <- tempfile("opcc-cache-")
+  dir.create(cache)
+  on.exit(unlink(cache, recursive = TRUE), add = TRUE)
+  current <- file.path(cache, "opcc-m2-current.csv.gz")
+  stale <- file.path(cache, "opcc-m2-stale.csv.gz")
+  payload <- raw(8L)
+  writeBin(payload, current)
+  writeBin(payload, stale)
+  Sys.setFileTime(stale, Sys.time() - 60)
+  sha256 <- digest::digest(payload, algo = "sha256", serialize = FALSE)
+
+  cached <- OPCC:::.download_verified(
+    "unused", current, sha256, TRUE,
+    downloader = function(...) testthat::fail("cached artifact was downloaded"),
+    cache_limit = 8L
+  )
+
+  testthat::expect_identical(cached, current)
+  testthat::expect_true(file.exists(current))
+  testthat::expect_false(file.exists(stale))
+})
+
+testthat::test_that("clear_opcc_cache deletes only package-owned files", {
+  cache <- tempfile("opcc-cache-")
+  dir.create(cache)
+  on.exit(unlink(cache, recursive = TRUE), add = TRUE)
+  owned <- file.path(cache, "opcc-m5-old.csv.gz")
+  unrelated <- file.path(cache, "another-package-cache.bin")
+  writeBin(raw(1L), owned)
+  writeBin(raw(1L), unrelated)
+
+  removed <- clear_opcc_cache(cache)
+
+  testthat::expect_identical(removed, owned)
+  testthat::expect_false(file.exists(owned))
+  testthat::expect_true(file.exists(unrelated))
+})
+
+testthat::test_that("clear_opcc_cache requires one cache path", {
+  testthat::expect_error(
+    clear_opcc_cache(c(tempdir(), tempdir())),
+    "single non-empty character path"
+  )
+})
+
 testthat::test_that("failed downloads cannot poison the final cache and retry", {
   cache <- tempfile("opcc-cache-")
   dir.create(cache)

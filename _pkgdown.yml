@@ -1,7 +1,10 @@
-url: https://lennon-li.github.io/OPCC/
+url: https://github.com/lennon-li/OPCC
 template:
   bootstrap: 5
 reference:
+  - title: OPCC package
+    contents:
+      - OPCC-package
   - title: Correspondence lookups
     contents:
       - normalize_postal_code
@@ -12,6 +15,7 @@ reference:
   - title: Release verification
     contents:
       - list_vintages
+      - clear_opcc_cache
       - release_manifest
       - validate_release
   - title: Local source layers

@@ -175,8 +175,7 @@ utils::globalVariables(c(
 #'
 #' @param nar_dir Path returned by [download_nar()].
 #' @param geonames_txt Path returned by [download_geonames()].
-#' @param output_dir Directory for output files. Defaults to
-#'   `postal_centroids` inside the build cache.
+#' @param output_dir Required directory for output files.
 #' @return Invisibly, the path to `ontario_postal_centroids.csv`.
 #' @examples
 #' # Consumes the multi-gigabyte NAR and GeoNames downloads, so it is not run
@@ -193,10 +192,8 @@ utils::globalVariables(c(
 #'
 #' @export
 build_centroids <- function(nar_dir, geonames_txt, output_dir = NULL) {
+  output_dir <- .opcc_require_destination(output_dir, "output_dir")
   .check_build_deps(need_sf = FALSE)
-  if (is.null(output_dir)) {
-    output_dir <- file.path(.opcc_build_cache(NULL), "postal_centroids")
-  }
   dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
   out_csv <- file.path(output_dir, "ontario_postal_centroids.csv")
 
@@ -371,8 +368,7 @@ build_centroids <- function(nar_dir, geonames_txt, output_dir = NULL) {
 #' @param db_shp Path to the DB boundary `.shp` from
 #'   [download_census_boundaries()].
 #' @param gaf_csv Path returned by [download_gaf()].
-#' @param output_dir Directory for output files. Defaults to
-#'   `postal_centroids` inside the build cache.
+#' @param output_dir Required directory for output files.
 #' @return Invisibly, the path to `ontario_postal_gaf_rollup.csv`.
 #' @examples
 #' # Consumes the census boundary and GAF downloads, so it is not run
@@ -395,10 +391,8 @@ build_centroids <- function(nar_dir, geonames_txt, output_dir = NULL) {
 #' @export
 build_db_assignment <- function(centroids_csv, province_shp, db_shp,
                                 gaf_csv, output_dir = NULL) {
+  output_dir <- .opcc_require_destination(output_dir, "output_dir")
   .check_build_deps(need_sf = TRUE)
-  if (is.null(output_dir)) {
-    output_dir <- file.path(.opcc_build_cache(NULL), "postal_centroids")
-  }
   dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
   out_csv <- file.path(output_dir, "ontario_postal_gaf_rollup.csv")
 
@@ -585,8 +579,7 @@ build_db_assignment <- function(centroids_csv, province_shp, db_shp,
 #'   [download_census_boundaries()].
 #' @param gaf_csv Path returned by [download_gaf()].
 #' @param rollup_csv Path returned by [build_db_assignment()].
-#' @param output_dir Directory for output files. Defaults to `m2`
-#'   inside the build cache.
+#' @param output_dir Required directory for output files.
 #' @return Invisibly, the path to `m2_correspondence.csv`.
 #' @examples
 #' # Consumes the NAR, boundary, and GAF downloads plus the DB-assignment
@@ -607,10 +600,8 @@ build_db_assignment <- function(centroids_csv, province_shp, db_shp,
 #' @export
 build_m2 <- function(nar_dir, db_shp, gaf_csv, rollup_csv,
                      output_dir = NULL) {
+  output_dir <- .opcc_require_destination(output_dir, "output_dir")
   .check_build_deps(need_sf = TRUE)
-  if (is.null(output_dir)) {
-    output_dir <- file.path(.opcc_build_cache(NULL), "m2")
-  }
   dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
   out_csv <- file.path(output_dir, "m2_correspondence.csv")
   manifest_path <- file.path(output_dir, "m2_manifest.json")

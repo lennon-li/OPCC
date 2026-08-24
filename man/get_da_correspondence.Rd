@@ -13,7 +13,8 @@ get_da_correspondence(
 \arguments{
 \item{vintage}{A value returned by \code{\link[=list_vintages]{list_vintages()}} for \code{level = "DA"}.}
 
-\item{cache_dir}{Directory used for verified downloaded files.}
+\item{cache_dir}{Directory for the small, verified, actively managed
+runtime cache.}
 
 \item{offline}{Require an already cached verified file.}
 }

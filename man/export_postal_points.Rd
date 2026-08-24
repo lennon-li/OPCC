@@ -25,7 +25,8 @@ used when those attributes are absent.}
 
 \item{vintage}{Centroid artifact vintage.}
 
-\item{cache_dir}{Cache directory for downloaded artifacts.}
+\item{cache_dir}{Directory for the small, verified, actively managed
+runtime cache.}
 
 \item{offline}{If \code{TRUE}, use only already-cached artifacts.}
 }

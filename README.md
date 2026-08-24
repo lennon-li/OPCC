@@ -102,4 +102,9 @@ and unmatched postal codes stay explicit rather than being filled in.
 Contribute only open, redistributable evidence. See `CONTRIBUTING.md`,
 `GOVERNANCE.md`, `SECURITY.md`, and `CITATION.cff`.
 
+To report a bug, [open an issue](https://github.com/lennon-li/OPCC/issues/new/choose)
+with your OPCC and R versions, a minimal reproducible example, the expected and
+observed results, and any relevant release vintage or source identifier. Do not
+include Canada Post, PCCF, PCCF+, or other restricted data.
+
 OPCC is not affiliated with Canada Post or Statistics Canada.

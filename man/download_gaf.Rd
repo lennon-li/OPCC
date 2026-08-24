@@ -7,7 +7,7 @@
 download_gaf(cache_dir = NULL)
 }
 \arguments{
-\item{cache_dir}{Build cache directory.}
+\item{cache_dir}{Required directory for downloaded and extracted files.}
 }
 \value{
 Invisibly, the path to the extracted GAF CSV.

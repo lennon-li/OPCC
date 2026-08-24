@@ -1,7 +1,23 @@
-.opcc_build_cache <- function(cache_dir) {
-  if (is.null(cache_dir)) {
-    cache_dir <- file.path(tools::R_user_dir("OPCC", "cache"), "build")
+.opcc_require_destination <- function(path, arg) {
+  if (is.null(path) || !is.character(path) || length(path) != 1L ||
+      is.na(path) || !nzchar(path)) {
+    stop(
+      sprintf(
+        "%s must be supplied explicitly to store large OPCC build files. ",
+        arg
+      ),
+      sprintf(
+        "Supply a directory you manage, for example %s = tempfile('opcc-build').",
+        arg
+      ),
+      call. = FALSE
+    )
   }
+  path
+}
+
+.opcc_build_cache <- function(cache_dir) {
+  cache_dir <- .opcc_require_destination(cache_dir, "cache_dir")
   dir.create(cache_dir, recursive = TRUE, showWarnings = FALSE)
   cache_dir
 }
@@ -47,8 +63,7 @@
 #' Address and Location part files. Skips the download if the zip is
 #' already cached.
 #'
-#' @param cache_dir Build cache directory. Defaults to a persistent
-#'   user-level directory under `tools::R_user_dir("OPCC", "cache")`.
+#' @param cache_dir Required directory for downloaded and extracted files.
 #' @return Invisibly, the path to the NAR scratch directory containing
 #'   the extracted Ontario CSV files.
 #' @examples
@@ -92,7 +107,7 @@ download_nar <- function(cache_dir = NULL) {
 #' Downloads the GeoNames CA_full.csv.zip and extracts the tab-delimited
 #' text file. Skips the download if already cached.
 #'
-#' @param cache_dir Build cache directory.
+#' @param cache_dir Required directory for downloaded and extracted files.
 #' @return Invisibly, the path to the extracted `CA_full.txt`.
 #' @examples
 #' # Downloads the GeoNames CA_full.csv.zip, so it needs network access and
@@ -128,7 +143,7 @@ download_geonames <- function(cache_dir = NULL) {
 #' Downloads the province/territory and Dissemination Block boundary
 #' shapefiles. Skips downloads if already cached.
 #'
-#' @param cache_dir Build cache directory.
+#' @param cache_dir Required directory for downloaded and extracted files.
 #' @return Invisibly, a named list with `province` and `db` paths to the
 #'   extracted `.shp` files.
 #' @examples
@@ -178,7 +193,7 @@ download_census_boundaries <- function(cache_dir = NULL) {
 #' written next to the zip and every later reuse is verified against it;
 #' Statistics Canada does not publish an official checksum for this file.
 #'
-#' @param cache_dir Build cache directory.
+#' @param cache_dir Required directory for downloaded and extracted files.
 #' @return Invisibly, a named list with `da` pointing to the extracted
 #'   `lda_000b21a_e.shp`.
 #' @examples
@@ -230,7 +245,7 @@ download_da_boundaries <- function(cache_dir = NULL) {
 #'
 #' Downloads the GAF zip and extracts the CSV. Skips if already cached.
 #'
-#' @param cache_dir Build cache directory.
+#' @param cache_dir Required directory for downloaded and extracted files.
 #' @return Invisibly, the path to the extracted GAF CSV.
 #' @examples
 #' # Downloads the Statistics Canada Geographic Attribute File zip, so it is

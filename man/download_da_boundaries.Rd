@@ -7,7 +7,7 @@
 download_da_boundaries(cache_dir = NULL)
 }
 \arguments{
-\item{cache_dir}{Build cache directory.}
+\item{cache_dir}{Required directory for downloaded and extracted files.}
 }
 \value{
 Invisibly, a named list with \code{da} pointing to the extracted

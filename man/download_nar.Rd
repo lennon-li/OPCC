@@ -7,8 +7,7 @@
 download_nar(cache_dir = NULL)
 }
 \arguments{
-\item{cache_dir}{Build cache directory. Defaults to a persistent
-user-level directory under \code{tools::R_user_dir("OPCC", "cache")}.}
+\item{cache_dir}{Required directory for downloaded and extracted files.}
 }
 \value{
 Invisibly, the path to the NAR scratch directory containing

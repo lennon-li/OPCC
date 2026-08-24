@@ -1,14 +1,13 @@
-script_path <- if (file.exists("scripts/m6_release_controls.R")) {
-  "scripts/m6_release_controls.R"
-} else {
-  file.path("..", "..", "scripts", "m6_release_controls.R")
-}
-if (!file.exists(script_path)) {
+if (!file.exists(opcc_source_checkout_path(
+  "scripts", "m6_release_controls.R"
+))) {
   testthat::test_that("M6 release control tests are source-checkout tests", {
     testthat::skip("M6 release control script is not installed with the runtime package")
   })
 } else {
-source(script_path)
+  source(opcc_source_checkout_path(
+    "scripts", "m6_release_controls.R"
+  ))
 
 testthat::test_that("release drift reports added removed and changed keys", {
   prior <- data.frame(postal_code = c("K1A 0A6", "K1A 0A7"), DAUID = c("1", "2"), allocation_weight = c(.6, 1))

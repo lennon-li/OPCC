@@ -40,6 +40,53 @@
   file.path(cache_dir, sprintf("opcc-%s-%s%s", kind, vintage, extension))
 }
 
+.opcc_cache_limit <- 64 * 1024^2
+
+.opcc_cache_files <- function(cache_dir) {
+  paths <- list.files(cache_dir, full.names = TRUE, no.. = TRUE)
+  paths <- paths[basename(paths) |> startsWith("opcc-")]
+  info <- file.info(paths)
+  paths[!is.na(info$isdir) & !info$isdir]
+}
+
+.prune_opcc_cache <- function(cache_dir, preserve = character(),
+                              max_bytes = .opcc_cache_limit) {
+  files <- .opcc_cache_files(cache_dir)
+  sizes <- file.info(files)$size
+  total <- sum(sizes, na.rm = TRUE)
+  removable <- setdiff(files, preserve)
+  removable <- removable[order(file.info(removable)$mtime)]
+  for (path in removable) {
+    if (total <= max_bytes) break
+    size <- file.info(path)$size
+    if (unlink(path) == 0L) total <- total - size
+  }
+  invisible(NULL)
+}
+
+#' Clear the downloaded OPCC release cache
+#'
+#' Removes only OPCC files named `opcc-*` from `cache_dir`. This is an explicit
+#' maintenance action; routine downloads retain a small, verified cache capped
+#' at 64 MiB.
+#'
+#' @param cache_dir Directory containing downloaded OPCC release artifacts.
+#' @return The paths removed, invisibly.
+#' @examples
+#' cache <- tempfile("opcc-cache")
+#' dir.create(cache)
+#' clear_opcc_cache(cache)
+#' @export
+clear_opcc_cache <- function(cache_dir = tools::R_user_dir("OPCC", "cache")) {
+  if (!is.character(cache_dir) || length(cache_dir) != 1L ||
+      is.na(cache_dir) || !nzchar(cache_dir)) {
+    stop("cache_dir must be a single non-empty character path", call. = FALSE)
+  }
+  files <- .opcc_cache_files(cache_dir)
+  removed <- files[vapply(files, unlink, integer(1)) == 0L]
+  invisible(removed)
+}
+
 .ontario_bounds <- c(
   latitude_min = 41.6,
   latitude_max = 56.9,
@@ -48,12 +95,16 @@
 )
 
 .download_verified <- function(url, path, sha256, offline,
-                               downloader = utils::download.file) {
+                               downloader = utils::download.file,
+                               cache_limit = .opcc_cache_limit) {
   verified <- function(file) {
     identical(tolower(digest::digest(file, algo = "sha256", file = TRUE)),
               tolower(sha256))
   }
-  if (file.exists(path) && verified(path)) return(path)
+  if (file.exists(path) && verified(path)) {
+    .prune_opcc_cache(dirname(path), preserve = path, max_bytes = cache_limit)
+    return(path)
+  }
   if (offline) {
     if (file.exists(path)) stop("Checksum verification failed", call. = FALSE)
     stop("Release is not cached and offline = TRUE", call. = FALSE)
@@ -80,6 +131,7 @@
   if (!file.rename(temporary, path)) {
     stop("Could not promote verified download into the cache", call. = FALSE)
   }
+  .prune_opcc_cache(dirname(path), preserve = path, max_bytes = cache_limit)
   path
 }
 
@@ -254,7 +306,8 @@ list_vintages <- function(level = c("DB", "DA")) {
 #' Download, cache, and verify a correspondence release
 #'
 #' @param vintage A value returned by [list_vintages()].
-#' @param cache_dir Directory used for verified downloaded files.
+#' @param cache_dir Directory for the small, verified, actively managed
+#'   runtime cache.
 #' @param offline Require an already cached verified file.
 #' @return A data frame of postal-code-to-DB links.
 #' @examples
@@ -291,7 +344,8 @@ get_correspondence <- function(
 #' Download, cache, and verify a direct DA correspondence release
 #'
 #' @param vintage A value returned by [list_vintages()] for `level = "DA"`.
-#' @param cache_dir Directory used for verified downloaded files.
+#' @param cache_dir Directory for the small, verified, actively managed
+#'   runtime cache.
 #' @param offline Require an already cached verified file.
 #' @return A data frame of postal-code-to-DA links with contributing DB lineage.
 #' @examples
@@ -387,7 +441,8 @@ pc_to_geo <- function(
 #'
 #' @param vintage A value returned by [list_vintages()].
 #' @param level Geography level, `"DB"` or `"DA"`.
-#' @param cache_dir Directory used for verified downloaded files.
+#' @param cache_dir Directory for the small, verified, actively managed
+#'   runtime cache.
 #' @param offline Require an already cached verified file.
 #' @return A parsed JSON list.
 #' @examples
@@ -424,7 +479,8 @@ release_manifest <- function(
 #'
 #' @param vintage A value returned by [list_vintages()].
 #' @param level Geography level, `"DB"` or `"DA"`.
-#' @param cache_dir Directory used for verified downloaded files.
+#' @param cache_dir Directory for the small, verified, actively managed
+#'   runtime cache.
 #' @param offline Require an already cached verified file.
 #' @return Invisibly `TRUE`, or an error describing a failed invariant.
 #' @examples
@@ -481,7 +537,8 @@ validate_release <- function(
 #' @param vintage Point-release vintage.
 #' @param point_file Optional local gzip CSV file. Supplying this enables fully
 #'   offline and air-gapped use.
-#' @param cache_dir Directory used for verified downloaded files.
+#' @param cache_dir Directory for the small, verified, actively managed
+#'   runtime cache.
 #' @param offline Require an already cached verified file.
 #' @param source Optional character vector of `point_source` values to retain.
 #'   By default, observations from every source are returned.

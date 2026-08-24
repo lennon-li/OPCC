@@ -16,8 +16,7 @@ build_m2(nar_dir, db_shp, gaf_csv, rollup_csv, output_dir = NULL)
 
 \item{rollup_csv}{Path returned by \code{\link[=build_db_assignment]{build_db_assignment()}}.}
 
-\item{output_dir}{Directory for output files. Defaults to \code{m2}
-inside the build cache.}
+\item{output_dir}{Required directory for output files.}
 }
 \value{
 Invisibly, the path to \code{m2_correspondence.csv}.
