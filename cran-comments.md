@@ -43,10 +43,14 @@ Checks were run on 2026-08-24 against OPCC 0.0.1.
   during `R CMD check --as-cran`.
 - This is a new submission with no downstream dependencies.
 
+## Cross-platform results
+
+GitHub Actions run 32742616810 checked this package surface on
+ubuntu-latest, macos-latest, and windows-latest with
+`rcmdcheck::rcmdcheck(args = c("--no-manual", "--as-cran"))`, plus an Ubuntu
+release-validation job. All four jobs passed.
+
 ## Not yet re-run on this package surface
 
-- Cross-platform GitHub Actions checks (Ubuntu, macOS, Windows) plus Ubuntu
-  release validation. Run 32545802566 passed all four jobs, but it describes
-  an earlier commit and predates the changes checked above. It must be re-run
-  once these changes are pushed.
-- macOS `R CMD check --as-cran` outside GitHub Actions.
+- macOS `R CMD check --as-cran` outside GitHub Actions, including the PDF
+  manual, which the CI jobs skip via `--no-manual`.
