@@ -61,7 +61,19 @@
   dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
   temporary <- tempfile(paste0(basename(path), "."), tmpdir = dirname(path))
   on.exit(unlink(temporary), add = TRUE)
-  downloader(url, temporary, mode = "wb", quiet = TRUE)
+  # CRAN policy: fail gracefully when a remote resource is unavailable.
+  # Only errors are converted here: a partial or corrupt payload is caught by
+  # the checksum below, and download.file() can warn on a transfer that still
+  # succeeds.
+  tryCatch(
+    downloader(url, temporary, mode = "wb", quiet = TRUE),
+    error = function(e) {
+      stop("Could not download the release artifact.\n  URL: ", url,
+           "\n  Reason: ", conditionMessage(e),
+           "\nCheck your network connection, or use a cached release with ",
+           "offline = TRUE.", call. = FALSE)
+    }
+  )
   if (!file.exists(temporary) || !verified(temporary)) {
     stop("Checksum verification failed", call. = FALSE)
   }

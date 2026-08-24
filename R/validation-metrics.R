@@ -54,7 +54,7 @@ sli_haversine_km <- function(lat1, lon1, lat2, lon2) {
 }
 
 sli_read_centroids <- function(path) {
-  .check_validation_deps("readr")
+  .check_validation_deps(c("readr", "dplyr"))
   if (!file.exists(path)) stop("Centroid file not found: ", path)
   df <- readr::read_csv(path, show_col_types = FALSE)
   req <- c("postal_code", "latitude", "longitude", "point_source")
@@ -76,7 +76,7 @@ sli_read_centroids <- function(path) {
 }
 
 sli_read_sli <- function(path) {
-  .check_validation_deps("readr")
+  .check_validation_deps(c("readr", "dplyr"))
   if (!file.exists(path)) stop("SLI file not found: ", path)
   df <- readr::read_csv(path, show_col_types = FALSE)
   nms <- tolower(names(df))
@@ -508,6 +508,21 @@ sli_digest_private_file <- function(path) {
 }
 
 sli_make_synthetic_qa <- function(centroids, seed = 42L, n_per_source = 100L) {
+  .check_validation_deps("dplyr")
+  # Seeding for determinism must not clobber the caller's random stream.
+  had_seed <- exists(".Random.seed", envir = globalenv(), inherits = FALSE)
+  old_seed <- if (had_seed) {
+    get(".Random.seed", envir = globalenv(), inherits = FALSE)
+  } else {
+    NULL
+  }
+  on.exit({
+    if (had_seed) {
+      assign(".Random.seed", old_seed, envir = globalenv())
+    } else {
+      suppressWarnings(rm(".Random.seed", envir = globalenv()))
+    }
+  }, add = TRUE)
   set.seed(seed)
   out <- centroids |>
     dplyr::group_by(point_source) |>
@@ -532,6 +547,7 @@ sli_make_synthetic_qa <- function(centroids, seed = 42L, n_per_source = 100L) {
 }
 
 sli_compute_point_distances <- function(centroids, sli) {
+  .check_validation_deps("dplyr")
   centroids$.opcc_row <- seq_len(nrow(centroids))
   joined <- merge(
     centroids,
@@ -556,6 +572,7 @@ sli_compute_point_distances <- function(centroids, sli) {
 }
 
 sli_compute_metrics <- function(centroids, sli) {
+  .check_validation_deps("dplyr")
   joined <- sli_compute_point_distances(centroids, sli)
 
   if (nrow(joined) == 0L) {

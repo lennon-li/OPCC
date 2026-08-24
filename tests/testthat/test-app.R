@@ -151,13 +151,18 @@ test_that("app uploads a CSV and auto-detects the postal column offline", {
     skip_if_not_installed(pkg)
   }
   app_dir <- system.file("shiny", package = "OPCC")
+  # run_app() evaluates the app in a child of OPCC's namespace so app.R can
+  # reach package internals without ::: ; the test must load it the same way
+  # or it exercises a different scope than users get.
+  app_obj <- source(file.path(app_dir, "app.R"),
+                    local = new.env(parent = asNamespace("OPCC")))$value
   csv_path <- tempfile(fileext = ".csv")
   on.exit(unlink(csv_path), add = TRUE)
   utils::write.csv(
     data.frame(id = 1:2, `Postal Code` = c("m5v3a8", "M4V 1A1"),
                check.names = FALSE),
     csv_path, row.names = FALSE)
-  shiny::testServer(shiny::shinyAppDir(app_dir), {
+  shiny::testServer(app_obj, {
     session$setInputs(input_mode = "file")
     session$setInputs(
       input_file = list(datapath = csv_path, name = "records.csv"))
@@ -363,20 +368,18 @@ test_that(".render_opcc_reproducer_script emits the shapefile step for typed cod
     vintage = "2026-07-20", all_links = FALSE,
     codes = c("M5V 3A8", "K1A 0B1"))
   expect_match(script, "opcc_postal_points.zip", fixed = TRUE)
-  expect_match(script, "OPCC:::.postal_points_sf(postal_points, joined)",
-               fixed = TRUE)
-  expect_match(script, "OPCC:::.write_postal_points_shapefile(", fixed = TRUE)
-  expect_match(script, "OPCC:::.load_postal_centroids()", fixed = TRUE)
+  expect_match(script, "OPCC::export_postal_points(", fixed = TRUE)
+  # The script is handed to the user, so it must stay on public API.
+  expect_false(grepl(":::", paste(script, collapse = ""), fixed = TRUE))
 })
 
 test_that(".render_opcc_reproducer_script emits the shapefile step for uploads", {
   script <- OPCC:::.render_opcc_reproducer_script(
     "my records.csv", "Postal Code", ".", "2026-07-20", all_links = FALSE)
   expect_match(script, "opcc_postal_points.zip", fixed = TRUE)
-  expect_match(script, "OPCC:::.postal_points_sf(postal_points, joined)",
-               fixed = TRUE)
-  expect_match(script, "OPCC:::.write_postal_points_shapefile(", fixed = TRUE)
-  expect_match(script, "OPCC:::.load_postal_centroids()", fixed = TRUE)
+  expect_match(script, "OPCC::export_postal_points(", fixed = TRUE)
+  # The script is handed to the user, so it must stay on public API.
+  expect_false(grepl(":::", paste(script, collapse = ""), fixed = TRUE))
 })
 
 test_that(".render_opcc_reproducer_script shapefile output parses and stays ASCII", {

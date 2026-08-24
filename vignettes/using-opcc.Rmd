@@ -22,6 +22,11 @@ through open, redistributable evidence.
 | Verify artifacts or reproduce the DA roll-up from the DB artifact | [Part 2](#part-2-reproduce-and-verify-artifacts) -- uses package functions only; no source checkout needed |
 | Rebuild all artifacts from raw Statistics Canada sources | [Rebuild all artifacts](#rebuild-all-artifacts-from-raw-sources) -- uses package functions for download and build; requires `sf`, `dplyr`, `readr` |
 
+Most code below is shown but not run when this vignette is built. Those chunks
+download versioned release artifacts, read files from paths you supply, or need
+packages listed under `Suggests`. Chunks that run with the installed package
+alone and no network are evaluated.
+
 ## Part 1: Use OPCC with your data
 
 ### Install
@@ -50,11 +55,10 @@ code. Unmatched postal codes are reported, never fabricated.
 
 All OPCC functions normalize internally, but you can normalize explicitly:
 
-```{r, eval = FALSE}
+```{r}
 library(OPCC)
 
 normalize_postal_code(c("m5v3a8", "K1A-0A6", "k1a0a6"))
-#> [1] "M5V 3A8" "K1A 0A6" "K1A 0A6"
 ```
 
 ### Look up a single postal code
@@ -88,7 +92,9 @@ attr(result, "unmatched")
 ### Join OPCC geographies to your own data
 
 The most common workflow: you have a data frame with a postal-code column and
-you want census geography identifiers.
+you want census geography identifiers. `get_correspondence()` and
+`get_da_correspondence()` download a release artifact, so the joins below are
+not evaluated here.
 
 ```{r, eval = FALSE}
 library(OPCC)
@@ -145,7 +151,7 @@ merged_all <- merge(my_data, da, by = "postal_code", all.x = TRUE)
 | `contributing_dbuids` | Pipe-delimited DBUID list behind a DA link (DA artifact) |
 | `source_vintages` | Source evidence vintage(s) behind the link |
 
-With `dplyr`:
+With `dplyr`, which is a `Suggests` package and so is also not evaluated here:
 
 ```{r, eval = FALSE}
 library(dplyr)
@@ -170,11 +176,16 @@ By default, artifacts are cached in a persistent user directory
 (`tools::R_user_dir("OPCC", "cache")`), so they survive across R sessions.
 You can override this with `cache_dir`.
 
-```{r, eval = FALSE}
-# List available release vintages
+Listing vintages reads an index shipped with the package, so it runs here:
+
+```{r}
 list_vintages(level = "DB")
 list_vintages(level = "DA")
+```
 
+Downloading a release does need the network, so the rest is shown but not run:
+
+```{r, eval = FALSE}
 # Download using the default persistent cache
 db <- get_correspondence(vintage = "2026-07-19-geonames-amendment")
 da <- get_da_correspondence(vintage = "2026-07-20")
@@ -225,7 +236,8 @@ pts <- pc_to_point("K0A 0A1",
 ### Source-qualified point lookups
 
 `pc_to_point()` returns supplementary GeoNames point observations. These are
-source-labeled and separate from NAR address evidence:
+source-labeled and separate from NAR address evidence. It downloads its own
+point artifact, so the chunk is not evaluated:
 
 ```{r, eval = FALSE}
 pc_to_point("K0A 0A1")
@@ -236,11 +248,18 @@ pc_to_point("K0A 0A1", source = "geonames")
 
 Use this only for redistributable, open data. Local layers stay separate from
 canonical OPCC releases. The API rejects Canada Post, PCCF, and PCCF+ inputs.
+The paths below are placeholders for your own files, so the chunk is not
+evaluated.
 
 ```{r, eval = FALSE}
 my_source <- utils::read.csv("/path/to/municipal-postal-data.csv",
                              stringsAsFactors = FALSE)
+```
 
+Describing the source is pure metadata, so this part runs. A real `checksum`
+comes from your own file; a literal stands in for it here:
+
+```{r}
 adapter <- new_source_adapter(
   source_id = "municipal_registry",
   licence = "Open Government Licence - Municipality",
@@ -251,10 +270,16 @@ adapter <- new_source_adapter(
     latitude = "lat",
     longitude = "lon"
   ),
-  checksum = digest::digest("/path/to/municipal-postal-data.csv",
-                            algo = "sha256", file = TRUE)
+  checksum = strrep("0", 64L)
 )
 
+adapter
+```
+
+Building the layer, profiling it, and packaging a contribution bundle all need
+your own data, so they are shown but not run:
+
+```{r, eval = FALSE}
 layer <- build_source_layer(my_source, adapter, on_invalid = "quarantine")
 profile_source_layer(layer)
 
@@ -295,7 +320,8 @@ computation as the M5 build script: it sums DB allocation weights within
 each DA, preserves contributing-DB lineage, and selects the best DA link.
 
 The published DA artifacts were built from the NAR-only M2 baseline
-(`2026-06-26`), so use that vintage to reproduce them exactly:
+(`2026-06-26`), so use that vintage to reproduce them exactly. Both lookups
+download a release artifact, so the chunk is not evaluated:
 
 ```{r, eval = FALSE}
 db <- get_correspondence(vintage = "2026-06-26")
@@ -344,6 +370,10 @@ The build requires `sf` (system libraries GDAL, GEOS, PROJ), `dplyr`, and
 libproj-dev`. On macOS: `brew install gdal geos proj`. On Windows: install
 [Rtools](https://cran.r-project.org/bin/windows/Rtools/) and use the `sf`
 binary from CRAN.
+
+None of the build steps below are evaluated when this vignette is built: they
+download the raw public inputs and need `sf`, `dplyr`, and `readr`. Each step
+also consumes the output of the step before it.
 
 ```{r, eval = FALSE}
 packages <- c("digest", "dplyr", "jsonlite", "readr", "sf")

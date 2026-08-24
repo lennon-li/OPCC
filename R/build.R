@@ -9,7 +9,7 @@ utils::globalVariables(c(
 ))
 
 .check_build_deps <- function(need_sf = FALSE) {
-  pkgs <- c("dplyr", "readr", "digest", "jsonlite")
+  pkgs <- c("dplyr", "readr", "rlang", "digest", "jsonlite")
   if (need_sf) pkgs <- c(pkgs, "sf")
   missing <- pkgs[!vapply(pkgs, requireNamespace, logical(1), quietly = TRUE)]
   if (length(missing) > 0L) {

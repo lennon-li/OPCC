@@ -59,6 +59,7 @@ testthat::test_that("M2 output keeps the required contract", {
 })
 
 testthat::test_that("GeoNames point evidence is appended only when it has DB and DA", {
+  testthat::skip_if_not_installed("readr")
   nar <- aggregate_m2_evidence(data.frame(
     postal_code = "K1A 0A6", LOC_GUID = "A1", DBUID = "DB1", DAUID = "DA1",
     stringsAsFactors = FALSE
@@ -92,6 +93,7 @@ testthat::test_that("GeoNames point evidence is appended only when it has DB and
 })
 
 testthat::test_that("GeoNames DB status and geography identifiers are consistent", {
+  testthat::skip_if_not_installed("readr")
   nar <- aggregate_m2_evidence(data.frame(
     postal_code = "K1A 0A6",
     LOC_GUID = "A1",

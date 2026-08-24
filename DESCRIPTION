@@ -20,7 +20,7 @@ Roxygen: list(markdown = TRUE)
 Depends: R (>= 4.1)
 Imports: digest, jsonlite
 Suggests: testthat (>= 3.0.0), curl, dplyr, readr, readxl, rlang, sf, knitr, rmarkdown, withr,
-    shiny (>= 1.8.0), bslib, DT, leaflet, htmlwidgets
+    shiny (>= 1.8.0), bslib (>= 0.6.0), DT, leaflet, htmlwidgets
 Config/testthat/edition: 3
 VignetteBuilder: knitr
 Config/roxygen2/version: 8.0.0

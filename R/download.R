@@ -13,7 +13,15 @@
   }
   dir.create(dirname(dest), recursive = TRUE, showWarnings = FALSE)
   message(sprintf("[download] %s: fetching %s", label, url))
-  utils::download.file(url, dest, mode = "wb")
+  # CRAN policy: fail gracefully when a remote resource is unavailable.
+  tryCatch(
+    utils::download.file(url, dest, mode = "wb"),
+    error = function(e) {
+      unlink(dest)
+      stop(sprintf("Could not download %s.\n  URL: %s\n  Reason: %s",
+                   label, url, conditionMessage(e)), call. = FALSE)
+    }
+  )
   message(sprintf("[download] %s: saved to %s", label, dest))
   invisible(dest)
 }

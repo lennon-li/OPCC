@@ -19,6 +19,7 @@ test_that("haversine distance is correct", {
 
 test_that("centroid reader validates required columns", {
   testthat::skip_if_not_installed("readr")
+  testthat::skip_if_not_installed("withr")
   tmp <- withr::local_tempfile(fileext = ".csv")
   write.csv(data.frame(
     postal_code = c("K1A 0B1", "M5V 3A8"),
@@ -37,6 +38,7 @@ test_that("centroid reader validates required columns", {
 
 test_that("SLI reader accepts flexible names and preserves reference points", {
   testthat::skip_if_not_installed("readr")
+  testthat::skip_if_not_installed("withr")
   tmp <- withr::local_tempfile(fileext = ".csv")
   write.csv(data.frame(
     pc = c("K1A 0B1", "K1A 0B1", "M5V 3A8"),
@@ -49,6 +51,7 @@ test_that("SLI reader accepts flexible names and preserves reference points", {
 })
 
 test_that("metrics computation stratifies by source", {
+  testthat::skip_if_not_installed("dplyr")
   centroids <- data.frame(
     postal_code = c("K1A 0B1", "M5V 3A8", "H3A 0G4"),
     latitude = c(45.42, 43.64, 45.50),
@@ -67,6 +70,7 @@ test_that("metrics computation stratifies by source", {
 })
 
 test_that("point validation uses the nearest reference coordinate", {
+  testthat::skip_if_not_installed("dplyr")
   centroids <- data.frame(
     postal_code = "K1A 0B1",
     latitude = 45,
@@ -89,6 +93,7 @@ test_that("point validation uses the nearest reference coordinate", {
 })
 
 test_that("point metrics handle an empty comparison without non-finite values", {
+  testthat::skip_if_not_installed("dplyr")
   centroids <- data.frame(
     postal_code = "K1A 0B1",
     latitude = 45,
@@ -114,6 +119,7 @@ test_that("point metrics handle an empty comparison without non-finite values", 
 })
 
 test_that("point coverage is zero for disjoint non-empty inputs", {
+  testthat::skip_if_not_installed("dplyr")
   centroids <- data.frame(
     postal_code = "K1A 0B1",
     latitude = 45,
@@ -134,6 +140,7 @@ test_that("point coverage is zero for disjoint non-empty inputs", {
 })
 
 test_that("synthetic QA is deterministic", {
+  testthat::skip_if_not_installed("dplyr")
   centroids <- data.frame(
     postal_code = c("K1A 0B1", "M5V 3A8", "H3A 0G4", "V6B 1A1"),
     latitude = c(45.42, 43.64, 45.50, 49.28),
@@ -164,6 +171,7 @@ test_that("tampered M1 manifest fails verification", {
   gz_path <- testthat::test_path("../../releases/m1/2026-06-26-nar-geonames-centroids/opcc_m1_centroids.csv.gz")
   testthat::skip_if_not(file.exists(manifest_path))
   testthat::skip_if_not(file.exists(gz_path))
+  testthat::skip_if_not_installed("withr")
 
   manifest <- jsonlite::read_json(manifest_path)
   manifest$artifact$csv_sha256 <- paste(rep("0", 64), collapse = "")

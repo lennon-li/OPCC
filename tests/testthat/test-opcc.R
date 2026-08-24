@@ -67,6 +67,7 @@ testthat::test_that("GeoNames points retain source and geography", {
 })
 
 testthat::test_that("point lookup retains every source-qualified observation", {
+  testthat::skip_if_not_installed("withr")
   point_file <- withr::local_tempfile(fileext = ".csv.gz")
   connection <- gzfile(point_file, open = "wt")
   utils::write.csv(
@@ -110,6 +111,7 @@ testthat::test_that("point lookup retains every source-qualified observation", {
 })
 
 testthat::test_that("point lookup filters by one or more sources explicitly", {
+  testthat::skip_if_not_installed("withr")
   point_file <- withr::local_tempfile(fileext = ".csv.gz")
   connection <- gzfile(point_file, open = "wt")
   utils::write.csv(

@@ -61,8 +61,7 @@ and an R script that reproduces both.
 run_app()
 ```
 
-Requires `shiny`, `bslib`, `DT`, `leaflet`, `htmlwidgets`, `promises`,
-`future`, and `sf`.
+Requires `shiny`, `bslib`, `DT`, `leaflet`, `htmlwidgets`, and `sf`.
 
 ## Reproduce from scratch
 
@@ -91,6 +90,12 @@ M5 DA correspondence was benchmarked against an authorised PCCF-derived
 Ontario DA export: 99.46% any-link agreement, 95.65% best-link containment,
 93.92% pair F1 across 280,649 comparable postal codes. See
 [docs/validation-summary.md](docs/validation-summary.md).
+
+Agreement with that benchmark does not make OPCC authoritative, certified, or
+a drop-in replacement for Canada Post, PCCF, or PCCF+ products. The comparison
+is DA-level only, and the benchmark's vintage predates the OPCC release it was
+compared against. The evidence unit remains an observed postal association,
+and unmatched postal codes stay explicit rather than being filled in.
 
 ## Community
 

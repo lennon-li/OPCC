@@ -1,5 +1,6 @@
 test_that("PCCF reader preserves rows and validates its schema", {
   testthat::skip_if_not_installed("readr")
+  testthat::skip_if_not_installed("withr")
   path <- withr::local_tempfile(fileext = ".csv")
   write.csv(data.frame(
     PC = c("K1A0B1", "K1A 0B1", "M5V 3A8"),
@@ -21,6 +22,7 @@ test_that("PCCF reader preserves rows and validates its schema", {
 
 test_that("PCCF reader rejects unsafe or inconsistent rows", {
   testthat::skip_if_not_installed("readr")
+  testthat::skip_if_not_installed("withr")
   missing <- withr::local_tempfile(fileext = ".csv")
   write.csv(data.frame(
     PC = "K1A 0B1",
@@ -76,6 +78,7 @@ test_that("PCCF identity metadata is explicit and path-free", {
 
 test_that("M2 and M5 artifacts are verified before use", {
   testthat::skip_if_not_installed("readr")
+  testthat::skip_if_not_installed("withr")
   source <- withr::local_tempfile(fileext = ".csv")
   writeLines(
     c(
@@ -118,6 +121,7 @@ test_that("M2 and M5 artifacts are verified before use", {
 })
 
 test_that("combined PCCF metrics are aggregate-only", {
+  testthat::skip_if_not_installed("dplyr")
   centroids <- data.frame(
     postal_code = c("K1A 0B1", "M5V 3A8", "L0L 1L0", "K0K 1K0"),
     latitude = c(45, 45, 44, 45),
@@ -207,6 +211,8 @@ test_that("combined PCCF metrics are aggregate-only", {
 })
 
 test_that("private writer emits only path-free aggregate artifacts", {
+  testthat::skip_if_not_installed("dplyr")
+  testthat::skip_if_not_installed("withr")
   centroids <- data.frame(
     postal_code = c("K1A 0B1", "M5V 3A8"),
     latitude = c(45.0000001, 43.6400001),
@@ -374,6 +380,7 @@ test_that("PCCF contract fixes schema and benchmark semantics", {
 })
 
 test_that("release index and M5 ancestry bind compatible releases", {
+  testthat::skip_if_not_installed("withr")
   m2_artifact <- withr::local_tempfile(fileext = ".csv.gz")
   m2_path <- withr::local_tempfile(fileext = ".json")
   m5_artifact <- withr::local_tempfile(fileext = ".csv.gz")
@@ -449,6 +456,7 @@ test_that("release index and M5 ancestry bind compatible releases", {
 })
 
 test_that("licensed PCCF input must resolve outside the repository", {
+  testthat::skip_if_not_installed("withr")
   repo_root <- withr::local_tempdir()
   in_repo <- file.path(repo_root, "pccf.csv")
   writeLines("restricted", in_repo)
@@ -471,6 +479,7 @@ test_that("licensed PCCF input must resolve outside the repository", {
 })
 
 test_that("licensed input read errors do not reveal local paths", {
+  testthat::skip_if_not_installed("withr")
   secret_path <- file.path(
     withr::local_tempdir(),
     "never-log-this-pccf-name.csv"

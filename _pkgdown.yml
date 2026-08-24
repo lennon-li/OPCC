@@ -27,3 +27,15 @@ reference:
     contents:
       - run_app
       - download_da_boundaries
+      - export_postal_points
+  - title: Rebuild artifacts from source
+    contents:
+      - download_nar
+      - download_geonames
+      - download_gaf
+      - download_census_boundaries
+      - build_centroids
+      - build_db_assignment
+      - build_m2
+      - aggregate_da_correspondence
+      - geonames_supplementary_adapter

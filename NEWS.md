@@ -1,5 +1,23 @@
 # OPCC 0.0.1
 
+- Every use of a suggested package is now conditional. `dplyr` was used
+  unguarded throughout the source-layer validation path, and `rlang` was
+  missing from the build dependency check, so a missing package surfaced as
+  an obscure namespace error instead of a list of packages to install.
+- `run_app()` no longer uses `rlang` to report which Shiny packages are
+  missing, since `rlang` is itself only suggested. It also enforces the
+  `bslib >= 0.6.0` floor that `DESCRIPTION` now declares.
+- Release and build downloads fail with an actionable message when the remote
+  resource is unavailable, instead of surfacing a raw connection error.
+- `sli_make_synthetic_qa()` restores the caller's random-number stream rather
+  than leaving it reseeded.
+- Added `export_postal_points()`, which writes the postal-code point
+  shapefile for a join. The reproducer script the Shiny app generates now
+  calls it instead of reaching into unexported internals, so the script a user
+  is handed runs entirely on public API.
+- The optional Public Health Unit overlay is now read only from the user's own
+  app cache. OPCC no longer obtains the boundary file from another package,
+  and the map simply omits the overlay when no cached file is present.
 - Added an `opcc_postal_points.zip` download to the Shiny app that exports
   the user's postal codes as a zipped ESRI point shapefile.
 - Initial public release with checksum-verified postal-code-to-DB and

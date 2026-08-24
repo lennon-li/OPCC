@@ -49,6 +49,7 @@ test_that("DA-only runner requires explicit private inputs", {
 })
 
 test_that("producer files must match the attributed commit bytes", {
+  skip_if_not_installed("withr")
   repo <- withr::local_tempdir()
   dir.create(file.path(repo, "scripts"))
   tracked <- file.path(repo, "scripts", "runner.R")
@@ -228,6 +229,7 @@ test_that("DA-only result records M1 and M2 as unvalidated", {
 })
 
 test_that("DA-only writer emits aggregate files without row canaries", {
+  skip_if_not_installed("withr")
   opcc <- data.frame(
     postal_code = "K1A 0B1",
     DAUID = "35010001",

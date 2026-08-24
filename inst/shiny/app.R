@@ -104,16 +104,15 @@ point_popup <- function(points, da_lookup) {
   }, character(1))
 }
 
+# Optional public health unit overlay. OPCC does not ship or fetch the
+# boundaries: the overlay draws only if the user has placed phu_simple.rds in
+# the app cache themselves. Nothing here depends on a package outside
+# DESCRIPTION, and the map degrades to no overlay when the file is absent.
 load_local_phu <- function() {
   rds <- file.path(tools::R_user_dir("OPCC", "cache"), "shiny-app",
                    "phu_simple.rds")
   if (!file.exists(rds)) {
-    src <- system.file("extdata", "phu_simple.rds", package = "ONgeoR")
-    if (!nzchar(src)) {
-      return(NULL)
-    }
-    dir.create(dirname(rds), recursive = TRUE, showWarnings = FALSE)
-    file.copy(src, rds)
+    return(NULL)
   }
   tryCatch(readRDS(rds), error = function(e) NULL)
 }
@@ -428,7 +427,7 @@ server <- function(input, output, session) {
         return(tags$p(class = "text-muted small",
                       "Upload a CSV to choose its postal code column."))
       }
-      guess <- OPCC:::.detect_postal_column(records)
+      guess <- .detect_postal_column(records)
       return(selectInput("postal_col", "Postal code column",
         choices = colnames(records),
         selected = if (!is.na(guess)) guess))
@@ -450,7 +449,7 @@ server <- function(input, output, session) {
       postal_col <- input$postal_col
       typed_codes <- NULL
     } else {
-      typed_codes <- OPCC:::.parse_postal_text(input$postcode_text)
+      typed_codes <- .parse_postal_text(input$postcode_text)
       if (length(typed_codes) == 0L) {
         show_status_popup("warning", "Missing input",
           tags$p("Enter at least one postal code, one per line."))
@@ -477,7 +476,7 @@ server <- function(input, output, session) {
       return()
     }
     result <- tryCatch(
-      OPCC:::.postal_da_join(records, postal_col, correspondence,
+      .postal_da_join(records, postal_col, correspondence,
                              all_links = all_links),
       error = function(e) e
     )
@@ -504,14 +503,14 @@ server <- function(input, output, session) {
     if (is.null(centroids)) {
       centroids <- tryCatch(
         shiny::withProgress(message = "Fetching postal centroids", value = 0.7, {
-          OPCC:::.load_postal_centroids()
+          .load_postal_centroids()
         }),
         error = function(e) NULL
       )
       if (!is.null(centroids)) centroids_rv(centroids)
     }
     points <- if (is.null(centroids)) NULL else
-      OPCC:::.filter_postal_centroids(centroids, input_codes)
+      .filter_postal_centroids(centroids, input_codes)
     if (!is.null(points) && nrow(points) > 0L) {
       postal_points_rv(points)
     } else {
@@ -620,8 +619,8 @@ server <- function(input, output, session) {
           tags$p("The sf package is required to export a shapefile."))
         return()
       }
-      sf_points <- OPCC:::.postal_points_sf(points, joined)
-      OPCC:::.write_postal_points_shapefile(sf_points, file)
+      sf_points <- .postal_points_sf(points, joined)
+      .write_postal_points_shapefile(sf_points, file)
     }
   )
 
@@ -631,7 +630,7 @@ server <- function(input, output, session) {
       meta <- join_meta_rv()
       req(meta)
       if (identical(meta$mode, "text")) {
-        script <- OPCC:::.render_opcc_reproducer_script(
+        script <- .render_opcc_reproducer_script(
           input_file = NULL, postal_col = "postal_code", output_dir = ".",
           vintage = meta$vintage,
           all_links = identical(input$all_links, "all"),
@@ -639,7 +638,7 @@ server <- function(input, output, session) {
         )
       } else {
         req(input$input_file, input$postal_col)
-        script <- OPCC:::.render_opcc_reproducer_script(
+        script <- .render_opcc_reproducer_script(
           input$input_file$name, input$postal_col, ".",
           latest_da_vintage, all_links = identical(input$all_links, "all")
         )

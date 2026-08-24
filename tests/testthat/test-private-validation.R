@@ -204,6 +204,7 @@ test_that("aggregate metrics do not contain restricted row values", {
 })
 
 test_that("licensed validation output cannot target the repository", {
+  testthat::skip_if_not_installed("withr")
   repo_root <- withr::local_tempdir()
   tracked_output <- file.path(repo_root, "docs")
   dir.create(tracked_output)
@@ -234,6 +235,7 @@ test_that("licensed validation output cannot target the repository", {
 })
 
 test_that("licensed output rejects a symlink parent into the repository", {
+  testthat::skip_if_not_installed("withr")
   repo_root <- withr::local_tempdir()
   tracked_output <- file.path(repo_root, "docs")
   dir.create(tracked_output)
