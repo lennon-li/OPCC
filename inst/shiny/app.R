@@ -17,23 +17,164 @@ if (utils::packageVersion("bslib") < "0.6.0") {
 # future/multisession worker; under load the session deadlocked writing the
 # task payload to the worker socket, which froze Shiny's single event loop and
 # left the UI completely unresponsive - no progress, no popup, no redraw.
-load_da_simplified <- function(tolerance) {
-  rds <- file.path(
-    tools::R_user_dir("OPCC", "cache"), "shiny-app",
-    sprintf("opcc-da-on-2021-simplified-%sm.rds", tolerance)
-  )
-  if (file.exists(rds)) {
-    return(readRDS(rds))
+da_artifact_cache_dir <- function() {
+  configured <- getOption("OPCC.shiny_da_cache_dir", NULL)
+  if (is.null(configured)) {
+    configured <- Sys.getenv("OPCC_SHINY_DA_CACHE_DIR", unset = "")
   }
-  paths <- OPCC::download_da_boundaries()
+  if (identical(configured, "")) return(NULL)
+  if (!is.character(configured) || length(configured) != 1L ||
+      is.na(configured) || !nzchar(configured)) {
+    stop("OPCC Shiny DA cache must be a single non-empty path", call. = FALSE)
+  }
+  dir.create(configured, recursive = TRUE, showWarnings = FALSE)
+  if (!dir.exists(configured)) {
+    stop("Could not create OPCC Shiny DA cache: ", configured, call. = FALSE)
+  }
+  normalizePath(configured, mustWork = TRUE)
+}
+
+read_da_artifact <- function(path) {
+  if (!file.exists(path) || isTRUE(file.info(path)$size == 0)) return(NULL)
+  value <- tryCatch(readRDS(path), error = function(e) NULL)
+  if (!inherits(value, "sf") ||
+      !all(c("DAUID", "PRUID") %in% names(value))) NULL else value
+}
+
+save_da_artifact <- function(value, path) {
+  dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
+  temporary <- tempfile(paste0(basename(path), "."), tmpdir = dirname(path))
+  on.exit(unlink(temporary, force = TRUE), add = TRUE)
+  saveRDS(value, temporary)
+  if (!file.rename(temporary, path)) {
+    stop("Could not atomically publish simplified DA cache", call. = FALSE)
+  }
+  invisible(path)
+}
+
+da_lock_owner_path <- function(lock) file.path(lock, "owner.rds")
+
+write_da_lock_owner <- function(lock, owner) {
+  path <- da_lock_owner_path(lock)
+  temporary <- tempfile("owner.", tmpdir = lock)
+  on.exit(unlink(temporary, force = TRUE), add = TRUE)
+  saveRDS(owner, temporary)
+  if (!file.rename(temporary, path)) return(FALSE)
+  TRUE
+}
+
+da_process_alive <- function(pid) {
+  isTRUE(tryCatch(tools::pskill(pid, 0L), error = function(e) FALSE))
+}
+
+da_lock_is_stale <- function(lock, stale_after = 7200,
+                             now = Sys.time(),
+                             process_alive = da_process_alive) {
+  owner <- tryCatch(readRDS(da_lock_owner_path(lock)), error = function(e) NULL)
+  if (!is.list(owner) || is.null(owner$host) || is.null(owner$pid) ||
+      is.null(owner$heartbeat)) {
+    age <- as.numeric(difftime(now, file.info(lock)$mtime, units = "secs"))
+    return(is.finite(age) && age > stale_after)
+  }
+  if (identical(owner$host, unname(Sys.info()[["nodename"]]))) {
+    return(!process_alive(owner$pid))
+  }
+  age <- as.numeric(difftime(
+    now, file.info(da_lock_owner_path(lock))$mtime, units = "secs"
+  ))
+  is.finite(age) && age > stale_after
+}
+
+refresh_da_lock <- function(lock, owner) {
+  owner$heartbeat <- Sys.time()
+  current <- tryCatch(readRDS(da_lock_owner_path(lock)),
+                      error = function(e) NULL)
+  if (!is.list(current) || !identical(current$host, owner$host) ||
+      !identical(current$pid, owner$pid) ||
+      !isTRUE(Sys.setFileTime(da_lock_owner_path(lock), owner$heartbeat))) {
+    stop("Lost ownership of simplified DA cache lock", call. = FALSE)
+  }
+  owner
+}
+
+build_da_simplified <- function(tolerance, raw_cache_dir,
+                                heartbeat = function() NULL) {
+  heartbeat()
+  old_timeout <- options(timeout = max(900, getOption("timeout", 60)))
+  on.exit(options(old_timeout), add = TRUE)
+  paths <- OPCC::download_da_boundaries(cache_dir = raw_cache_dir)
+  heartbeat()
   da_sf <- sf::st_read(paths$da, quiet = TRUE)
+  heartbeat()
   da_sf <- da_sf[da_sf$PRUID == "35", ]
   da_sf <- sf::st_transform(da_sf, 3347)
   da_sf <- sf::st_simplify(da_sf, preserveTopology = FALSE,
                            dTolerance = tolerance)
   da_sf <- sf::st_transform(da_sf, 4326)
-  dir.create(dirname(rds), recursive = TRUE, showWarnings = FALSE)
-  saveRDS(da_sf, rds)
+  heartbeat()
+  da_sf
+}
+
+load_da_simplified <- function(tolerance, raw_cache_dir,
+                               artifact_cache_dir = NULL,
+                               lock_timeout = 600,
+                               stale_after = 7200) {
+  artifact_dir <- artifact_cache_dir %||% raw_cache_dir
+  rds <- file.path(
+    artifact_dir,
+    sprintf("opcc-da-on-2021-simplified-%sm.rds", tolerance)
+  )
+  cached <- read_da_artifact(rds)
+  if (!is.null(cached)) return(cached)
+
+  lock <- NULL
+  owner <- NULL
+  if (!is.null(artifact_cache_dir)) {
+    lock <- paste0(rds, ".lock")
+    deadline <- Sys.time() + lock_timeout
+    while (!dir.create(lock, showWarnings = FALSE)) {
+      cached <- read_da_artifact(rds)
+      if (!is.null(cached)) return(cached)
+      if (da_lock_is_stale(lock, stale_after = stale_after)) {
+        stale_lock <- paste0(lock, ".stale-", Sys.getpid(), "-",
+                             sprintf("%08x", sample.int(.Machine$integer.max, 1)))
+        if (file.rename(lock, stale_lock)) {
+          unlink(stale_lock, recursive = TRUE, force = TRUE)
+          next
+        }
+      }
+      if (Sys.time() >= deadline) {
+        # Another process may still be building. Build safely in this
+        # session, but do not contend for or overwrite its shared artifact.
+        artifact_dir <- raw_cache_dir
+        rds <- file.path(artifact_dir, basename(rds))
+        lock <- NULL
+        break
+      }
+      Sys.sleep(0.25)
+    }
+    if (!is.null(lock)) {
+      on.exit(unlink(lock, recursive = TRUE, force = TRUE), add = TRUE)
+      owner <- list(
+        host = unname(Sys.info()[["nodename"]]), pid = Sys.getpid(),
+        heartbeat = Sys.time()
+      )
+      if (!write_da_lock_owner(lock, owner)) {
+        stop("Could not record simplified DA cache lock ownership",
+             call. = FALSE)
+      }
+      cached <- read_da_artifact(rds)
+      if (!is.null(cached)) return(cached)
+    }
+  }
+  # A truncated or wrong-type RDS must not block atomic publication on
+  # platforms where file.rename() cannot replace an existing destination.
+  if (file.exists(rds)) unlink(rds, force = TRUE)
+  heartbeat <- if (is.null(owner)) function() NULL else function() {
+    owner <<- refresh_da_lock(lock, owner)
+  }
+  da_sf <- build_da_simplified(tolerance, raw_cache_dir, heartbeat)
+  save_da_artifact(da_sf, rds)
   da_sf
 }
 
@@ -664,6 +805,17 @@ ui <- bslib::page_sidebar(
 )
 
 server <- function(input, output, session) {
+  # Boundary source files are large rebuild inputs, so they must not enter
+  # OPCC's persistent runtime cache. Keep raw downloads/extracts in a directory
+  # owned by this Shiny session and remove it when the session ends. Only the
+  # derived RDS may use an explicitly configured operator directory.
+  raw_cache_dir <- tempfile("opcc-shiny-session-", tmpdir = tempdir())
+  dir.create(raw_cache_dir, recursive = TRUE, showWarnings = FALSE)
+  artifact_cache_dir <- da_artifact_cache_dir()
+  session$onSessionEnded(function() {
+    unlink(raw_cache_dir, recursive = TRUE, force = TRUE)
+  })
+
 
   records_rv <- reactiveVal(NULL)
   joined_rv <- reactiveVal(NULL)
@@ -804,9 +956,15 @@ server <- function(input, output, session) {
       da_sf <- tryCatch(
         shiny::withProgress(
           message = "Loading dissemination area boundaries",
-          detail = "First run downloads and simplifies the boundary file.",
+          detail = if (is.null(artifact_cache_dir)) {
+            "Session-only cache: each new app session rebuilds the map."
+          } else {
+            "Using the operator-configured reusable simplified-map cache."
+          },
           value = 0.85,
-          load_da_simplified(da_simplify_tolerance)
+          load_da_simplified(
+            da_simplify_tolerance, raw_cache_dir, artifact_cache_dir
+          )
         ),
         error = function(e) e
       )

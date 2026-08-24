@@ -63,6 +63,20 @@ run_app()
 
 Requires `shiny`, `bslib`, `DT`, `leaflet`, `htmlwidgets`, and `sf`.
 
+The app keeps the roughly 200 MB Statistics Canada boundary download and its
+extracted build inputs in a unique session directory and deletes them when the
+session ends. By default, the simplified map artifact is session-only too, so
+each new session downloads and rebuilds it. A user or server operator can opt
+in to reusing only that derived RDS by setting either
+`options(OPCC.shiny_da_cache_dir = "/managed/path")` before `run_app()`, or the
+`OPCC_SHINY_DA_CACHE_DIR` environment variable. The R option takes precedence.
+OPCC never places the raw archive or extraction in that managed directory.
+Shared-cache builds use an owner lock. A lock owned by a live process on the
+same host is never expired based on age; cross-host locks carry a build-phase
+heartbeat and are recoverable after two hours without progress. If a live
+builder outlasts a session's wait, that session falls back to its private raw
+cache rather than overwriting the shared artifact.
+
 ## Reproduce from scratch
 
 Rebuild every artifact from raw Statistics Canada sources using package

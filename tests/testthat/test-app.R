@@ -104,7 +104,8 @@ test_that("app loads DA boundaries synchronously, after join validation", {
     'inherits(result, "error")', join_block, fixed = TRUE
   )[[1]]
   boundary_line <- grep(
-    "load_da_simplified(da_simplify_tolerance)", join_block, fixed = TRUE
+    "load_da_simplified(",
+    join_block, fixed = TRUE
   )[[1]]
   expect_gt(boundary_line, validation_line)
 
@@ -112,6 +113,203 @@ test_that("app loads DA boundaries synchronously, after join validation", {
   # never looks like a frozen app.
   progress_line <- grep("withProgress", join_block, fixed = TRUE)
   expect_true(any(progress_line < boundary_line))
+})
+
+test_that("simplified-map cache requires an explicit managed location", {
+  for (pkg in c("shiny", "bslib", "DT", "leaflet")) {
+    skip_if_not_installed(pkg)
+  }
+  app_env <- new.env(parent = asNamespace("OPCC"))
+  source(system.file("shiny", "app.R", package = "OPCC"), local = app_env)
+
+  withr::local_options(list(OPCC.shiny_da_cache_dir = NULL))
+  withr::local_envvar(OPCC_SHINY_DA_CACHE_DIR = NA)
+  expect_null(app_env$da_artifact_cache_dir())
+
+  env_cache <- tempfile("opcc-managed-env-")
+  withr::local_envvar(OPCC_SHINY_DA_CACHE_DIR = env_cache)
+  expect_equal(app_env$da_artifact_cache_dir(), normalizePath(env_cache))
+
+  option_cache <- tempfile("opcc-managed-option-")
+  withr::local_options(list(OPCC.shiny_da_cache_dir = option_cache))
+  expect_equal(app_env$da_artifact_cache_dir(), normalizePath(option_cache))
+})
+
+test_that("app removes its temporary boundary cache when the session ends", {
+  for (pkg in c("shiny", "bslib", "DT", "leaflet")) {
+    skip_if_not_installed(pkg)
+  }
+  app_dir <- system.file("shiny", package = "OPCC")
+  app_obj <- source(
+    file.path(app_dir, "app.R"),
+    local = new.env(parent = asNamespace("OPCC"))
+  )$value
+  observed <- new.env(parent = emptyenv())
+
+  shiny::testServer(app_obj, {
+    observed$cache_dir <- raw_cache_dir
+    writeLines("session-owned", file.path(raw_cache_dir, "probe.txt"))
+    expect_true(file.exists(file.path(raw_cache_dir, "probe.txt")))
+  })
+
+  expect_false(dir.exists(observed$cache_dir))
+})
+
+test_that("session cleanup never removes the operator artifact cache", {
+  for (pkg in c("shiny", "bslib", "DT", "leaflet")) {
+    skip_if_not_installed(pkg)
+  }
+  managed <- tempfile("opcc-managed-")
+  dir.create(managed)
+  on.exit(unlink(managed, recursive = TRUE), add = TRUE)
+  withr::local_options(list(OPCC.shiny_da_cache_dir = managed))
+  app_env <- new.env(parent = asNamespace("OPCC"))
+  app_obj <- source(system.file("shiny", "app.R", package = "OPCC"),
+                    local = app_env)$value
+  probe <- file.path(managed, "operator-owned.txt")
+  writeLines("keep", probe)
+  observed <- new.env(parent = emptyenv())
+
+  shiny::testServer(app_obj, {
+    observed$raw <- raw_cache_dir
+    expect_false(identical(raw_cache_dir, artifact_cache_dir))
+  })
+
+  expect_false(dir.exists(observed$raw))
+  expect_true(file.exists(probe))
+})
+
+test_that("simplified-map artifacts are validated and published atomically", {
+  for (pkg in c("shiny", "bslib", "DT", "leaflet", "sf")) {
+    skip_if_not_installed(pkg)
+  }
+  app_env <- new.env(parent = asNamespace("OPCC"))
+  source(system.file("shiny", "app.R", package = "OPCC"), local = app_env)
+  cache <- tempfile("opcc-artifact-")
+  dir.create(cache)
+  on.exit(unlink(cache, recursive = TRUE), add = TRUE)
+  path <- file.path(cache, "map.rds")
+
+  writeBin(charToRaw("partial"), path)
+  expect_null(app_env$read_da_artifact(path))
+  artifact <- sf::st_sf(
+    DAUID = "35204841", PRUID = "35",
+    geometry = sf::st_sfc(sf::st_point(c(-79.4, 43.6)), crs = 4326)
+  )
+  app_env$save_da_artifact(artifact, path)
+  expect_s3_class(app_env$read_da_artifact(path), "sf")
+  expect_false(any(grepl("map.rds.", list.files(cache), fixed = TRUE)))
+})
+
+test_that("valid managed simplified-map cache hits never build or download", {
+  for (pkg in c("shiny", "bslib", "DT", "leaflet", "sf")) {
+    skip_if_not_installed(pkg)
+  }
+  app_env <- new.env(parent = asNamespace("OPCC"))
+  source(system.file("shiny", "app.R", package = "OPCC"), local = app_env)
+  raw <- tempfile("opcc-raw-")
+  managed <- tempfile("opcc-managed-")
+  dir.create(raw)
+  dir.create(managed)
+  on.exit(unlink(c(raw, managed), recursive = TRUE), add = TRUE)
+  artifact <- sf::st_sf(
+    DAUID = "35204841", PRUID = "35",
+    geometry = sf::st_sfc(sf::st_point(c(-79.4, 43.6)), crs = 4326)
+  )
+  path <- file.path(managed, "opcc-da-on-2021-simplified-50m.rds")
+  saveRDS(artifact, path)
+  app_env$build_da_simplified <- function(...) {
+    testthat::fail("valid cached artifact triggered a build/download")
+  }
+
+  expect_identical(app_env$load_da_simplified(50, raw, managed), artifact)
+})
+
+test_that("active and recent managed locks are never broken", {
+  for (pkg in c("shiny", "bslib", "DT", "leaflet", "sf")) {
+    skip_if_not_installed(pkg)
+  }
+  app_env <- new.env(parent = asNamespace("OPCC"))
+  source(system.file("shiny", "app.R", package = "OPCC"), local = app_env)
+  artifact <- sf::st_sf(
+    DAUID = "35204841", PRUID = "35",
+    geometry = sf::st_sfc(sf::st_point(c(-79.4, 43.6)), crs = 4326)
+  )
+  for (owner in list(
+    list(host = unname(Sys.info()[["nodename"]]), pid = Sys.getpid(),
+         heartbeat = Sys.time() - 86400),
+    list(host = "another-host", pid = 1L, heartbeat = Sys.time())
+  )) {
+    raw <- tempfile("opcc-raw-")
+    managed <- tempfile("opcc-managed-")
+    dir.create(raw)
+    dir.create(managed)
+    lock <- file.path(
+      managed, "opcc-da-on-2021-simplified-50m.rds.lock"
+    )
+    dir.create(lock)
+    saveRDS(owner, file.path(lock, "owner.rds"))
+    built_in <- NULL
+    app_env$build_da_simplified <- function(tolerance, raw_cache_dir,
+                                             heartbeat) {
+      built_in <<- raw_cache_dir
+      artifact
+    }
+
+    expect_s3_class(
+      app_env$load_da_simplified(50, raw, managed, lock_timeout = 0,
+                                 stale_after = 60),
+      "sf"
+    )
+    expect_identical(built_in, raw)
+    expect_true(dir.exists(lock))
+    expect_true(file.exists(file.path(raw,
+      "opcc-da-on-2021-simplified-50m.rds")))
+    expect_false(file.exists(file.path(managed,
+      "opcc-da-on-2021-simplified-50m.rds")))
+    unlink(c(raw, managed), recursive = TRUE)
+  }
+})
+
+test_that("stale managed locks are recovered before rebuilding", {
+  for (pkg in c("shiny", "bslib", "DT", "leaflet", "sf")) {
+    skip_if_not_installed(pkg)
+  }
+  app_env <- new.env(parent = asNamespace("OPCC"))
+  source(system.file("shiny", "app.R", package = "OPCC"), local = app_env)
+  raw <- tempfile("opcc-raw-")
+  managed <- tempfile("opcc-managed-")
+  dir.create(raw)
+  dir.create(managed)
+  on.exit(unlink(c(raw, managed), recursive = TRUE), add = TRUE)
+  lock <- file.path(managed,
+    "opcc-da-on-2021-simplified-50m.rds.lock")
+  dir.create(lock)
+  saveRDS(list(host = "dead-remote-host", pid = 1L,
+               heartbeat = as.POSIXct("2000-01-01", tz = "UTC")),
+          file.path(lock, "owner.rds"))
+  Sys.setFileTime(file.path(lock, "owner.rds"),
+                  as.POSIXct("2000-01-01", tz = "UTC"))
+  artifact <- sf::st_sf(
+    DAUID = "35204841", PRUID = "35",
+    geometry = sf::st_sfc(sf::st_point(c(-79.4, 43.6)), crs = 4326)
+  )
+  built_in <- NULL
+  app_env$build_da_simplified <- function(tolerance, raw_cache_dir,
+                                           heartbeat) {
+    built_in <<- raw_cache_dir
+    heartbeat()
+    artifact
+  }
+
+  expect_s3_class(app_env$load_da_simplified(
+    50, raw, managed, lock_timeout = 0, stale_after = 60
+  ), "sf")
+  expect_identical(built_in, raw)
+  expect_false(dir.exists(lock))
+  expect_true(file.exists(file.path(managed,
+    "opcc-da-on-2021-simplified-50m.rds")))
+  expect_length(list.files(managed, pattern = "[.]stale-"), 0L)
 })
 
 test_that("app uses a professional two-column results workspace", {
