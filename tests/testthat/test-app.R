@@ -114,6 +114,27 @@ test_that("app loads DA boundaries synchronously, after join validation", {
   expect_true(any(progress_line < boundary_line))
 })
 
+test_that("app uses a professional two-column results workspace", {
+  app_source <- readLines(system.file("shiny", "app.R", package = "OPCC"))
+  app_text <- paste(app_source, collapse = "\n")
+
+  expect_match(app_text, "bslib::page_sidebar\\(")
+  expect_match(
+    app_text,
+    "Open Postal Code Correspondence to Dissemination Areas",
+    fixed = TRUE
+  )
+  expect_match(app_text, "opcc-control-panel", fixed = TRUE)
+  expect_match(app_text, "opcc-results-workspace", fixed = TRUE)
+  expect_match(app_text, "bslib::navset_card_underline\\(")
+
+  map_start <- grep('"Map"', app_source, fixed = TRUE)[[1]]
+  map_output <- grep('leaflet::leafletOutput("da_map"', app_source,
+                     fixed = TRUE)[[1]]
+  map_panel <- app_source[map_start:map_output]
+  expect_false(any(grepl("sidebar(", map_panel, fixed = TRUE)))
+})
+
 test_that(".postal_da_join does not multiply duplicate input rows", {
   records <- data.frame(id = 1:4, pc = rep("m5v3a8", 4),
                         stringsAsFactors = FALSE)

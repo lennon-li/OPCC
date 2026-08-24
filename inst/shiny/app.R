@@ -236,149 +236,427 @@ join_status_text <- function(meta, n_out) {
 }
 
 app_css <- "
-.top-nav .nav-tabs .nav-link {
-  font-weight: 600;
-  letter-spacing: 0.02em;
+body {
+  letter-spacing: 0.005em;
 }
-.opcc-header {
-  background: linear-gradient(90deg, #1b4f8f 0%, #2a78d6 100%);
-  color: #ffffff;
-  padding: 10px 22px;
+.opcc-shell {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 88% 8%, rgba(22, 138, 173, 0.12), transparent 28rem),
+    #eef4f8;
+}
+.opcc-brand {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.9rem;
+  color: #ffffff;
+  padding: 0.25rem 0;
 }
-.opcc-header .opcc-title {
-  font-size: 1.22rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
+.opcc-brand-mark {
+  display: grid;
+  place-items: center;
+  width: 3.1rem;
+  height: 3.1rem;
+  flex: 0 0 auto;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 0.9rem;
+  background: linear-gradient(145deg, #16a6a1, #08778c);
+  box-shadow: 0 0.45rem 1.2rem rgba(3, 38, 54, 0.24);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
 }
-.opcc-header .opcc-subtitle {
-  font-size: 0.9rem;
-  font-weight: 400;
-  opacity: 0.85;
+.opcc-brand h1 {
+  margin: 0;
+  color: #ffffff;
+  font-size: clamp(1rem, 1.5vw, 1.35rem);
+  font-weight: 750;
+  line-height: 1.18;
+}
+.opcc-brand p {
+  margin: 0.18rem 0 0;
+  color: #badde4;
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+body.bslib-page-sidebar > .navbar {
+  min-height: 5rem;
+  border: 0;
+  background: linear-gradient(105deg, #102f46 0%, #0a5368 60%, #08778c 100%);
+  box-shadow: 0 0.35rem 1.4rem rgba(16, 47, 70, 0.2);
+}
+.opcc-control-panel {
+  border: 0 !important;
+  border-right: 1px solid #dbe7ed !important;
+  box-shadow: 0.45rem 0 1.5rem rgba(23, 55, 73, 0.06);
+}
+.opcc-sidebar-intro {
+  padding: 0.2rem 0 0.75rem;
+}
+.opcc-sidebar-intro h2 {
+  margin: 0;
+  color: #173749;
+  font-size: 1.15rem;
+  font-weight: 750;
+}
+.opcc-sidebar-intro p {
+  margin: 0.35rem 0 0;
+  color: #607987;
+  font-size: 0.84rem;
+  line-height: 1.45;
 }
 .opcc-section-title {
-  color: #1b4f8f;
-  font-weight: 700;
-  font-size: 0.78rem;
-  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 1.15rem 0 0.55rem;
+  color: #08778c;
+  font-size: 0.73rem;
+  font-weight: 800;
   letter-spacing: 0.09em;
-  margin-top: 0.9rem;
-  margin-bottom: 0.45rem;
+  text-transform: uppercase;
 }
-.opcc-section-title:first-child {
-  margin-top: 0;
+.opcc-step {
+  display: inline-grid;
+  place-items: center;
+  width: 1.45rem;
+  height: 1.45rem;
+  border-radius: 50%;
+  background: #dff3f4;
+  color: #076775;
+  font-size: 0.68rem;
 }
+.opcc-control-panel .form-control,
+.opcc-control-panel .selectize-input {
+  border-color: #c7d9e1;
+  border-radius: 0.65rem;
+  background: #fbfdfe;
+}
+.opcc-control-panel .form-control:focus,
+.opcc-control-panel .selectize-input.focus {
+  border-color: #1598a2;
+  box-shadow: 0 0 0 0.22rem rgba(21, 152, 162, 0.14);
+}
+.opcc-control-panel .shiny-options-group {
+  line-height: 1.35;
+}
+.opcc-vintage {
+  padding: 0.65rem 0.75rem;
+  border: 1px solid #d7e8ed;
+  border-radius: 0.65rem;
+  background: #eff8fa;
+  color: #315b68;
+  font-size: 0.78rem;
+}
+.opcc-join-button {
+  min-height: 2.85rem;
+  margin-top: 0.8rem;
+  border: 0;
+  border-radius: 0.7rem;
+  background: linear-gradient(100deg, #08778c, #0b8e8a);
+  box-shadow: 0 0.5rem 1rem rgba(8, 119, 140, 0.2);
+  font-weight: 750;
+}
+.opcc-join-button:hover,
+.opcc-join-button:focus {
+  background: linear-gradient(100deg, #08687a, #087b78);
+  transform: translateY(-1px);
+}
+.opcc-downloads {
+  padding: 0.75rem;
+  border: 1px solid #e2e9ed;
+  border-radius: 0.75rem;
+  background: #f7fafb;
+}
+.opcc-downloads .btn {
+  border-radius: 0.55rem;
+  font-size: 0.78rem;
+  text-align: left;
+}
+.opcc-results-workspace {
+  display: flex;
+  min-width: 0;
+  height: 100%;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+.opcc-workspace-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 0.15rem 0.2rem;
+}
+.opcc-workspace-heading h2 {
+  margin: 0;
+  color: #173749;
+  font-size: 1.35rem;
+  font-weight: 750;
+}
+.opcc-workspace-heading p {
+  margin: 0.18rem 0 0;
+  color: #627b89;
+  font-size: 0.86rem;
+}
+.opcc-result-summary {
+  display: flex;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+.opcc-stat {
+  padding: 0.45rem 0.7rem;
+  border: 1px solid #d8e7ec;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #355766;
+  font-size: 0.75rem;
+  font-weight: 650;
+  box-shadow: 0 0.2rem 0.7rem rgba(35, 71, 88, 0.05);
+}
+.opcc-stat-ready {
+  border-color: #a7ddd3;
+  background: #e9f8f4;
+  color: #166b59;
+}
+.opcc-results-card {
+  flex: 1 1 auto;
+  min-height: 32rem;
+}
+.opcc-results-card > .card {
+  height: 100%;
+  border: 1px solid rgba(194, 214, 223, 0.75) !important;
+  border-radius: 1rem !important;
+  box-shadow: 0 0.8rem 2.25rem rgba(31, 68, 86, 0.1) !important;
+  overflow: hidden;
+}
+.opcc-results-card > .card .nav-underline {
+  gap: 1.25rem;
+}
+.opcc-results-card .nav-link {
+  color: #617985;
+  font-weight: 700;
+}
+.opcc-results-card .nav-link.active {
+  color: #08778c;
+}
+.opcc-data-wrap,
 .opcc-map-wrap {
   position: relative;
+  width: 100%;
   height: 100%;
+  min-height: 28rem;
 }
-.opcc-map-overlay {
+.opcc-empty-state {
   position: absolute;
   inset: 0;
   z-index: 500;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.7rem;
-  background: rgba(246, 248, 251, 0.92);
+  background:
+    radial-gradient(circle at 50% 42%, rgba(24, 166, 161, 0.09), transparent 15rem),
+    rgba(248, 251, 252, 0.96);
   text-align: center;
-  padding: 1rem;
+  padding: 2rem;
 }
-.opcc-map-overlay .opcc-overlay-title {
-  color: #1b4f8f;
-  font-weight: 700;
-  font-size: 1.02rem;
+.opcc-empty-state-inner {
+  max-width: 26rem;
 }
-.opcc-map-overlay .opcc-overlay-note {
-  color: #52606d;
+.opcc-empty-symbol {
+  display: grid;
+  place-items: center;
+  width: 4.2rem;
+  height: 4.2rem;
+  margin: 0 auto 1rem;
+  border-radius: 1.25rem;
+  background: linear-gradient(145deg, #d8f1f1, #e8f0fa);
+  color: #08778c;
+  font-size: 1.5rem;
+  font-weight: 800;
+  box-shadow: inset 0 0 0 1px rgba(8, 119, 140, 0.12);
+}
+.opcc-overlay-title {
+  color: #173749;
+  font-size: 1.05rem;
+  font-weight: 750;
+}
+.opcc-overlay-note {
+  margin-top: 0.35rem;
+  color: #637c89;
   font-size: 0.86rem;
-  max-width: 34rem;
+  line-height: 1.5;
 }
 .opcc-modal-band {
   color: #ffffff;
-  font-weight: 600;
   font-size: 1.02rem;
-  padding: 0.55rem 0.95rem;
-  border-radius: 0.4rem;
+  font-weight: 650;
+  padding: 0.65rem 0.95rem;
+  border-radius: 0.65rem;
   margin-bottom: 0.85rem;
+}
+@media (max-width: 767.98px) {
+  .opcc-brand-mark {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+  .opcc-brand p {
+    display: none;
+  }
+  .opcc-results-workspace {
+    min-height: 38rem;
+  }
 }
 "
 
-ui <- bslib::page_fillable(
-  window_title = "OPCC - Open Postal Code Correspondence",
-  theme = bslib::bs_theme(
-    version = 5,
-    primary = da_fill_color,
-    secondary = point_color,
-    bg = "#f6f8fb",
-    fg = "#1f2933"
+app_theme <- bslib::bs_theme(
+  version = 5,
+  preset = "shiny",
+  primary = "#08778c",
+  secondary = "#e2783f",
+  success = "#23866b",
+  info = "#247ba0",
+  warning = "#d88724",
+  danger = "#c94c56",
+  bg = "#eef4f8",
+  fg = "#173749",
+  "border-radius" = "0.7rem",
+  "font-family-sans-serif" = paste(
+    "Inter, Aptos, Segoe UI, Roboto, Helvetica Neue, Arial, sans-serif"
+  )
+) |>
+  bslib::bs_add_rules(app_css)
+
+ui <- bslib::page_sidebar(
+  window_title = paste(
+    "Open Postal Code Correspondence to Dissemination Areas"
   ),
-  tags$style(app_css),
-  tags$div(
-    class = "opcc-header",
+  theme = app_theme,
+  class = "bslib-page-dashboard opcc-shell",
+  title = tags$div(
+    class = "opcc-brand",
+    tags$div(class = "opcc-brand-mark", "OPCC"),
     tags$div(
-      class = "opcc-title",
-      "OPCC: Open Postal Code Correspondence",
-      tags$div(class = "opcc-subtitle",
-        "Ontario postal codes joined to census dissemination areas")
+      tags$h1("Open Postal Code Correspondence to Dissemination Areas"),
+      tags$p("Ontario postal codes to census geography, openly and reproducibly")
     )
   ),
-  bslib::layout_sidebar(
-    sidebar = bslib::sidebar(
-      width = 340,
-      tags$div(class = "opcc-section-title", "Postal code input"),
-      radioButtons("input_mode", NULL,
-        choices = c("Enter postal codes" = "text",
-                    "Upload a CSV" = "file"),
-        selected = "text"),
-      conditionalPanel(
-        condition = "input.input_mode == 'text'",
-        textAreaInput("postcode_text", "Postal codes",
-          height = "110px",
-          placeholder = "M5V 3A8\nK1A 0B1\nN6A 3K7"),
-        tags$p(class = "text-muted small",
-          "One postal code per line.")
-      ),
-      conditionalPanel(
-        condition = "input.input_mode == 'file'",
-        fileInput("input_file", "Upload a CSV",
-          accept = c(".csv", "text/csv"),
-          buttonLabel = "Browse...",
-          placeholder = "CSV with a postal-code column")
-      ),
-      uiOutput("postal_col_ui"),
-      tags$div(class = "opcc-section-title", "Join options"),
-      radioButtons("all_links", "Multiple dissemination areas",
-        choices = c("Keep one best link per postal code" = "best",
-                    "Return every link" = "all"),
-        selected = "best"),
-      tags$p(class = "text-muted small",
-        paste("About 7.8% of Ontario postal codes span more than one",
-              "dissemination area; \"Return every link\" can give a",
-              "record more than one output row.")),
-      tags$p(class = "text-muted small",
-        sprintf("Correspondence vintage: %s (latest)", latest_da_vintage)),
-      actionButton("run_join", "Join", class = "btn-primary w-100 mb-1"),
-      tags$div(class = "opcc-section-title", "Downloads"),
-      uiOutput("downloads_ui")
+  sidebar = bslib::sidebar(
+    width = 360,
+    class = "opcc-control-panel",
+    bg = "#ffffff",
+    tags$div(
+      class = "opcc-sidebar-intro",
+      tags$h2("Build a correspondence"),
+      tags$p(
+        "Enter postal codes or upload a table, then join them to the latest ",
+        "available dissemination-area correspondence."
+      )
     ),
-    bslib::navset_tab(
-      id = "output_tab",
-      bslib::nav_panel(
-        "Data table",
-        DT::dataTableOutput("joined_table")
+    tags$div(
+      class = "opcc-section-title",
+      tags$span(class = "opcc-step", "1"),
+      "Choose your input"
+    ),
+    radioButtons(
+      "input_mode",
+      NULL,
+      choices = c(
+        "Enter postal codes" = "text",
+        "Upload a CSV" = "file"
       ),
-      bslib::nav_panel(
-        "Map",
-        tags$div(
-          class = "opcc-map-wrap",
-          leaflet::leafletOutput("da_map", height = "calc(100vh - 160px)"),
-          uiOutput("map_status")
+      selected = "text"
+    ),
+    conditionalPanel(
+      condition = "input.input_mode == 'text'",
+      textAreaInput(
+        "postcode_text",
+        "Postal codes",
+        height = "110px",
+        placeholder = "M5V 3A8\nK1A 0B1\nN6A 3K7"
+      ),
+      tags$p(class = "text-muted small", "One postal code per line.")
+    ),
+    conditionalPanel(
+      condition = "input.input_mode == 'file'",
+      fileInput(
+        "input_file",
+        "Upload a CSV",
+        accept = c(".csv", "text/csv"),
+        buttonLabel = "Browse...",
+        placeholder = "CSV with a postal-code column"
+      )
+    ),
+    uiOutput("postal_col_ui"),
+    tags$div(
+      class = "opcc-section-title",
+      tags$span(class = "opcc-step", "2"),
+      "Set the join rule"
+    ),
+    radioButtons(
+      "all_links",
+      "Multiple dissemination areas",
+      choices = c(
+        "Keep one best link per postal code" = "best",
+        "Return every link" = "all"
+      ),
+      selected = "best"
+    ),
+    tags$p(
+      class = "text-muted small",
+      paste(
+        "About 7.8% of Ontario postal codes span more than one",
+        "dissemination area. Returning every link can create multiple",
+        "output rows for one input record."
+      )
+    ),
+    tags$div(
+      class = "opcc-vintage",
+      sprintf("Correspondence vintage: %s (latest)", latest_da_vintage)
+    ),
+    actionButton(
+      "run_join",
+      "Join postal codes to areas",
+      class = "btn-primary opcc-join-button w-100"
+    ),
+    tags$div(
+      class = "opcc-section-title",
+      tags$span(class = "opcc-step", "3"),
+      "Download results"
+    ),
+    tags$div(class = "opcc-downloads", uiOutput("downloads_ui"))
+  ),
+  tags$main(
+    class = "opcc-results-workspace",
+    tags$div(
+      class = "opcc-workspace-heading",
+      tags$div(
+        tags$h2("Results workspace"),
+        tags$p("Join once, then inspect the correspondence as data or a map.")
+      ),
+      uiOutput("result_summary")
+    ),
+    tags$div(
+      class = "opcc-results-card",
+      bslib::navset_card_underline(
+        id = "output_tab",
+        height = "100%",
+        full_screen = TRUE,
+        bslib::nav_panel(
+          "Data",
+          tags$div(
+            class = "opcc-data-wrap",
+            DT::dataTableOutput("joined_table"),
+            uiOutput("data_status")
+          )
+        ),
+        bslib::nav_panel(
+          "Map",
+          tags$div(
+            class = "opcc-map-wrap",
+            leaflet::leafletOutput("da_map", height = "100%"),
+            uiOutput("map_status")
+          )
         )
       )
     )
@@ -566,11 +844,65 @@ server <- function(input, output, session) {
     }
   })
 
+  output$result_summary <- renderUI({
+    joined <- joined_rv()
+    meta <- join_meta_rv()
+    if (is.null(joined) || is.null(meta)) {
+      return(tags$div(
+        class = "opcc-result-summary",
+        tags$span(class = "opcc-stat", "Ready for input"),
+        tags$span(
+          class = "opcc-stat",
+          sprintf("Vintage %s", latest_da_vintage)
+        )
+      ))
+    }
+    tags$div(
+      class = "opcc-result-summary",
+      tags$span(
+        class = "opcc-stat opcc-stat-ready",
+        sprintf("%s joined rows", format(nrow(joined), big.mark = ","))
+      ),
+      tags$span(
+        class = "opcc-stat",
+        sprintf(
+          "%s unmatched",
+          format(length(meta$unmatched), big.mark = ",")
+        )
+      ),
+      tags$span(
+        class = "opcc-stat",
+        sprintf("%s invalid", format(meta$invalid_count, big.mark = ","))
+      )
+    )
+  })
+
   output$joined_table <- DT::renderDataTable({
     joined <- joined_rv()
     req(joined)
     joined
   }, rownames = FALSE, options = list(scrollX = TRUE, pageLength = 25))
+
+  output$data_status <- renderUI({
+    if (is.null(joined_rv())) {
+      return(tags$div(
+        class = "opcc-empty-state",
+        tags$div(
+          class = "opcc-empty-state-inner",
+          tags$div(class = "opcc-empty-symbol", "01"),
+          tags$div(class = "opcc-overlay-title", "Your joined data will appear here"),
+          tags$div(
+            class = "opcc-overlay-note",
+            paste(
+              "Use the control panel to enter postal codes or upload a CSV,",
+              "then run the join."
+            )
+          )
+        )
+      ))
+    }
+    NULL
+  })
 
   output$downloads_ui <- renderUI({
     joined_ready <- !is.null(joined_rv()) && nrow(joined_rv()) > 0L
@@ -590,10 +922,19 @@ server <- function(input, output, session) {
   output$map_status <- renderUI({
     if (is.null(da_matched_rv())) {
       return(tags$div(
-        class = "opcc-map-overlay",
-        tags$div(class = "opcc-overlay-title", "No map yet"),
-        tags$div(class = "opcc-overlay-note",
-          "Enter postal codes and press Join to draw the map.")
+        class = "opcc-empty-state",
+        tags$div(
+          class = "opcc-empty-state-inner",
+          tags$div(class = "opcc-empty-symbol", "DA"),
+          tags$div(class = "opcc-overlay-title", "The map is created automatically"),
+          tags$div(
+            class = "opcc-overlay-note",
+            paste(
+              "After the data is joined, matched dissemination areas and",
+              "postal-code points are drawn here--no extra map controls needed."
+            )
+          )
+        )
       ))
     }
     NULL
