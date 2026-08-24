@@ -243,7 +243,20 @@ test_that("licensed output rejects a symlink parent into the repository", {
   linked_parent <- file.path(outside, "linked-docs")
   linked <- file.symlink(tracked_output, linked_parent)
   testthat::skip_if_not(linked, "symbolic links are unavailable")
-  on.exit(unlink(linked_parent), add = TRUE)
+  on.exit({
+    if (.Platform$OS.type == "windows") {
+      status <- system2(
+        "cmd.exe",
+        c("/d", "/c", "rmdir", shQuote(linked_parent, type = "cmd")),
+        stdout = FALSE,
+        stderr = FALSE
+      )
+      expect_identical(status, 0L)
+    } else {
+      expect_identical(unlink(linked_parent), 0L)
+    }
+    expect_false(file.exists(linked_parent))
+  }, add = TRUE)
 
   expect_error(
     sli_validate_output_directory(
