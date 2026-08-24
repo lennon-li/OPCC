@@ -64,7 +64,21 @@ write_da_lock_owner <- function(lock, owner) {
 }
 
 da_process_alive <- function(pid) {
-  isTRUE(tryCatch(tools::pskill(pid, 0L), error = function(e) FALSE))
+  if (.Platform$OS.type == "windows") {
+    output <- tryCatch(
+      system2(
+        "tasklist",
+        c("/FI", shQuote(sprintf("PID eq %d", as.integer(pid))),
+          "/FO", "CSV", "/NH"),
+        stdout = TRUE, stderr = FALSE
+      ),
+      error = function(e) NULL
+    )
+    if (is.null(output) || !is.null(attr(output, "status"))) return(NA)
+    listed_pids <- sub('^"[^"]+","([0-9]+)".*$', "\\1", output)
+    return(any(listed_pids == as.character(as.integer(pid))))
+  }
+  tryCatch(tools::pskill(pid, 0L), error = function(e) NA)
 }
 
 da_lock_is_stale <- function(lock, stale_after = 7200,
@@ -77,7 +91,9 @@ da_lock_is_stale <- function(lock, stale_after = 7200,
     return(is.finite(age) && age > stale_after)
   }
   if (identical(owner$host, unname(Sys.info()[["nodename"]]))) {
-    return(!process_alive(owner$pid))
+    alive <- process_alive(owner$pid)
+    if (isTRUE(alive)) return(FALSE)
+    if (identical(alive, FALSE)) return(TRUE)
   }
   age <- as.numeric(difftime(
     now, file.info(da_lock_owner_path(lock))$mtime, units = "secs"

@@ -271,6 +271,44 @@ test_that("active and recent managed locks are never broken", {
   }
 })
 
+test_that("lock liveness decisions are portable and conservative", {
+  for (pkg in c("shiny", "bslib", "DT", "leaflet")) {
+    skip_if_not_installed(pkg)
+  }
+  app_env <- new.env(parent = asNamespace("OPCC"))
+  source(system.file("shiny", "app.R", package = "OPCC"), local = app_env)
+  lock <- tempfile("opcc-lock-")
+  dir.create(lock)
+  on.exit(unlink(lock, recursive = TRUE), add = TRUE)
+  owner_path <- file.path(lock, "owner.rds")
+  same_host <- unname(Sys.info()[["nodename"]])
+  old <- as.POSIXct("2000-01-01", tz = "UTC")
+
+  saveRDS(list(host = same_host, pid = 123L, heartbeat = old), owner_path)
+  Sys.setFileTime(owner_path, old)
+  expect_false(app_env$da_lock_is_stale(
+    lock, stale_after = 60, process_alive = function(pid) TRUE
+  ))
+  expect_true(app_env$da_lock_is_stale(
+    lock, stale_after = 60, process_alive = function(pid) FALSE
+  ))
+  expect_true(app_env$da_lock_is_stale(
+    lock, stale_after = 60, process_alive = function(pid) NA
+  ))
+
+  Sys.setFileTime(owner_path, Sys.time())
+  expect_false(app_env$da_lock_is_stale(
+    lock, stale_after = 60, process_alive = function(pid) NA
+  ))
+
+  saveRDS(list(host = "another-host", pid = 123L, heartbeat = old), owner_path)
+  Sys.setFileTime(owner_path, old)
+  expect_true(app_env$da_lock_is_stale(
+    lock, stale_after = 60,
+    process_alive = function(pid) stop("remote PID must not be probed")
+  ))
+})
+
 test_that("stale managed locks are recovered before rebuilding", {
   for (pkg in c("shiny", "bslib", "DT", "leaflet", "sf")) {
     skip_if_not_installed(pkg)
