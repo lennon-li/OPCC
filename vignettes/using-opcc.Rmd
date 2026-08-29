@@ -373,7 +373,8 @@ binary from CRAN.
 
 None of the build steps below are evaluated when this vignette is built: they
 download the raw public inputs and need `sf`, `dplyr`, and `readr`. Each step
-also consumes the output of the step before it.
+also consumes the output of the step before it. Raw source files are large, so
+all download helpers require an explicit directory that you manage.
 
 ```{r, eval = FALSE}
 packages <- c("digest", "dplyr", "jsonlite", "readr", "sf")
@@ -386,10 +387,13 @@ if (length(missing)) install.packages(missing)
 Each download is cached; re-running skips files already present.
 
 ```{r, eval = FALSE}
-nar_dir <- download_nar()
-geonames_txt <- download_geonames()
-bounds <- download_census_boundaries()
-gaf_csv <- download_gaf()
+build_cache <- file.path(tempdir(), "opcc-build")
+dir.create(build_cache, recursive = TRUE, showWarnings = FALSE)
+
+nar_dir <- download_nar(cache_dir = build_cache)
+geonames_txt <- download_geonames(cache_dir = build_cache)
+bounds <- download_census_boundaries(cache_dir = build_cache)
+gaf_csv <- download_gaf(cache_dir = build_cache)
 ```
 
 **Step 2: Build postal code centroids (M1).**
