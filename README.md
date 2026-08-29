@@ -80,13 +80,17 @@ cache rather than overwriting the shared artifact.
 ## Reproduce from scratch
 
 Rebuild every artifact from raw Statistics Canada sources using package
-functions only (requires `sf`, `dplyr`, `readr`):
+functions only (requires `sf`, `dplyr`, `readr`). Raw inputs are large, so the
+build functions require an explicit directory that you control:
 
 ```r
-nar_dir <- download_nar()
-geonames_txt <- download_geonames()
-bounds <- download_census_boundaries()
-gaf_csv <- download_gaf()
+build_cache <- file.path(tempdir(), "opcc-build")
+dir.create(build_cache, recursive = TRUE, showWarnings = FALSE)
+
+nar_dir <- download_nar(cache_dir = build_cache)
+geonames_txt <- download_geonames(cache_dir = build_cache)
+bounds <- download_census_boundaries(cache_dir = build_cache)
+gaf_csv <- download_gaf(cache_dir = build_cache)
 
 centroids_csv <- build_centroids(nar_dir, geonames_txt)
 rollup_csv <- build_db_assignment(centroids_csv, bounds$province, bounds$db, gaf_csv)
