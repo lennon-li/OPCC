@@ -29,6 +29,14 @@
   }
   dir.create(dirname(dest), recursive = TRUE, showWarnings = FALSE)
   message(sprintf("[download] %s: fetching %s", label, url))
+
+  # CRAN asks packages downloading files larger than a few MB to use a
+  # sufficiently large timeout. Preserve any larger user setting and restore
+  # it immediately after this download.
+  old_timeout <- getOption("timeout", 60)
+  options(timeout = max(3600, old_timeout))
+  on.exit(options(timeout = old_timeout), add = TRUE)
+
   # CRAN policy: fail gracefully when a remote resource is unavailable.
   tryCatch(
     utils::download.file(url, dest, mode = "wb"),
