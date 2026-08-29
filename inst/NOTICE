@@ -1,0 +1,35 @@
+OPCC source data licences and attribution
+
+OPCC package code and documentation
+- Copyright: Lennon Li and OPCC contributors
+- Licence: MIT
+
+Statistics Canada National Address Register (NAR)
+- Source: Statistics Canada, National Address Register
+- Licence: Open Government Licence - Canada
+- OPCC treatment: source-qualified postal association evidence; source and
+  vintage are retained in release provenance.
+
+Statistics Canada 2021 Census geography
+- Source: Statistics Canada, 2021 Census geography products, including
+  Dissemination Block / Dissemination Area boundaries and the Geographic
+  Attribute File
+- Licence: Open Government Licence - Canada
+- OPCC treatment: geographic assignment and census-geography roll-up.
+
+GeoNames Canadian postal-code points
+- Source: GeoNames
+- Licence: Creative Commons Attribution 4.0 (CC BY 4.0)
+- OPCC treatment: separately identified supplementary postal-code point
+  evidence; source date and attribution are retained in provenance metadata.
+
+Restricted sources not redistributed by OPCC
+- Canada Post postal products, PCCF, and PCCF+ are not ingested or
+  redistributed as OPCC release evidence.
+- Any maintainer-held licensed QA material is local, read-only validation
+  material and is not included in the package, repository release artifacts,
+  runtime cache, or contribution workflow.
+
+Source-specific terms control if they conflict with this notice. OPCC publishes
+or accepts a data layer only when its source terms permit the intended use and
+redistribution.
