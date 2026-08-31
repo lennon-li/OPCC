@@ -684,3 +684,23 @@ test_that("normalize_postal_code flags the malformed entries the app rejects", {
   expect_equal(malformed, c("not a code", "12345"))
   expect_length(typed[!is.na(normalize_postal_code(typed))], 3L)
 })
+
+test_that("the app header shows the installed package version", {
+  testthat::skip_if_not_installed("shiny")
+  testthat::skip_if_not_installed("bslib")
+  testthat::skip_if_not_installed("DT")
+  testthat::skip_if_not_installed("leaflet")
+  app_file <- system.file("shiny", "app.R", package = "OPCC")
+  testthat::skip_if(!nzchar(app_file))
+
+  app_env <- new.env(parent = asNamespace("OPCC"))
+  suppressMessages(source(app_file, local = app_env))
+  version <- as.character(utils::packageVersion("OPCC"))
+
+  # The badge must track DESCRIPTION rather than a hard-coded string.
+  expect_equal(app_env$opcc_app_version, version)
+
+  markup <- paste(as.character(app_env$ui), collapse = "")
+  expect_true(grepl("opcc-version", markup, fixed = TRUE))
+  expect_true(grepl(paste0("v", version), markup, fixed = TRUE))
+})

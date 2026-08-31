@@ -1,5 +1,21 @@
-# OPCC 0.0.1
+# OPCC 1.0.0
 
+- First CRAN release.
+- The Shiny app can now reuse the simplified dissemination-area boundary
+  artifact between sessions, so a lookup draws its map in about a second
+  instead of re-downloading the Statistics Canada boundary file and
+  re-simplifying every Ontario dissemination area on each launch. The cache is
+  never created without permission: point `OPCC.shiny_da_cache_dir` or
+  `OPCC_SHINY_DA_CACHE_DIR` at a directory, or answer the one-time prompt shown
+  in an interactive session. The answer is remembered, and with no setting and
+  no recorded answer the app keeps everything in a session-only temporary
+  directory.
+- Typed postal codes are now checked against the Canadian `A1A 1A1` format
+  before the join runs. Malformed entries are listed back by name and skipped,
+  and the join continues with the valid ones instead of silently reporting
+  them as invalid afterwards.
+- The Shiny app header shows the installed package version beside the title,
+  and the download buttons now follow the app's teal palette.
 - Every use of a suggested package is now conditional. `dplyr` was used
   unguarded throughout the source-layer validation path, and `rlang` was
   missing from the build dependency check, so a missing package surfaced as

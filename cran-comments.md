@@ -16,22 +16,22 @@
 
 ## R CMD check results
 
-Checks were run on 2026-08-31 against OPCC 0.0.1.
+Checks were run on 2026-08-31 against OPCC 1.0.0.
 
 - `R CMD build OPCC` with vignettes: OK.
-- `R CMD check --as-cran OPCC_0.0.1.tar.gz`: `Status: 1 NOTE`.
+- `R CMD check --as-cran OPCC_1.0.0.tar.gz`: `Status: 1 NOTE`.
 - The sole NOTE is CRAN incoming feasibility identifying this as a new
   submission; there are no package ERRORs or WARNINGs.
-- Package test suite under check: 534 passing, 14 skipped, 0 failures. The
+- Package test suite under check: 537 passing, 14 skipped, 0 failures. The
   skips are tests that need a source checkout, a build script that is not
   installed with the runtime package, a locally cached artifact, or the
   opt-in installed-app browser test. Every skip reports its own reason; the
   cached-artifact skips mean the exact pass/skip split varies with what is
   cached on the checking machine.
 - `R CMD check --as-cran` with `_R_CHECK_DEPENDS_ONLY_=true`:
-  `Status: 1 NOTE`, the same new-submission NOTE; 423 passing, 39 skipped,
+  `Status: 1 NOTE`, the same new-submission NOTE; 423 passing, 40 skipped,
   0 failures.
-- With all suggested packages installed, the full local suite runs 599
+- With all suggested packages installed, the full local suite runs 602
   passing, 1 skip (the opt-in browser test), and 0 failures.
 - All four GitHub Actions check jobs passed on the exact commit submitted
   here. Because they run with `error_on = "warning"`, a passing job is

@@ -12,6 +12,14 @@ if (utils::packageVersion("bslib") < "0.6.0") {
 
 `%||%` <- function(a, b) if (is.null(a)) b else a
 
+# Read from the installed package so the badge cannot drift from DESCRIPTION.
+# Sourced from a namespace child during a build or check, the package may not
+# be installed yet, so fall back rather than failing to start.
+opcc_app_version <- tryCatch(
+  as.character(utils::packageVersion("OPCC")),
+  error = function(e) "development"
+)
+
 # The dissemination area boundaries are loaded synchronously, inside the same
 # withProgress() as the rest of the join. An earlier version ran this in a
 # future/multisession worker; under load the session deadlocked writing the
@@ -431,6 +439,24 @@ body {
   font-weight: 750;
   line-height: 1.18;
 }
+.opcc-brand-title {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.opcc-version {
+  flex: 0 0 auto;
+  padding: 0.1rem 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 0.6rem;
+  background: rgba(255, 255, 255, 0.12);
+  color: #d9eef2;
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
 .opcc-brand p {
   margin: 0.18rem 0 0;
   color: #badde4;
@@ -698,8 +724,9 @@ app_theme <- bslib::bs_theme(
   bslib::bs_add_rules(app_css)
 
 ui <- bslib::page_sidebar(
-  window_title = paste(
-    "Open Postal Code Correspondence to Dissemination Areas"
+  window_title = paste0(
+    "Open Postal Code Correspondence to Dissemination Areas (v",
+    opcc_app_version, ")"
   ),
   theme = app_theme,
   class = "bslib-page-dashboard opcc-shell",
@@ -707,7 +734,13 @@ ui <- bslib::page_sidebar(
     class = "opcc-brand",
     tags$div(class = "opcc-brand-mark", "OPCC"),
     tags$div(
-      tags$h1("Open Postal Code Correspondence to Dissemination Areas"),
+      tags$div(
+        class = "opcc-brand-title",
+        tags$h1("Open Postal Code Correspondence to Dissemination Areas"),
+        tags$span(class = "opcc-version",
+                  title = "Installed OPCC package version",
+                  paste0("v", opcc_app_version))
+      ),
       tags$p("Ontario postal codes to census geography, openly and reproducibly")
     )
   ),

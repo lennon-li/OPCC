@@ -1,6 +1,6 @@
 Package: OPCC
 Title: Open Postal Code Correspondence
-Version: 0.0.1
+Version: 1.0.0
 Authors@R:
     person("Lennon", "Li", email = "yeli@biostats.ai",
            role = c("aut", "cre", "cph"))
