@@ -349,7 +349,8 @@ build_da_map <- function(da_matched, joined, points = NULL, phu = NULL) {
 download_or_disabled <- function(items) {
   tagList(lapply(items, function(item) {
     if (isTRUE(item$ready)) {
-      downloadButton(item$id, item$label, class = "btn-primary w-100 mb-1")
+      downloadButton(item$id, item$label,
+                     class = "btn-opcc-download w-100 mb-1")
     } else {
       tags$button(
         item$label, type = "button",
@@ -529,6 +530,18 @@ body.bslib-page-sidebar > .navbar {
   border-radius: 0.55rem;
   font-size: 0.78rem;
   text-align: left;
+}
+.opcc-downloads .btn-opcc-download {
+  border: 0;
+  background: #0b8e8a;
+  color: #ffffff;
+  font-weight: 600;
+}
+.opcc-downloads .btn-opcc-download:hover,
+.opcc-downloads .btn-opcc-download:focus {
+  background: #087b78;
+  color: #ffffff;
+  box-shadow: 0 0.25rem 0.6rem rgba(8, 119, 140, 0.25);
 }
 .opcc-results-workspace {
   display: flex;
@@ -900,6 +913,26 @@ server <- function(input, output, session) {
         show_status_popup("warning", "Missing input",
           tags$p("Enter at least one postal code, one per line."))
         return()
+      }
+      malformed <- typed_codes[is.na(OPCC::normalize_postal_code(typed_codes))]
+      if (length(malformed) > 0L) {
+        show_status_popup(
+          if (length(malformed) == length(typed_codes)) "error" else "warning",
+          "Check the postal code format",
+          tags$p(sprintf(
+            "%s of %s entered value(s) are not valid Canadian postal codes:",
+            format(length(malformed), big.mark = ","),
+            format(length(typed_codes), big.mark = ","))),
+          tags$ul(lapply(utils::head(malformed, 10L), tags$li)),
+          if (length(malformed) > 10L) {
+            tags$p(sprintf("...and %s more.",
+                           format(length(malformed) - 10L, big.mark = ",")))
+          },
+          tags$p(class = "text-muted mb-0",
+                 "Expected format: A1A 1A1. Correct or remove them, then join.")
+        )
+        if (length(malformed) == length(typed_codes)) return()
+        typed_codes <- setdiff(typed_codes, malformed)
       }
       records <- data.frame(postal_code = typed_codes,
                             stringsAsFactors = FALSE)

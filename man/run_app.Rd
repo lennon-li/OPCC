@@ -21,6 +21,16 @@ table, and draw the matched dissemination areas on a map. The joined
 CSV, the map as HTML, and an R script reproducing both artifacts are
 downloadable.
 }
+\details{
+Reusing the simplified map between sessions requires a writable cache. The
+app never writes one without permission: set \code{OPCC.shiny_da_cache_dir} (or
+\code{OPCC_SHINY_DA_CACHE_DIR}) to choose the location yourself, or answer the
+one-time prompt shown in an interactive session. The answer is remembered,
+so a recorded "yes" also applies to later non-interactive launches, and a
+recorded "no" is honoured until you delete the record. Without permission
+the map is rebuilt in a session-only temporary directory, which is correct
+but takes several minutes per session.
+}
 \examples{
 if (interactive()) {
   run_app()

@@ -1,3 +1,82 @@
+# Helpers for the opt-in, consent-gated reusable map cache.
+.opcc_da_cache_consent_file <- function() {
+  file.path(tools::R_user_dir("OPCC", "config"), "shiny-da-cache-consent.txt")
+}
+
+.opcc_da_cache_configured <- function() {
+  configured <- getOption("OPCC.shiny_da_cache_dir", NULL)
+  if (is.null(configured)) {
+    configured <- Sys.getenv("OPCC_SHINY_DA_CACHE_DIR", unset = "")
+  }
+  if (identical(configured, "")) NULL else configured
+}
+
+# Records the answer so the question is asked once per user, not once per
+# session. A stored "no" is honoured until the file is removed.
+.opcc_read_da_cache_consent <- function(path = .opcc_da_cache_consent_file()) {
+  if (!file.exists(path)) return(NA)
+  answer <- tryCatch(trimws(readLines(path, n = 1L, warn = FALSE)),
+                     error = function(e) character())
+  if (length(answer) != 1L) return(NA)
+  if (identical(answer, "yes")) return(TRUE)
+  if (identical(answer, "no")) return(FALSE)
+  NA
+}
+
+.opcc_write_da_cache_consent <- function(granted,
+                                         path = .opcc_da_cache_consent_file()) {
+  dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
+  tryCatch({
+    writeLines(if (isTRUE(granted)) "yes" else "no", path)
+    TRUE
+  }, error = function(e) FALSE)
+}
+
+.opcc_ask_da_cache_consent <- function(target) {
+  message(
+    "\nOPCC can reuse the simplified dissemination-area map between sessions.\n",
+    "Without it, every app session re-downloads the Statistics Canada boundary\n",
+    "file and re-simplifies 20,465 polygons, which takes several minutes.\n\n",
+    "  Location: ", target, "\n",
+    "  Size:     roughly 5 MB\n\n",
+    "You can remove it at any time with clear_opcc_cache()."
+  )
+  answer <- tryCatch(
+    readline("Store the reusable map cache there? (y/N) "),
+    error = function(e) ""
+  )
+  grepl("^y", trimws(answer), ignore.case = TRUE)
+}
+
+# Returns a directory to reuse, or NULL to keep everything session-local.
+# Never prompts, and never writes, outside an interactive session, so
+# R CMD check and non-interactive use are unaffected.
+.opcc_resolve_da_cache_dir <- function(interactive_session = interactive(),
+                                       ask = .opcc_ask_da_cache_consent,
+                                       consent_file = .opcc_da_cache_consent_file()) {
+  configured <- .opcc_da_cache_configured()
+  if (!is.null(configured)) return(NULL)
+  target <- file.path(tools::R_user_dir("OPCC", "cache"), "shiny-app")
+  consent <- .opcc_read_da_cache_consent(consent_file)
+  if (isFALSE(consent)) return(NULL)
+  if (is.na(consent)) {
+    # No answer on record. Only an interactive session can be asked, so a
+    # non-interactive run (R CMD check included) stays session-local and
+    # writes nothing.
+    if (!isTRUE(interactive_session)) return(NULL)
+    granted <- isTRUE(tryCatch(ask(target), error = function(e) FALSE))
+    .opcc_write_da_cache_consent(granted, consent_file)
+    if (!granted) {
+      message("Keeping the map cache session-only. ",
+              "Set OPCC_SHINY_DA_CACHE_DIR to change this later.")
+      return(NULL)
+    }
+  }
+  dir.create(target, recursive = TRUE, showWarnings = FALSE)
+  if (!dir.exists(target)) return(NULL)
+  target
+}
+
 #' Launch the OPCC Shiny app
 #'
 #' Launches a Shiny app that joins a user-uploaded CSV to the OPCC
@@ -6,6 +85,15 @@
 #' table, and draw the matched dissemination areas on a map. The joined
 #' CSV, the map as HTML, and an R script reproducing both artifacts are
 #' downloadable.
+#'
+#' Reusing the simplified map between sessions requires a writable cache. The
+#' app never writes one without permission: set `OPCC.shiny_da_cache_dir` (or
+#' `OPCC_SHINY_DA_CACHE_DIR`) to choose the location yourself, or answer the
+#' one-time prompt shown in an interactive session. The answer is remembered,
+#' so a recorded "yes" also applies to later non-interactive launches, and a
+#' recorded "no" is honoured until you delete the record. Without permission
+#' the map is rebuilt in a session-only temporary directory, which is correct
+#' but takes several minutes per session.
 #'
 #' @param ... Passed to [shiny::runApp()].
 #'
@@ -47,6 +135,13 @@ run_app <- function(...) {
   app_file <- file.path(app_dir, "app.R")
   if (!file.exists(app_file)) {
     stop("Could not find the OPCC Shiny app file. Try re-installing the package.", call. = FALSE)
+  }
+  # Resolved before runApp() so the one-time consent prompt reaches the
+  # console, not a browser session that cannot answer readline().
+  resolved_cache <- .opcc_resolve_da_cache_dir()
+  if (!is.null(resolved_cache)) {
+    old_cache_option <- options(OPCC.shiny_da_cache_dir = resolved_cache)
+    on.exit(options(old_cache_option), add = TRUE)
   }
   # Evaluate the app in a child of OPCC's own namespace so it resolves the
   # package's internal helpers by name. That is why inst/shiny/app.R contains

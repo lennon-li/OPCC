@@ -635,3 +635,52 @@ test_that(".render_opcc_reproducer_script shapefile output parses and stays ASCI
     expect_match(script, "opcc_postal_points.zip", fixed = TRUE)
   }
 })
+
+test_that("the reusable map cache is never used without configuration or consent", {
+  testthat::skip_if_not_installed("withr")
+  resolve <- OPCC:::.opcc_resolve_da_cache_dir
+
+  # Non-interactive use (including R CMD check) must never prompt or write.
+  withr::local_options(list(OPCC.shiny_da_cache_dir = NULL))
+  withr::local_envvar(OPCC_SHINY_DA_CACHE_DIR = NA)
+  unanswered <- file.path(withr::local_tempdir(), "no-answer.txt")
+  expect_null(resolve(interactive_session = FALSE,
+                      ask = function(target) stop("must not prompt"),
+                      consent_file = unanswered))
+  expect_false(file.exists(unanswered))
+
+  # A recorded refusal is honoured without re-prompting.
+  refused <- file.path(withr::local_tempdir(), "refused.txt")
+  OPCC:::.opcc_write_da_cache_consent(FALSE, refused)
+  expect_null(resolve(interactive_session = TRUE,
+                      ask = function(target) stop("must not prompt"),
+                      consent_file = refused))
+
+  # An explicit setting is left to the app, which reads it directly.
+  withr::local_options(list(OPCC.shiny_da_cache_dir = withr::local_tempdir()))
+  expect_null(resolve(interactive_session = TRUE,
+                      ask = function(target) stop("must not prompt"),
+                      consent_file = unanswered))
+})
+
+test_that("a stored map-cache answer is remembered and honoured", {
+  testthat::skip_if_not_installed("withr")
+  path <- file.path(withr::local_tempdir(), "consent.txt")
+  expect_true(is.na(OPCC:::.opcc_read_da_cache_consent(path)))
+
+  expect_true(OPCC:::.opcc_write_da_cache_consent(FALSE, path))
+  expect_false(OPCC:::.opcc_read_da_cache_consent(path))
+
+  expect_true(OPCC:::.opcc_write_da_cache_consent(TRUE, path))
+  expect_true(OPCC:::.opcc_read_da_cache_consent(path))
+
+  writeLines("maybe", path)
+  expect_true(is.na(OPCC:::.opcc_read_da_cache_consent(path)))
+})
+
+test_that("normalize_postal_code flags the malformed entries the app rejects", {
+  typed <- c("M5S 1A1", "m5v3a8", "not a code", "12345", "K1A 0B1")
+  malformed <- typed[is.na(normalize_postal_code(typed))]
+  expect_equal(malformed, c("not a code", "12345"))
+  expect_length(typed[!is.na(normalize_postal_code(typed))], 3L)
+})
