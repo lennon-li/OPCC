@@ -649,7 +649,7 @@ test_that("the reusable map cache is never used without configuration or consent
                       consent_file = unanswered))
   expect_false(file.exists(unanswered))
 
-  # A recorded refusal is honoured without re-prompting.
+  # A recorded refusal is honored without re-prompting.
   refused <- file.path(withr::local_tempdir(), "refused.txt")
   OPCC:::.opcc_write_da_cache_consent(FALSE, refused)
   expect_null(resolve(interactive_session = TRUE,
@@ -663,7 +663,7 @@ test_that("the reusable map cache is never used without configuration or consent
                       consent_file = unanswered))
 })
 
-test_that("a stored map-cache answer is remembered and honoured", {
+test_that("a stored map-cache answer is remembered and honored", {
   testthat::skip_if_not_installed("withr")
   path <- file.path(withr::local_tempdir(), "consent.txt")
   expect_true(is.na(OPCC:::.opcc_read_da_cache_consent(path)))

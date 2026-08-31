@@ -12,7 +12,7 @@
 }
 
 # Records the answer so the question is asked once per user, not once per
-# session. A stored "no" is honoured until the file is removed.
+# session. A stored "no" is honored until the file is removed.
 .opcc_read_da_cache_consent <- function(path = .opcc_da_cache_consent_file()) {
   if (!file.exists(path)) return(NA)
   answer <- tryCatch(trimws(readLines(path, n = 1L, warn = FALSE)),
@@ -91,7 +91,7 @@
 #' `OPCC_SHINY_DA_CACHE_DIR`) to choose the location yourself, or answer the
 #' one-time prompt shown in an interactive session. The answer is remembered,
 #' so a recorded "yes" also applies to later non-interactive launches, and a
-#' recorded "no" is honoured until you delete the record. Without permission
+#' recorded "no" is honored until you delete the record. Without permission
 #' the map is rebuilt in a session-only temporary directory, which is correct
 #' but takes several minutes per session.
 #'

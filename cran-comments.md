@@ -6,9 +6,9 @@
   `pdflatex` (TeX Live 2026), and `qpdf` 11.9.0 were available.
 - The same tarball rechecked with `_R_CHECK_DEPENDS_ONLY_=true`, so only
   Depends and Imports were visible, to confirm every use of a suggested
-  package is conditional. That run adds `--no-build-vignettes`, because
-  re-building the vignette needs `rmarkdown`, which is a suggested package
-  and therefore deliberately absent from that library.
+  package is conditional. That run also builds and re-builds the vignette,
+  because `R CMD check` makes the `VignetteBuilder` package available even
+  when only Depends and Imports are otherwise visible.
 - GitHub Actions on ubuntu-latest, macos-latest, and windows-latest with
   R release, plus a separate ubuntu-latest job on R-devel. All four run
   `rcmdcheck::rcmdcheck(args = c("--no-manual", "--as-cran"),
@@ -22,16 +22,16 @@ Checks were run on 2026-08-31 against OPCC 0.0.1.
 - `R CMD check --as-cran OPCC_0.0.1.tar.gz`: `Status: 1 NOTE`.
 - The sole NOTE is CRAN incoming feasibility identifying this as a new
   submission; there are no package ERRORs or WARNINGs.
-- Package test suite under check: 522 passing, 14 skipped, 0 failures. The
+- Package test suite under check: 534 passing, 14 skipped, 0 failures. The
   skips are tests that need a source checkout, a build script that is not
   installed with the runtime package, a locally cached artifact, or the
   opt-in installed-app browser test. Every skip reports its own reason; the
   cached-artifact skips mean the exact pass/skip split varies with what is
   cached on the checking machine.
 - `R CMD check --as-cran` with `_R_CHECK_DEPENDS_ONLY_=true`:
-  `Status: 1 NOTE`, the same new-submission NOTE; 411 passing, 39 skipped,
+  `Status: 1 NOTE`, the same new-submission NOTE; 423 passing, 39 skipped,
   0 failures.
-- With all suggested packages installed, the full local suite runs 587
+- With all suggested packages installed, the full local suite runs 599
   passing, 1 skip (the opt-in browser test), and 0 failures.
 - All four GitHub Actions check jobs passed on the exact commit submitted
   here. Because they run with `error_on = "warning"`, a passing job is
@@ -57,6 +57,15 @@ Checks were run on 2026-08-31 against OPCC 0.0.1.
 - Examples that would fetch a release artifact are wrapped in `\donttest{}`
   with an inner `if (interactive())` guard, so no example downloads anything
   during `R CMD check --as-cran`.
+- The package writes nothing to the user's home filespace without permission.
+  The Shiny app can reuse a simplified boundary artifact between sessions, but
+  that cache is used only when the user points `OPCC.shiny_da_cache_dir` (or
+  `OPCC_SHINY_DA_CACHE_DIR`) at a directory, or answers a one-time interactive
+  console prompt. With no setting and no recorded answer the app keeps
+  everything in a session-only `tempdir()` location and removes it when the
+  session ends. The prompt is reached only from `interactive()` sessions, so
+  `R CMD check` never prompts and never creates the cache or the file that
+  records the answer.
 - This is a new submission with no downstream dependencies.
 
 ## Not yet re-run on the current package surface
@@ -65,7 +74,9 @@ Checks were run on 2026-08-31 against OPCC 0.0.1.
   GitHub Actions jobs on those platforms pass `--no-manual`; the PDF manual
   is built and checked only in the Linux run above.
 - The opt-in installed-app browser test (`OPCC_RUN_BROWSER_TESTS=true`). It
-  last passed on 2026-08-24; no application code has changed since. It cannot
+  last passed on 2026-08-24. The Shiny application has changed since then, so
+  this end-to-end check is currently unverified; the affected behaviour is
+  covered by non-browser `shiny::testServer()` tests that do run. It cannot
   currently be run on the maintainer's machine because of an unrelated
   instability between `chromote` and the locally installed Chrome. The test
   never runs during `R CMD check`.
