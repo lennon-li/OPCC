@@ -1,1 +1,4 @@
 .scratch/
+
+# pkgdown site is built on demand, not published
+docs/site/

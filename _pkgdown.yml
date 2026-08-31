@@ -1,4 +1,11 @@
-url: https://github.com/lennon-li/OPCC
+# No `url:` on purpose: the pkgdown site is built on demand (see `destination:`)
+# and is not published. A site URL here must also appear in DESCRIPTION, and
+# https://lennon-li.github.io/OPCC/ currently returns 404 (no GitHub Pages),
+# which `R CMD check --as-cran` flags as a dead URL.
+# Consequence: `pkgdown::check_pkgdown()` fails with "url is missing". That is
+# expected and harmless -- `pkgdown::build_site()` works. To publish later,
+# enable Pages, then add the same URL here and to DESCRIPTION's URL field.
+destination: docs/site
 template:
   bootstrap: 5
 reference:

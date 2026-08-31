@@ -55,7 +55,10 @@ vignette("using-opcc", package = "OPCC")
 Upload a CSV, pick its postal-code column, and join it to the
 postal-code-to-DA correspondence: view the joined table, draw the matched
 dissemination areas on a map, and download the joined CSV, the map as HTML,
-and an R script that reproduces both.
+and an R script that reproduces both. You can also type postal codes
+directly; entries that are not valid Canadian postal codes are listed back
+to you and skipped, and the join continues with the valid ones. The header
+shows the installed package version.
 
 ```r
 run_app()
@@ -65,11 +68,18 @@ Requires `shiny`, `bslib`, `DT`, `leaflet`, `htmlwidgets`, and `sf`.
 
 The app keeps the roughly 200 MB Statistics Canada boundary download and its
 extracted build inputs in a unique session directory and deletes them when the
-session ends. By default, the simplified map artifact is session-only too, so
-each new session downloads and rebuilds it. A user or server operator can opt
-in to reusing only that derived RDS by setting either
-`options(OPCC.shiny_da_cache_dir = "/managed/path")` before `run_app()`, or the
-`OPCC_SHINY_DA_CACHE_DIR` environment variable. The R option takes precedence.
+session ends. Only the small derived simplified-map RDS can persist, and only
+with your permission. There are three ways to grant it: set
+`options(OPCC.shiny_da_cache_dir = "/managed/path")` before `run_app()`, set
+the `OPCC_SHINY_DA_CACHE_DIR` environment variable, or answer the one-time
+prompt shown when you launch the app in an interactive session. The R option
+takes precedence over the environment variable, and both take precedence over
+the prompt. Your answer to the prompt is remembered, so a recorded refusal is
+honored until you delete the record, and `clear_opcc_cache()` removes the
+cache itself. Without any of these the map artifact is session-only, which is
+correct but means each new session re-downloads and re-simplifies it, taking
+several minutes rather than about a second.
+
 OPCC never places the raw archive or extraction in that managed directory.
 Shared-cache builds use an owner lock. A lock owned by a live process on the
 same host is never expired based on age; cross-host locks carry a build-phase
