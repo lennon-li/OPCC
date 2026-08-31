@@ -6,6 +6,7 @@ license: MIT
 repository-code: "https://github.com/lennon-li/OPCC"
 url: "https://github.com/lennon-li/OPCC"
 version: "1.0.0"
+date-released: "2026-08-31"
 authors:
   - family-names: "Li"
     given-names: "Lennon"
