@@ -2,31 +2,41 @@
 
 - Ubuntu 24.04.4 LTS (x86_64-pc-linux-gnu), R 4.6.1: fresh source-archive
   build and full `R CMD check --as-cran` against the built tarball,
-  including rendered vignette, PDF manual, and HTML manual. `pandoc`,
-  `pdflatex`, and `qpdf` were available.
+  including rendered vignette, PDF manual, and HTML manual. `pandoc` 3.1.3,
+  `pdflatex` (TeX Live 2026), and `qpdf` 11.9.0 were available.
 - The same tarball rechecked with `_R_CHECK_DEPENDS_ONLY_=true`, so only
   Depends and Imports were visible, to confirm every use of a suggested
   package is conditional. That run adds `--no-build-vignettes`, because
   re-building the vignette needs `rmarkdown`, which is a suggested package
   and therefore deliberately absent from that library.
+- GitHub Actions on ubuntu-latest, macos-latest, and windows-latest with
+  R release, plus a separate ubuntu-latest job on R-devel. All four run
+  `rcmdcheck::rcmdcheck(args = c("--no-manual", "--as-cran"),
+  error_on = "warning")`.
 
 ## R CMD check results
 
-Checks were run on 2026-08-30 against OPCC 0.0.1.
+Checks were run on 2026-08-31 against OPCC 0.0.1.
 
 - `R CMD build OPCC` with vignettes: OK.
 - `R CMD check --as-cran OPCC_0.0.1.tar.gz`: `Status: 1 NOTE`.
 - The sole NOTE is CRAN incoming feasibility identifying this as a new
   submission; there are no package ERRORs or WARNINGs.
-- Package test suite under check: 530 passing, 10 skipped, 0 failures. The
+- Package test suite under check: 522 passing, 14 skipped, 0 failures. The
   skips are tests that need a source checkout, a build script that is not
-  installed with the runtime package, a cached artifact, or the opt-in
-  installed-app browser test.
+  installed with the runtime package, a locally cached artifact, or the
+  opt-in installed-app browser test. Every skip reports its own reason; the
+  cached-artifact skips mean the exact pass/skip split varies with what is
+  cached on the checking machine.
 - `R CMD check --as-cran` with `_R_CHECK_DEPENDS_ONLY_=true`:
-  `Status: 1 NOTE`, the same new-submission NOTE; 414 passing, 38 skipped,
+  `Status: 1 NOTE`, the same new-submission NOTE; 411 passing, 39 skipped,
   0 failures.
 - With all suggested packages installed, the full local suite runs 587
   passing, 1 skip (the opt-in browser test), and 0 failures.
+- All four GitHub Actions check jobs passed on the exact commit submitted
+  here. Because they run with `error_on = "warning"`, a passing job is
+  itself evidence of 0 errors and 0 warnings on that platform. A fifth job
+  re-validates the released data artifacts.
 - `urlchecker::url_check()`: all checked URLs are correct.
 - `spelling::spell_check_package()`: no spelling errors. Package-specific
   technical terms are recorded in `inst/WORDLIST`.
@@ -51,16 +61,11 @@ Checks were run on 2026-08-30 against OPCC 0.0.1.
 
 ## Not yet re-run on the current package surface
 
-- Cross-platform GitHub Actions results. The last green run
-  (`32789251230`, commit `e18f6c1`) checked ubuntu-latest, macos-latest, and
-  windows-latest with `rcmdcheck::rcmdcheck(args = c("--no-manual",
-  "--as-cran"))` plus an Ubuntu release-validation job, all with 0 errors,
-  0 warnings, and the new-submission NOTE. It predates the current
-  documentation and test-guard changes, which have not yet been pushed.
-- macOS `R CMD check --as-cran` outside GitHub Actions, including the PDF
-  manual, which the CI package-check jobs skip via `--no-manual`.
+- macOS and Windows `R CMD check --as-cran` including the PDF manual. The
+  GitHub Actions jobs on those platforms pass `--no-manual`; the PDF manual
+  is built and checked only in the Linux run above.
 - The opt-in installed-app browser test (`OPCC_RUN_BROWSER_TESTS=true`). It
-  last passed on 2026-08-24 at commit `e18f6c1`. It cannot currently be run on
-  the maintainer's machine because of an unrelated instability between
-  `chromote` and the locally installed Chrome; no package code has changed
-  since that run.
+  last passed on 2026-08-24; no application code has changed since. It cannot
+  currently be run on the maintainer's machine because of an unrelated
+  instability between `chromote` and the locally installed Chrome. The test
+  never runs during `R CMD check`.
