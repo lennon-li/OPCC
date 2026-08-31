@@ -2,3 +2,7 @@
 
 # pkgdown site is built on demand, not published
 docs/site/
+
+# built package tarballs and check output
+/*.tar.gz
+/*.Rcheck/
