@@ -23,3 +23,12 @@ opcc_source_checkout_path <- function(...) {
   )
   candidates[which(file.exists(candidates))[1]]
 }
+
+# testthat::skip_if_offline() calls rlang::check_installed("curl"), which
+# errors rather than skips when curl -- a suggested package -- is absent.
+# Use this instead so offline-dependent tests skip cleanly under
+# _R_CHECK_DEPENDS_ONLY_=true.
+skip_if_no_network <- function() {
+  testthat::skip_if_not_installed("curl")
+  testthat::skip_if_offline()
+}

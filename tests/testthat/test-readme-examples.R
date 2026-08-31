@@ -19,7 +19,7 @@ testthat::test_that("README DA example demonstrates a local DA lookup", {
 })
 
 testthat::test_that("README point example returns GeoNames point evidence", {
-  testthat::skip_if_offline()
+  skip_if_no_network()
   testthat::skip_on_cran()
   result <- pc_to_point("K1A 0A6")
   testthat::expect_gt(nrow(result), 0)

@@ -4,7 +4,7 @@ testthat::test_that("M2 GeoNames amendment is discoverable through the release i
 })
 
 testthat::test_that("release_manifest works for the M2 amendment vintage", {
-  testthat::skip_if_offline()
+  skip_if_no_network()
   testthat::skip_on_cran()
   manifest <- release_manifest("2026-07-19-geonames-amendment", level = "DB")
   testthat::expect_true(is.list(manifest))
@@ -12,7 +12,7 @@ testthat::test_that("release_manifest works for the M2 amendment vintage", {
 })
 
 testthat::test_that("validate_release passes for the M2 amendment vintage", {
-  testthat::skip_if_offline()
+  skip_if_no_network()
   testthat::skip_on_cran()
   result <- validate_release("2026-07-19-geonames-amendment", level = "DB")
   testthat::expect_true(result)
